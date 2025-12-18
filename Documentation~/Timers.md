@@ -16,6 +16,7 @@ A high-performance, extensible timer system that integrates directly into Unity'
   - [RepeatingTimer](#repeatingtimer)
 - [API Reference](#api-reference)
 - [Timer Pooling](#timer-pooling)
+- [Timer Chaining](#timer-chaining)
 - [Thread Safety](#thread-safety)
 - [Network Synchronization](#network-synchronization)
 - [Advanced Usage](#advanced-usage)
@@ -242,6 +243,76 @@ TimerPool.Prewarm<MyCustomTimer>(10);
 
 > [!IMPORTANT]
 > Use `TimerPool.Release(timer)` instead of `timer.Dispose()` to return timers to the pool.
+
+---
+
+## Timer Chaining
+
+Chain multiple steps for sequential execution.
+
+### Basic Usage
+
+```csharp
+TimerChain.Start(2f)
+    .Then(() => Debug.Log("Step 1"))
+    .Then(1.5f)
+    .Then(() => Debug.Log("Step 2"))
+    .OnComplete(() => Debug.Log("Done!"))
+    .Run();
+```
+
+### Available Steps
+
+| Method | Description |
+|--------|-------------|
+| `.Then(float)` | Delay in seconds |
+| `.Then(Action)` | Execute action |
+| `.Then(Timer, duration)` | Any timer type |
+| `.ThenRepeat(interval, count, onTick)` | Repeating action |
+| `.WaitUntil(() => condition)` | Wait until true |
+| `.WaitWhile(() => condition)` | Wait while true |
+| `.Parallel(step1, step2, ...)` | Run steps in parallel |
+
+### Examples
+
+```csharp
+// Wait for condition
+TimerChain.Start(1f)
+    .WaitUntil(() => player.IsReady)
+    .Then(() => StartGame())
+    .Run();
+
+// Parallel execution
+TimerChain.Start(0f)
+    .Parallel(
+        new DelayStep(2f),
+        new RepeatStep(0.5f, 4, () => Flash())
+    )
+    .Then(() => Debug.Log("Both complete!"))
+    .Run();
+
+// Custom steps
+public class MyStep : IChainStep
+{
+    public float Duration => 1f;
+    public void Execute(Action onComplete) { /* ... */ onComplete(); }
+    public void Pause() { }
+    public void Resume() { }
+    public void Dispose() { }
+}
+
+TimerChain.Start(new MyStep()).Run();
+```
+
+### Control
+
+```csharp
+var chain = TimerChain.Start(5f).Run();
+chain.Pause();
+chain.Resume();
+chain.Stop();
+chain.Dispose();
+```
 
 ---
 
