@@ -1,6 +1,6 @@
 {
   "name": "com.eraflo.unityimportpackage",
-  "version": "1.0.33",
+  "version": "1.0.34",
   "displayName": "Unity Import Package",
   "description": "A Unity Package with basic scripts and editors",
   "unity": "2022.3",
