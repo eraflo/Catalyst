@@ -133,12 +133,12 @@ jobs:
           name: Test Results
           path: TestResults
 
-  # Version bump on push (any branch), release only on main
+  # Version bump only on main branch (other branches bump when merged)
   version:
     name: Version Bump
     runs-on: ubuntu-latest
     needs: [validate, test]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
       new_version: ${{ steps.bump.outputs.new_version }}
       is_main: ${{ steps.check_branch.outputs.is_main }}
@@ -165,20 +165,38 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $VERSION"
       
+      - name: Check if version bump needed
+        id: check_bump
+        run: |
+          # Skip if the last commit is already a version bump
+          LAST_COMMIT=$(git log -1 --pretty=format:"%s")
+          if echo "$LAST_COMMIT" | grep -qE "^chore: bump version to"; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Skipping - last commit was already a version bump"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Determine version bump type
         id: bump_type
+        if: steps.check_bump.outputs.skip != 'true'
         run: |
           # Get last tag or first commit
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
           
-          # Get commit messages since last tag
-          COMMITS=$(git log --pretty=format:"%s" $LAST_TAG..HEAD)
+          # Get commit messages since last tag (excluding version bump commits)
+          COMMITS=$(git log --pretty=format:"%s" $LAST_TAG..HEAD | grep -v "^chore: bump version to" || true)
           
           echo "=== Commits to analyze ==="
           echo "$COMMITS"
           echo "=========================="
           
-          # Initialize bump type
+          # Count by type for logging
+          MAJOR_COUNT=0
+          MINOR_COUNT=0
+          PATCH_COUNT=0
+          
+          # Initialize bump type (priority: major > minor > patch)
           BUMP_TYPE="none"
           
           # Check each commit message for Conventional Commits format
@@ -186,26 +204,32 @@ jobs:
             # Skip empty lines
             [ -z "$commit" ] && continue
             
-            # BREAKING CHANGE in body or footer, or ! after type
+            # BREAKING CHANGE in body or footer, or ! after type = MAJOR
             if echo "$commit" | grep -qE "^[a-z]+(\(.+\))?!:|BREAKING CHANGE"; then
               BUMP_TYPE="major"
+              MAJOR_COUNT=$((MAJOR_COUNT + 1))
+              # Major takes priority, can break early
               break
             fi
             
-            # feat: = new feature = minor
+            # feat: = new feature = MINOR
             if echo "$commit" | grep -qE "^feat(\(.+\))?:"; then
+              MINOR_COUNT=$((MINOR_COUNT + 1))
               if [ "$BUMP_TYPE" != "major" ]; then
                 BUMP_TYPE="minor"
               fi
             fi
             
-            # fix/perf/refactor/docs/style/test/chore = patch
+            # fix/perf/refactor/docs/style/test/chore/build/ci = PATCH
             if echo "$commit" | grep -qE "^(fix|perf|refactor|docs|style|test|chore|build|ci)(\(.+\))?:"; then
+              PATCH_COUNT=$((PATCH_COUNT + 1))
               if [ "$BUMP_TYPE" = "none" ]; then
                 BUMP_TYPE="patch"
               fi
             fi
           done <<< "$COMMITS"
+          
+          echo "Found: $MAJOR_COUNT major, $MINOR_COUNT minor, $PATCH_COUNT patch commits"
           
           # Default to patch if no conventional commits found
           if [ "$BUMP_TYPE" = "none" ]; then
@@ -214,10 +238,11 @@ jobs:
           fi
           
           echo "type=$BUMP_TYPE" >> $GITHUB_OUTPUT
-          echo "Determined bump type: $BUMP_TYPE"
+          echo "Final bump type: $BUMP_TYPE"
       
       - name: Bump version
         id: bump
+        if: steps.check_bump.outputs.skip != 'true'
         run: |
           CURRENT="${{ steps.current.outputs.version }}"
           TYPE="${{ steps.bump_type.outputs.type }}"
@@ -247,6 +272,7 @@ jobs:
           jq ".version = \"$NEW_VERSION\"" package.json > tmp.json && mv tmp.json package.json
       
       - name: Commit version bump
+        if: steps.check_bump.outputs.skip != 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -256,13 +282,13 @@ jobs:
       
       # Only create tags and releases on main branch
       - name: Create Release Tag
-        if: steps.check_branch.outputs.is_main == 'true'
+        if: steps.check_bump.outputs.skip != 'true' && steps.check_branch.outputs.is_main == 'true'
         run: |
           git tag v${{ steps.bump.outputs.new_version }}
           git push origin v${{ steps.bump.outputs.new_version }}
       
       - name: Create GitHub Release
-        if: steps.check_branch.outputs.is_main == 'true'
+        if: steps.check_bump.outputs.skip != 'true' && steps.check_branch.outputs.is_main == 'true'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.bump.outputs.new_version }}
