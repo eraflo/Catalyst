@@ -26,6 +26,11 @@ namespace Eraflo.UnityImportPackage.Timers
         /// </summary>
         public static int Count => _backend?.Count ?? 0;
 
+        /// <summary>
+        /// Timer system metrics for debugging and profiling.
+        /// </summary>
+        public static TimerMetrics Metrics { get; } = new TimerMetrics();
+
         #endregion
 
         #region Internal Lifecycle
@@ -91,7 +96,9 @@ namespace Eraflo.UnityImportPackage.Timers
         public static TimerHandle Create<T>(float duration) where T : struct, ITimer
         {
             EnsureInitialized();
-            return _backend.Create<T>(TimerConfig.FromDuration(duration));
+            var handle = _backend.Create<T>(TimerConfig.FromDuration(duration));
+            Metrics.RecordCreation(duration);
+            return handle;
         }
 
         /// <summary>
@@ -103,7 +110,9 @@ namespace Eraflo.UnityImportPackage.Timers
         public static TimerHandle Create<T>(TimerConfig config) where T : struct, ITimer
         {
             EnsureInitialized();
-            return _backend.Create<T>(config);
+            var handle = _backend.Create<T>(config);
+            Metrics.RecordCreation(config.Duration);
+            return handle;
         }
 
         /// <summary>
@@ -131,10 +140,18 @@ namespace Eraflo.UnityImportPackage.Timers
         public static void Resume(TimerHandle handle) => _backend?.Resume(handle);
 
         /// <summary>Cancels and removes a timer.</summary>
-        public static void Cancel(TimerHandle handle) => _backend?.Cancel(handle);
+        public static void Cancel(TimerHandle handle)
+        {
+            _backend?.Cancel(handle);
+            Metrics.RecordCancellation();
+        }
 
         /// <summary>Resets a timer to its initial state.</summary>
-        public static void Reset(TimerHandle handle) => _backend?.Reset(handle);
+        public static void Reset(TimerHandle handle)
+        {
+            _backend?.Reset(handle);
+            Metrics.RecordReset();
+        }
 
         /// <summary>Sets the time scale of a timer.</summary>
         public static void SetTimeScale(TimerHandle handle, float scale) => _backend?.SetTimeScale(handle, scale);
@@ -165,6 +182,56 @@ namespace Eraflo.UnityImportPackage.Timers
         /// <summary>Gets debug info for all active timers.</summary>
         public static System.Collections.Generic.List<TimerDebugInfo> GetActiveTimers() 
             => _backend?.GetActiveTimers() ?? new System.Collections.Generic.List<TimerDebugInfo>();
+
+        #endregion
+
+        #region Presets
+
+        /// <summary>
+        /// Creates a timer from a preset.
+        /// </summary>
+        /// <param name="presetName">Name of the preset to use.</param>
+        /// <returns>Timer handle, or None if preset not found.</returns>
+        public static TimerHandle FromPreset(string presetName)
+        {
+            var preset = TimerPresets.Get(presetName);
+            if (preset.TimerType == null)
+            {
+                UnityEngine.Debug.LogWarning($"[Timer] Preset '{presetName}' not found.");
+                return TimerHandle.None;
+            }
+
+            EnsureInitialized();
+            
+            // Use reflection to call generic Create<T>
+            var method = typeof(Timer).GetMethod(nameof(Create), new[] { typeof(TimerConfig) });
+            var generic = method.MakeGenericMethod(preset.TimerType);
+            return (TimerHandle)generic.Invoke(null, new object[] { preset.ToConfig() });
+        }
+
+        /// <summary>
+        /// Creates a timer from a preset with an OnComplete callback.
+        /// </summary>
+        /// <param name="presetName">Name of the preset to use.</param>
+        /// <param name="onComplete">Callback when timer completes.</param>
+        /// <returns>Timer handle, or None if preset not found.</returns>
+        public static TimerHandle FromPreset(string presetName, System.Action onComplete)
+        {
+            var handle = FromPreset(presetName);
+            if (handle.IsValid && onComplete != null)
+            {
+                On<OnComplete>(handle, onComplete);
+            }
+            return handle;
+        }
+
+        /// <summary>
+        /// Gets the easing type associated with a preset.
+        /// </summary>
+        public static EasingSystem.EasingType GetPresetEasing(string presetName)
+        {
+            return TimerPresets.Get(presetName).Easing;
+        }
 
         #endregion
     }

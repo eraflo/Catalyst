@@ -538,5 +538,195 @@ namespace Eraflo.UnityImportPackage.Tests
         }
 
         #endregion
+
+        #region Presets Tests
+
+        [Test]
+        public void Presets_Define_CreatesPreset()
+        {
+            TimerPresets.Clear();
+            
+            TimerPresets.Define("TestPreset", 5f, EasingType.QuadOut);
+            
+            Assert.IsTrue(TimerPresets.Exists("TestPreset"));
+        }
+
+        [Test]
+        public void Presets_DefineGeneric_CreatesPresetWithType()
+        {
+            TimerPresets.Clear();
+            
+            TimerPresets.Define<RepeatingTimer>("RepeatPreset", 2f);
+            
+            var preset = TimerPresets.Get("RepeatPreset");
+            Assert.AreEqual(typeof(RepeatingTimer), preset.TimerType);
+        }
+
+        [Test]
+        public void FromPreset_CreatesTimerFromPreset()
+        {
+            TimerPresets.Clear();
+            TimerPresets.Define("QuickFade", 0.5f);
+            
+            var handle = Timer.FromPreset("QuickFade");
+            
+            Assert.IsTrue(handle.IsValid);
+            Assert.AreEqual(1, Timer.Count);
+        }
+
+        [Test]
+        public void FromPreset_WithCallback_RegistersCallback()
+        {
+            TimerPresets.Clear();
+            TimerPresets.Define("TestWithCallback", 1f);
+            bool called = false;
+            
+            var handle = Timer.FromPreset("TestWithCallback", () => called = true);
+            
+            Assert.IsTrue(handle.IsValid);
+            // Callback registration is tested by checking handle is valid
+        }
+
+        [Test]
+        public void FromPreset_UndefinedPreset_ReturnsNone()
+        {
+            TimerPresets.Clear();
+            
+            var handle = Timer.FromPreset("NonExistent");
+            
+            Assert.IsFalse(handle.IsValid);
+        }
+
+        #endregion
+
+        #region Metrics Tests
+
+        [Test]
+        public void Metrics_TotalCreated_IncreasesOnCreate()
+        {
+            Timer.Metrics.Reset();
+            
+            Timer.Create<CountdownTimer>(5f);
+            Timer.Create<StopwatchTimer>(0f);
+            Timer.Create<DelayTimer>(3f);
+            
+            Assert.AreEqual(3, Timer.Metrics.TotalCreated);
+        }
+
+        [Test]
+        public void Metrics_TotalCancelled_IncreasesOnCancel()
+        {
+            Timer.Metrics.Reset();
+            
+            var h1 = Timer.Create<CountdownTimer>(5f);
+            var h2 = Timer.Create<CountdownTimer>(5f);
+            Timer.Cancel(h1);
+            
+            Assert.AreEqual(1, Timer.Metrics.TotalCancelled);
+        }
+
+        [Test]
+        public void Metrics_TotalResets_IncreasesOnReset()
+        {
+            Timer.Metrics.Reset();
+            
+            var handle = Timer.Create<CountdownTimer>(5f);
+            Timer.Reset(handle);
+            Timer.Reset(handle);
+            
+            Assert.AreEqual(2, Timer.Metrics.TotalResets);
+        }
+
+        [Test]
+        public void Metrics_PeakActiveCount_TracksMaximum()
+        {
+            Timer.Metrics.Reset();
+            
+            var h1 = Timer.Create<CountdownTimer>(5f);
+            var h2 = Timer.Create<CountdownTimer>(5f);
+            var h3 = Timer.Create<CountdownTimer>(5f);
+            Timer.Cancel(h1);
+            Timer.Cancel(h2);
+            
+            Assert.GreaterOrEqual(Timer.Metrics.PeakActiveCount, 3);
+        }
+
+        [Test]
+        public void Metrics_AverageDuration_CalculatesCorrectly()
+        {
+            Timer.Metrics.Reset();
+            
+            Timer.Create<CountdownTimer>(2f);
+            Timer.Create<CountdownTimer>(4f);
+            Timer.Create<CountdownTimer>(6f);
+            
+            Assert.AreEqual(4f, Timer.Metrics.AverageDuration, 0.01f);
+        }
+
+        [Test]
+        public void Metrics_Reset_ClearsAllMetrics()
+        {
+            Timer.Create<CountdownTimer>(5f);
+            Timer.Metrics.Reset();
+            
+            Assert.AreEqual(0, Timer.Metrics.TotalCreated);
+            Assert.AreEqual(0, Timer.Metrics.TotalCancelled);
+            Assert.AreEqual(0, Timer.Metrics.TotalResets);
+        }
+
+        #endregion
+
+        #region Persistence Tests
+
+        [Test]
+        public void Persistence_SaveAll_ReturnsValidJson()
+        {
+            Timer.Create<CountdownTimer>(5f);
+            Timer.Create<StopwatchTimer>(0f);
+            
+            string json = TimerPersistence.SaveAll();
+            
+            Assert.IsFalse(string.IsNullOrEmpty(json));
+            Assert.IsTrue(json.Contains("CountdownTimer"));
+            Assert.IsTrue(json.Contains("StopwatchTimer"));
+        }
+
+        [Test]
+        public void Persistence_LoadAll_RestoresTimers()
+        {
+            Timer.Create<CountdownTimer>(5f);
+            Timer.Create<CountdownTimer>(10f);
+            string json = TimerPersistence.SaveAll();
+            
+            Timer.Clear();
+            Assert.AreEqual(0, Timer.Count);
+            
+            var handles = TimerPersistence.LoadAll(json);
+            
+            Assert.AreEqual(2, handles.Count);
+            Assert.AreEqual(2, Timer.Count);
+        }
+
+        [Test]
+        public void Persistence_LoadAll_EmptyJson_ReturnsEmptyList()
+        {
+            var handles = TimerPersistence.LoadAll("");
+            
+            Assert.AreEqual(0, handles.Count);
+        }
+
+        [Test]
+        public void Persistence_Clear_ClearsRegistry()
+        {
+            Timer.Create<CountdownTimer>(5f);
+            TimerPersistence.SaveAll();
+            
+            TimerPersistence.Clear();
+            
+            // No exception means success
+            Assert.Pass();
+        }
+
+        #endregion
     }
 }

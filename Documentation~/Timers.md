@@ -2,6 +2,21 @@
 
 A high-performance, handle-based timer system with automatic backend selection and Burst support.
 
+## Table of Contents
+- [Quick Start](#quick-start)
+- [Timer Types](#timer-types)
+- [Callbacks](#extensible-callbacks)
+- [Easing](#easing-integration)
+- [Chaining & Groups](#timer-chaining)
+- [Presets](#timer-presets)
+- [Persistence](#timer-persistence)
+- [Metrics](#timer-metrics)
+- [Backends](#backends)
+- [Multiplayer](#multiplayer-support)
+- [API Reference](#api-reference)
+
+---
+
 ## Quick Start
 
 ```csharp
@@ -14,7 +29,7 @@ var stopwatch = Timer.Create<StopwatchTimer>(0f);
 // Simple delay
 Timer.Delay(2f, () => Debug.Log("Done!"));
 
-// Events (generic callback system)
+// Events
 Timer.On<OnComplete>(countdown, () => Debug.Log("Finished!"));
 Timer.On<OnTick, float>(countdown, (dt) => Debug.Log($"Tick: {dt}"));
 
@@ -28,126 +43,74 @@ float progress = Timer.GetProgress(countdown);
 bool done = Timer.IsFinished(countdown);
 ```
 
-## File Structure
-
-```
-Runtime/Timers/
-├── Core/
-│   ├── Timer.cs              # Core API (Create, Control, Query)
-│   ├── Timer.Events.cs       # Event registration (On<T>, Off<T>)
-│   ├── Timer.Easing.cs       # Easing methods (Lerp, GetEasedProgress)
-│   ├── TimerHandle.cs        # Handle struct
-│   ├── ITimer.cs             # Interface + ICallbackCollector
-│   ├── TimerCallbacks.cs     # Extensible callback registry
-│   └── TimerBootstrapper.cs  # PlayerLoop integration
-├── Types/
-│   ├── CountdownTimer.cs     # Counts down (1 → 0)
-│   ├── StopwatchTimer.cs     # Counts up indefinitely
-│   ├── DelayTimer.cs         # One-shot countdown
-│   ├── RepeatingTimer.cs     # Repeats every interval
-│   └── FrequencyTimer.cs     # N ticks per second
-├── Features/
-│   ├── TimerChain.cs         # Fluent chaining API
-│   ├── TimerGroup.cs         # Batch operations
-│   └── NetworkTimerSync.cs   # Multiplayer sync
-├── Backends/
-│   ├── ITimerBackend.cs
-│   ├── StandardBackend.cs    # Thread-safe managed backend
-│   └── BurstBackend.cs       # Burst-compiled (optional)
-└── Debugging/
-    └── TimerDebugger.cs      # Runtime overlay (F5)
-```
+---
 
 ## Timer Types
 
-| Type | Description | Supported Callbacks |
-|------|-------------|---------------------|
+| Type | Description | Callbacks |
+|------|-------------|-----------|
 | `CountdownTimer` | Counts down to 0 | OnComplete, OnTick, OnPause, OnResume, OnReset, OnCancel |
 | `StopwatchTimer` | Counts up indefinitely | OnTick, OnPause, OnResume, OnReset, OnCancel |
 | `DelayTimer` | One-shot countdown | OnComplete, OnTick, OnCancel |
 | `RepeatingTimer` | Ticks every interval | OnComplete, OnRepeat, OnTick, OnPause, OnResume, OnReset, OnCancel |
 | `FrequencyTimer` | N ticks per second | OnTick, OnPause, OnResume, OnReset, OnCancel |
 
+---
+
 ## Extensible Callbacks
 
-### Built-in Callbacks
+### Built-in
 
 ```csharp
-Timer.On<OnComplete>(handle, () => { });           // Timer finished
+Timer.On<OnComplete>(handle, () => { });           // Finished
 Timer.On<OnTick, float>(handle, (dt) => { });      // Every frame
 Timer.On<OnRepeat, int>(handle, (count) => { });   // Repeat interval
-Timer.On<OnPause>(handle, () => { });              // Paused
-Timer.On<OnResume>(handle, () => { });             // Resumed
-Timer.On<OnReset>(handle, () => { });              // Reset
-Timer.On<OnCancel>(handle, () => { });             // Cancelled
+Timer.On<OnPause>(handle, () => { });
+Timer.On<OnResume>(handle, () => { });
+Timer.On<OnReset>(handle, () => { });
+Timer.On<OnCancel>(handle, () => { });
 ```
 
-### Custom Callbacks
+### Custom
 
 ```csharp
 // 1. Define callback type
 public struct OnDamage : ITimerCallback { }
 
-// 2. Define data (any type)
-public struct DamageData { public int Amount; public string Source; }
-
-// 3. Create timer supporting the callback
+// 2. Implement in timer
 public struct DamageTimer : ITimer, ISupportsCallback<OnDamage>
 {
-    private DamageData _pending;
-    private bool _shouldFire;
-
-    // ... ITimer implementation ...
-
     public void CollectCallbacks(ICallbackCollector collector)
     {
         if (_shouldFire)
-        {
-            collector.Trigger<OnDamage, DamageData>(_pending);
-            _shouldFire = false;
-        }
+            collector.Trigger<OnDamage, DamageData>(_data);
     }
 }
 
-// 4. Use it
-var handle = Timer.Create<DamageTimer>(5f);
-Timer.On<OnDamage, DamageData>(handle, (data) => {
-    ApplyDamage(data.Amount, data.Source);
-});
+// 3. Use it
+Timer.On<OnDamage, DamageData>(handle, (data) => ApplyDamage(data));
 ```
 
-### Composite Interfaces
-
-```csharp
-// Use these instead of listing each callback:
-public struct MyTimer : ITimer, ISupportsStandardCallbacks { }     // All 6 lifecycle callbacks
-public struct MyTimer : ITimer, ISupportsIndefiniteCallbacks { }   // No OnComplete
-public struct MyTimer : ITimer, ISupportsOneShotCallbacks { }      // OnComplete, OnTick, OnCancel
-public struct MyTimer : ITimer, ISupportsRepeatingCallbacks { }    // Standard + OnRepeat
-```
+---
 
 ## Easing Integration
 
 ```csharp
 using Eraflo.UnityImportPackage.EasingSystem;
 
-var handle = Timer.Create<CountdownTimer>(2f);
-
 // Eased progress
 float eased = Timer.GetEasedProgress(handle, EasingType.ElasticOut);
 
-// Lerp with easing
+// Lerp (float, Vector2, Vector3, Quaternion, Color)
 float value = Timer.Lerp(handle, 0f, 100f, EasingType.QuadInOut);
-Vector2 pos2D = Timer.Lerp(handle, startPos, endPos, EasingType.SineInOut);
-Vector3 pos3D = Timer.Lerp(handle, startPos, endPos, EasingType.BounceOut);
-Quaternion rot = Timer.Lerp(handle, startRot, endRot, EasingType.BackOut);
-Color color = Timer.Lerp(handle, Color.red, Color.blue, EasingType.Linear);
+Vector3 pos = Timer.Lerp(handle, start, end, EasingType.BounceOut);
+Color col = Timer.Lerp(handle, Color.red, Color.blue, EasingType.Linear);
 
-// Unclamped (for Elastic/Back)
+// Unclamped (for Elastic/Back overshoots)
 float unclamped = Timer.LerpUnclamped(handle, 0f, 10f, EasingType.ElasticOut);
 ```
 
-**Available Easing Types:** Linear, Quad, Cubic, Quart, Quint, Sine, Expo, Circ, Elastic, Back, Bounce (In/Out/InOut variants)
+---
 
 ## Timer Chaining
 
@@ -159,12 +122,6 @@ Timer.Chain()
     .Then(() => Debug.Log("Step 2"))
     .Loop(3, 0.5f, (i) => Debug.Log($"Loop {i}"))
     .Start();
-
-// Control
-var chain = Timer.Chain().Delay(5f).Then(DoSomething).Start();
-chain.Pause();
-chain.Resume();
-chain.Cancel();
 ```
 
 ## Timer Groups
@@ -175,92 +132,135 @@ var group = Timer.CreateGroup("UI Timers");
 var h1 = group.Create<CountdownTimer>(5f);
 var h2 = group.Delay(3f, () => Debug.Log("Done"));
 
-// Batch operations
 group.PauseAll();
 group.ResumeAll();
 group.SetTimeScaleAll(0.5f);
 group.CancelAll();
-group.CleanupFinished();
 ```
 
-## Multiplayer Support
+---
+
+## Timer Presets
+
+Define reusable configurations:
 
 ```csharp
-// Create networked timer
-var (handle, netId) = Timer.CreateNetworked<CountdownTimer>(10f);
+// Define (once at startup)
+TimerPresets.Define("UIFade", 0.3f, EasingType.QuadOut);
+TimerPresets.Define<RepeatingTimer>("Heartbeat", 1f);
 
-// Server: send sync data
-NetworkTimerSync.OnSendSyncData = (data) => MyNetwork.Send(data);
-NetworkTimerSync.BroadcastAllSyncData();
-
-// Client: receive sync data
-void OnReceive(NetworkTimerSyncData data) => NetworkTimerSync.ApplySyncData(data);
+// Use
+var handle = Timer.FromPreset("UIFade");
+Timer.FromPreset("UIFade", () => OnComplete());
 ```
+
+---
+
+## Timer Persistence
+
+Save/restore timers with callbacks:
+
+```csharp
+// Save
+string json = TimerPersistence.SaveAll();
+PlayerPrefs.SetString("Timers", json);
+
+// Load (callbacks restored via reflection)
+TimerPersistence.LoadAll(PlayerPrefs.GetString("Timers"));
+```
+
+> **Important**: Lambdas cannot be persisted. Use method references.
+
+---
+
+## Timer Metrics
+
+```csharp
+var m = Timer.Metrics;
+
+m.TotalCreated       // Total timers created
+m.ActiveCount        // Currently active
+m.TotalCompleted     // Natural completions
+m.TotalCancelled     // Cancellations
+m.PeakActiveCount    // Max simultaneous
+m.AverageDuration    // Average initial duration
+m.LastUpdateMs       // Last update time (ms)
+
+Timer.Metrics.Reset();
+```
+
+---
 
 ## Backends
 
 ### StandardBackend (Default)
-- Thread-safe with queue-based async operations
-- Works everywhere, no additional dependencies
+Thread-safe, queue-based async operations.
 
 ### BurstBackend (High Performance)
-- Uses Unity.Burst (`[BurstCompile]`) for parallel timer updates
-- Uses Unity.Collections (`NativeList`, `NativeHashMap`) for cache-friendly storage
-- Parallel job processing via `IJobParallelFor`
+Uses Unity.Burst + Unity.Collections for parallel updates.
 
-**Dependencies (included in package.json):**
-```json
-"com.unity.burst": "1.8.12",
-"com.unity.collections": "2.2.1"
+Enable: **PackageSettings** → **Use Burst Timers**
+
+---
+
+## Multiplayer Support
+
+```csharp
+var (handle, netId) = Timer.CreateNetworked<CountdownTimer>(10f);
+
+// Server
+NetworkTimerSync.OnSendSyncData = (data) => MyNetwork.Send(data);
+NetworkTimerSync.BroadcastAllSyncData();
+
+// Client
+void OnReceive(NetworkTimerSyncData data) => NetworkTimerSync.ApplySyncData(data);
 ```
 
-Enable in **PackageSettings** → **Use Burst Timers**
-
-## Thread Safety
-
-- ✅ Create timers from any thread
-- ✅ Query state from any thread
-- ✅ Control (Pause/Resume/Cancel) from any thread
-- Operations from non-main threads are queued and processed on next Update
+---
 
 ## API Reference
 
 ### Creation
 | Method | Description |
 |--------|-------------|
-| `Timer.Create<T>(float)` | Create timer of type T |
-| `Timer.Create<T>(TimerConfig)` | Create with config |
+| `Timer.Create<T>(float)` | Create timer |
 | `Timer.Delay(float, Action)` | One-shot delay |
+| `Timer.FromPreset(string)` | Create from preset |
 
 ### Control
 | Method | Description |
 |--------|-------------|
-| `Timer.Pause(handle)` | Pause timer |
-| `Timer.Resume(handle)` | Resume timer |
-| `Timer.Cancel(handle)` | Cancel and remove |
-| `Timer.Reset(handle)` | Reset to initial state |
-| `Timer.SetTimeScale(handle, float)` | Set time multiplier |
-| `Timer.Clear()` | Remove all timers |
+| `Pause(handle)` | Pause |
+| `Resume(handle)` | Resume |
+| `Cancel(handle)` | Cancel and remove |
+| `Reset(handle)` | Reset to initial |
+| `SetTimeScale(handle, float)` | Time multiplier |
+| `Clear()` | Remove all |
 
 ### Query
 | Method | Description |
 |--------|-------------|
-| `Timer.GetCurrentTime(handle)` | Current time value |
-| `Timer.GetProgress(handle)` | Progress 0-1 |
-| `Timer.GetEasedProgress(handle, EasingType)` | Eased progress |
-| `Timer.IsFinished(handle)` | Check if finished |
-| `Timer.IsRunning(handle)` | Check if running |
-| `Timer.Count` | Active timer count |
+| `GetProgress(handle)` | Progress 0-1 |
+| `GetEasedProgress(handle, EasingType)` | Eased progress |
+| `IsFinished(handle)` | Check finished |
+| `IsRunning(handle)` | Check running |
 
 ### Events
 | Method | Description |
 |--------|-------------|
-| `Timer.On<TCallback>(handle, Action)` | Register callback |
-| `Timer.On<TCallback, TArg>(handle, Action<TArg>)` | Register with parameter |
-| `Timer.Off<TCallback>(handle)` | Unregister callback |
+| `On<T>(handle, Action)` | Register callback |
+| `On<T, TArg>(handle, Action<TArg>)` | With parameter |
+| `Off<T>(handle)` | Unregister |
 
-### Easing
-| Method | Description |
-|--------|-------------|
-| `Timer.Lerp(handle, from, to, easing)` | Interpolate float/Vector2/Vector3/Quaternion/Color |
-| `Timer.LerpUnclamped(handle, from, to, easing)` | Allow values outside 0-1 |
+---
+
+## File Structure
+
+```
+Runtime/Timers/
+├── Core/           Timer.cs, TimerHandle.cs, ITimer.cs, TimerCallbacks.cs
+├── Types/          CountdownTimer, StopwatchTimer, DelayTimer, etc.
+├── Features/       TimerChain, TimerGroup, TimerPresets, TimerPersistence, TimerMetrics
+├── Backends/       StandardBackend, BurstBackend
+└── Debugging/      TimerDebugger (F5 overlay)
+```

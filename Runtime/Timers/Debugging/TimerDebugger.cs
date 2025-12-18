@@ -60,6 +60,11 @@ namespace Eraflo.UnityImportPackage.Timers.Debugging
             // Header
             GUILayout.Label("Timer Debugger (F5)", _headerStyle);
             GUILayout.Label($"Active: {_cachedTimers.Count} | {(Timer.IsBurstMode ? "Burst" : "Standard")}", _labelStyle);
+            
+            // Metrics
+            var m = Timer.Metrics;
+            GUILayout.Label($"Created: {m.TotalCreated} | Completed: {m.TotalCompleted} | Cancelled: {m.TotalCancelled}", _labelStyle);
+            GUILayout.Label($"Update: {m.LastUpdateMs:F2}ms | Peak: {m.PeakActiveCount}", _labelStyle);
             GUILayout.Space(5);
 
             // Controls
