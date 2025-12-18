@@ -24,6 +24,13 @@ namespace Eraflo.UnityImportPackage
 
         [Header("Timer System")]
         [Tooltip("If enabled, log debug messages for timer events.")]
+        [SerializeField] private bool _enableDebugOverlay = false;
+        
+        /// <summary>
+        /// Whether to show the runtime debug overlay for timers.
+        /// </summary>
+        public bool EnableDebugOverlay => _enableDebugOverlay;
+
         [SerializeField] private bool _enableTimerDebugLogs = false;
 
         [Header("Timer Pool")]

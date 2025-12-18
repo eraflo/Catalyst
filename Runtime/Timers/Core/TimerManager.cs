@@ -55,6 +55,23 @@ namespace Eraflo.UnityImportPackage.Timers
         public static bool IsThreadSafe => PackageRuntime.IsThreadSafe;
 
         /// <summary>
+        /// Gets a snapshot of all currently registered timers. 
+        /// Useful for debugging or custom tools.
+        /// Thread-safe in ThreadSafe mode.
+        /// </summary>
+        public static List<Timer> GetAllTimers()
+        {
+            if (IsThreadSafe)
+            {
+                lock (_lockObject)
+                {
+                    return new List<Timer>(_timers);
+                }
+            }
+            return new List<Timer>(_timers);
+        }
+
+        /// <summary>
         /// The number of currently registered timers.
         /// </summary>
         public static int TimerCount

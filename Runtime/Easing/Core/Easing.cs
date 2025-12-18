@@ -1,4 +1,7 @@
-namespace Eraflo.UnityImportPackage.Easing
+using UnityEngine;
+
+
+namespace Eraflo.UnityImportPackage.EasingSystem
 {
     /// <summary>
     /// Static class containing standard easing functions.

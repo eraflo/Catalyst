@@ -13,6 +13,7 @@ namespace Eraflo.UnityImportPackage.Editor
         private SerializedProperty _networkDebugMode;
         private SerializedProperty _threadMode;
         private SerializedProperty _enableTimerDebugLogs;
+        private SerializedProperty _enableDebugOverlay;
         private SerializedProperty _enableTimerPooling;
         private SerializedProperty _timerPoolDefaultCapacity;
         private SerializedProperty _timerPoolMaxCapacity;
@@ -28,6 +29,7 @@ namespace Eraflo.UnityImportPackage.Editor
             _networkDebugMode = serializedObject.FindProperty("_networkDebugMode");
             _threadMode = serializedObject.FindProperty("_threadMode");
             _enableTimerDebugLogs = serializedObject.FindProperty("_enableTimerDebugLogs");
+            _enableDebugOverlay = serializedObject.FindProperty("_enableDebugOverlay");
             _enableTimerPooling = serializedObject.FindProperty("_enableTimerPooling");
             _timerPoolDefaultCapacity = serializedObject.FindProperty("_timerPoolDefaultCapacity");
             _timerPoolMaxCapacity = serializedObject.FindProperty("_timerPoolMaxCapacity");
@@ -71,6 +73,7 @@ namespace Eraflo.UnityImportPackage.Editor
             {
                 EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(_enableTimerDebugLogs, new GUIContent("Debug Logs"));
+                EditorGUILayout.PropertyField(_enableDebugOverlay, new GUIContent("Debug Overlay", "Show runtime overlay with active timers"));
                 EditorGUI.indentLevel--;
             }
             EditorGUILayout.EndFoldoutHeaderGroup();

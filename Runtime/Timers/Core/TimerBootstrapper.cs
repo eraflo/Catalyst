@@ -76,7 +76,15 @@ namespace Eraflo.UnityImportPackage.Timers
 
                 if (settings.EnableTimerDebugLogs)
                 {
-                    Debug.Log($"[TimerBootstrapper] Initialized with ThreadMode={settings.TimerThreadMode}");
+                    Debug.Log($"[TimerBootstrapper] Initialized with ThreadMode={settings.ThreadMode}");
+                }
+
+                if (settings.EnableDebugOverlay)
+                {
+                    if (GameObject.FindObjectOfType<Debugging.TimerDebugger>() == null)
+                    {
+                        new GameObject("TimerDebugger").AddComponent<Debugging.TimerDebugger>();
+                    }
                 }
             }
             catch (Exception e)

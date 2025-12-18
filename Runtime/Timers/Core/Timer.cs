@@ -1,6 +1,6 @@
 using System;
 using UnityEngine;
-using Eraflo.UnityImportPackage.Easing;
+using Eraflo.UnityImportPackage.EasingSystem;
 
 namespace Eraflo.UnityImportPackage.Timers
 {

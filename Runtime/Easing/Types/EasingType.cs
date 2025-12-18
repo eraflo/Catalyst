@@ -1,4 +1,4 @@
-namespace Eraflo.UnityImportPackage.Easing
+namespace Eraflo.UnityImportPackage.EasingSystem
 {
     /// <summary>
     /// Type of easing function to apply.
