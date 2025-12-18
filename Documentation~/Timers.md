@@ -9,6 +9,11 @@ A high-performance, extensible timer system that integrates directly into Unity'
 - [Features](#features)
 - [Quick Start](#quick-start)
 - [Timer Types](#timer-types)
+  - [CountdownTimer](#countdowntimer)
+  - [StopwatchTimer](#stopwatchtimer)
+  - [FrequencyTimer](#frequencytimer)
+  - [DelayTimer](#delaytimer)
+  - [RepeatingTimer](#repeatingtimer)
 - [API Reference](#api-reference)
 - [Thread Safety](#thread-safety)
 - [Network Synchronization](#network-synchronization)
@@ -23,7 +28,8 @@ A high-performance, extensible timer system that integrates directly into Unity'
 |---------|-------------|
 | **Player Loop Integration** | Timers run independently of MonoBehaviours |
 | **Self-Managing** | Timers auto-register/unregister with the TimerManager |
-| **Multiple Timer Types** | Countdown, Stopwatch, and Frequency timers |
+| **Multiple Timer Types** | Countdown, Stopwatch, Frequency, Delay, Repeating |
+| **One-Liner Delays** | `TimerManager.Delay(2f, action)` helper |
 | **Scaled/Unscaled Time** | Support for `Time.deltaTime` and `Time.unscaledDeltaTime` |
 | **Event-Based** | Subscribe to `OnTimerStart`, `OnTimerStop`, `OnTick` |
 | **Thread-Safe Mode** | Optional concurrent access from any thread |
@@ -36,20 +42,26 @@ A high-performance, extensible timer system that integrates directly into Unity'
 ```csharp
 using Eraflo.UnityImportPackage.Timers;
 
+// One-liner delay (auto-disposes)
+TimerManager.Delay(2f, () => Debug.Log("2 seconds passed!"));
+
 // Countdown Timer - counts down to zero
 var countdown = new CountdownTimer(5f);
-countdown.OnTimerStart += () => Debug.Log("Timer started!");
 countdown.OnTimerStop += () => Debug.Log("Timer finished!");
 countdown.Start();
 
 // Stopwatch Timer - counts up from zero
 var stopwatch = new StopwatchTimer();
 stopwatch.Start();
-Debug.Log($"Elapsed: {stopwatch.ElapsedTime}");
+
+// Repeating Timer - fires every interval
+var repeater = new RepeatingTimer(1f, 5); // 5 times, every 1s
+repeater.OnTick += () => Debug.Log($"Tick {repeater.CurrentRepeat}");
+repeater.Start();
 
 // Frequency Timer - ticks N times per second
-var frequency = new FrequencyTimer(10);
-frequency.OnTick += () => Debug.Log("Tick!");
+var frequency = new FrequencyTimer(60);
+frequency.OnTick += () => ProcessGameLogic();
 frequency.Start();
 
 // Don't forget to dispose!
@@ -102,6 +114,45 @@ ticker.Start();
 Debug.Log(ticker.TickCount); // Total ticks since start
 ```
 
+### DelayTimer
+
+One-liner for delayed actions. Auto-disposes after completion.
+
+```csharp
+// Simple delay
+TimerManager.Delay(2f, () => Debug.Log("Done!"));
+
+// With unscaled time (works during pause)
+TimerManager.Delay(1f, ShowNotification, useUnscaledTime: true);
+
+// Keep reference to cancel
+var delay = TimerManager.Delay(5f, () => SpawnBoss());
+delay.Cancel(); // Cancels without invoking callback
+```
+
+### RepeatingTimer
+
+Fires an event at regular intervals, finite or infinite times.
+
+```csharp
+// Repeat 5 times, every 2 seconds
+var timer = new RepeatingTimer(2f, 5);
+timer.OnTick += () => Debug.Log($"Tick {timer.CurrentRepeat}/{timer.RepeatCount}");
+timer.OnComplete += () => Debug.Log("All repeats done!");
+timer.Start();
+
+// Infinite repeating (repeatCount = 0)
+var infinite = new RepeatingTimer(0.5f, 0);
+infinite.OnTick += SpawnEnemy;
+infinite.Start();
+
+// Properties
+Debug.Log(timer.Interval);        // 2.0
+Debug.Log(timer.CurrentRepeat);   // Current repeat (1-based)
+Debug.Log(timer.RemainingRepeats);// Repeats left
+Debug.Log(timer.IsInfinite);      // true if repeatCount = 0
+```
+
 ---
 
 ## API Reference
@@ -134,7 +185,8 @@ Debug.Log(ticker.TickCount); // Total ticks since start
 |-------|-------------|
 | `OnTimerStart` | Fired when `Start()` is called |
 | `OnTimerStop` | Fired when `Stop()` is called or timer finishes |
-| `OnTick` | *(FrequencyTimer only)* Fired at specified frequency |
+| `OnTick` | *(FrequencyTimer, RepeatingTimer)* Fired at interval |
+| `OnComplete` | *(RepeatingTimer)* Fired when all repeats complete |
 
 ---
 
