@@ -27,8 +27,28 @@
   },
   "samples": [
     {
+      "displayName": "EventBus Sample",
+      "description": "Demonstrates the EventBus pub/sub system",
+      "path": "Samples~/EventBusSample"
+    },
+    {
+      "displayName": "Timer Sample",
+      "description": "Demonstrates timers, delays, and callbacks",
+      "path": "Samples~/TimerSample"
+    },
+    {
+      "displayName": "Pooling Sample",
+      "description": "Demonstrates object pooling for GameObjects",
+      "path": "Samples~/PoolingSample"
+    },
+    {
+      "displayName": "Easing Sample",
+      "description": "Visual demonstration of easing functions",
+      "path": "Samples~/EasingSample"
+    },
+    {
       "displayName": "VR Example Sample",
-      "description": "A basic example demonstrating package usage",
+      "description": "A basic example demonstrating VR usage",
       "path": "Samples~/VRExampleSample"
     }
   ]

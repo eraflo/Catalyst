@@ -1,0 +1,16 @@
+{
+    "name": "Eraflo.UnityImportPackage.Samples.Pooling",
+    "rootNamespace": "Eraflo.UnityImportPackage.Samples.Pooling",
+    "references": [
+        "Eraflo.UnityImportPackage.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,16 @@
+{
+    "name": "Eraflo.UnityImportPackage.Samples.EventBus",
+    "rootNamespace": "Eraflo.UnityImportPackage.Samples.Events",
+    "references": [
+        "Eraflo.UnityImportPackage.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
