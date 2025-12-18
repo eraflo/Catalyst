@@ -21,7 +21,9 @@
   "type": "library",
   "dependencies": {
     "com.unity.nuget.newtonsoft-json": "3.2.1",
-    "com.unity.addressables": "1.21.19"
+    "com.unity.addressables": "1.21.19",
+    "com.unity.burst": "1.8.12",
+    "com.unity.collections": "2.2.1"
   },
   "samples": [
     {

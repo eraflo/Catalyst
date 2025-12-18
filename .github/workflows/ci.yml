@@ -133,19 +133,30 @@ jobs:
           name: Test Results
           path: TestResults
 
-  # Version bump and release on merge to main
+  # Version bump on push (any branch), release only on main
   version:
     name: Version Bump
     runs-on: ubuntu-latest
     needs: [validate, test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event_name == 'push'
     outputs:
       new_version: ${{ steps.bump.outputs.new_version }}
+      is_main: ${{ steps.check_branch.outputs.is_main }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT_TOKEN }}
+      
+      - name: Check branch
+        id: check_branch
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "is_main=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_main=false" >> $GITHUB_OUTPUT
+          fi
+          echo "Current branch: ${{ github.ref }}"
       
       - name: Get current version
         id: current
@@ -164,6 +175,8 @@ jobs:
             echo "type=major" >> $GITHUB_OUTPUT
           elif echo "$COMMITS" | grep -qi "^feat"; then
             echo "type=minor" >> $GITHUB_OUTPUT
+          elif echo "$COMMITS" | grep -qi "enhancement\|^fix\|^perf\|^refactor"; then
+            echo "type=patch" >> $GITHUB_OUTPUT
           else
             echo "type=patch" >> $GITHUB_OUTPUT
           fi
@@ -206,12 +219,15 @@ jobs:
           git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }}"
           git push
       
+      # Only create tags and releases on main branch
       - name: Create Release Tag
+        if: steps.check_branch.outputs.is_main == 'true'
         run: |
           git tag v${{ steps.bump.outputs.new_version }}
           git push origin v${{ steps.bump.outputs.new_version }}
       
       - name: Create GitHub Release
+        if: steps.check_branch.outputs.is_main == 'true'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.bump.outputs.new_version }}
@@ -219,3 +235,4 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

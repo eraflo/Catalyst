@@ -32,10 +32,28 @@ bool debugMode = settings.NetworkDebugMode;
 
 ## Settings
 
-| Setting | Type | Description |
-|---------|------|-------------|
-| **Enable Networking** | `bool` | Enables automatic instantiation of `NetworkEventManager` |
-| **Network Debug Mode** | `bool` | Displays network debug logs in the console |
+### Network Events
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| **Enable Networking** | `bool` | `false` | Auto-instantiate `NetworkEventManager` on startup |
+| **Network Debug Mode** | `bool` | `false` | Display network debug logs |
+
+### Timer System
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| **Thread Mode** | `enum` | `SingleThread` | `SingleThread` = faster, `ThreadSafe` = safe from any thread |
+| **Enable Timer Debug Logs** | `bool` | `false` | Display timer debug logs |
+
+### Timer Pool
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| **Enable Timer Pooling** | `bool` | `true` | Enable/disable object pooling |
+| **Default Capacity** | `int` | `10` | Initial pool size per timer type |
+| **Max Capacity** | `int` | `50` | Maximum pooled timers per type |
+| **Prewarm Count** | `int` | `0` | Timers to prewarm on startup |
 
 ---
 
