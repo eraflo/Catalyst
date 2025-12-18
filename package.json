@@ -1,33 +1,33 @@
 {
-    "name": "com.eraflo.unityimportpackage",
-    "version": "1.0.0",
-    "displayName": "Unity Import Package",
-    "description": "A Unity Package with basic scripts and editors",
-    "unity": "2022.3",
-    "unityRelease": "0f1",
-    "documentationUrl": "",
-    "changelogUrl": "",
-    "licensesUrl": "",
-    "keywords": [
-        "utilities",
-        "tools",
-        "editor"
-    ],
-    "author": {
-        "name": "Eraflo",
-        "email": "",
-        "url": ""
-    },
-    "type": "library",
-    "dependencies": {
-        "com.unity.nuget.newtonsoft-json": "3.2.1",
-        "com.unity.addressables": "1.21.19"
-    },
-    "samples": [
-        {
-            "displayName": "VR Example Sample",
-            "description": "A basic example demonstrating package usage",
-            "path": "Samples~/VRExampleSample"
-        }
-    ]
+  "name": "com.eraflo.unityimportpackage",
+  "version": "1.0.1",
+  "displayName": "Unity Import Package",
+  "description": "A Unity Package with basic scripts and editors",
+  "unity": "2022.3",
+  "unityRelease": "0f1",
+  "documentationUrl": "",
+  "changelogUrl": "",
+  "licensesUrl": "",
+  "keywords": [
+    "utilities",
+    "tools",
+    "editor"
+  ],
+  "author": {
+    "name": "Eraflo",
+    "email": "",
+    "url": ""
+  },
+  "type": "library",
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
+    "com.unity.addressables": "1.21.19"
+  },
+  "samples": [
+    {
+      "displayName": "VR Example Sample",
+      "description": "A basic example demonstrating package usage",
+      "path": "Samples~/VRExampleSample"
+    }
+  ]
 }
