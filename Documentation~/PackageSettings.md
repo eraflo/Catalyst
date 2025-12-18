@@ -43,6 +43,7 @@ bool debugMode = settings.NetworkDebugMode;
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
+| **Thread Mode** | `enum` | `SingleThread` | `SingleThread` = faster, `ThreadSafe` = safe from any thread |
 | **Enable Timer Debug Logs** | `bool` | `false` | Display timer debug logs |
 
 ### Timer Pool

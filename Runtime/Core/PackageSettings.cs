@@ -1,3 +1,4 @@
+using Eraflo.UnityImportPackage.Timers;
 using UnityEngine;
 
 namespace Eraflo.UnityImportPackage
@@ -19,6 +20,9 @@ namespace Eraflo.UnityImportPackage
         [SerializeField] private bool _networkDebugMode = false;
 
         [Header("Timer System")]
+        [Tooltip("Thread mode for timer operations. SingleThread = faster, ThreadSafe = safe from any thread.")]
+        [SerializeField] private TimerThreadMode _timerThreadMode = TimerThreadMode.SingleThread;
+
         [Tooltip("If enabled, log debug messages for timer events.")]
         [SerializeField] private bool _enableTimerDebugLogs = false;
 
@@ -65,6 +69,11 @@ namespace Eraflo.UnityImportPackage
         /// Whether to log debug messages for network events.
         /// </summary>
         public bool NetworkDebugMode => _networkDebugMode;
+
+        /// <summary>
+        /// Thread mode for timer operations.
+        /// </summary>
+        public TimerThreadMode TimerThreadMode => _timerThreadMode;
 
         /// <summary>
         /// Whether to log debug messages for timer events.

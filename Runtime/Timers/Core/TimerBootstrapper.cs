@@ -63,12 +63,20 @@ namespace Eraflo.UnityImportPackage.Timers
             {
                 var settings = PackageSettings.Instance;
                 
+                // Set thread mode from settings
+                TimerManager.ThreadMode = settings.TimerThreadMode;
+                
                 TimerPool.DefaultCapacity = settings.TimerPoolDefaultCapacity;
                 TimerPool.MaxCapacity = settings.TimerPoolMaxCapacity;
 
                 if (settings.EnableTimerPooling && settings.TimerPoolPrewarmCount > 0)
                 {
                     PrewarmAllTimerTypes(settings.TimerPoolPrewarmCount, settings.EnableTimerDebugLogs);
+                }
+
+                if (settings.EnableTimerDebugLogs)
+                {
+                    Debug.Log($"[TimerBootstrapper] Initialized with ThreadMode={settings.TimerThreadMode}");
                 }
             }
             catch (Exception e)

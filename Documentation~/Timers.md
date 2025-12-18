@@ -17,6 +17,7 @@ A high-performance, extensible timer system that integrates directly into Unity'
 - [API Reference](#api-reference)
 - [Timer Pooling](#timer-pooling)
 - [Timer Chaining](#timer-chaining)
+- [Timer Groups](#timer-groups)
 - [Thread Safety](#thread-safety)
 - [Network Synchronization](#network-synchronization)
 - [Advanced Usage](#advanced-usage)
@@ -324,6 +325,52 @@ chain.Pause();
 chain.Resume();
 chain.Stop();
 chain.Dispose();
+```
+
+---
+
+## Timer Groups
+
+Group multiple timers for collective control.
+
+### Basic Usage
+
+```csharp
+// Create a group and add timers
+var group = new TimerGroup("Enemies");
+group.Add(timer1).Add(timer2).Add(timer3);
+
+// Control all timers at once
+group.PauseAll();
+group.ResumeAll();
+group.StopAll();
+group.ResetAll();
+group.SetTimeScale(0.5f);
+```
+
+### Named Groups with Registry
+
+```csharp
+// Get or create by name (global registry)
+var uiGroup = TimerGroups.GetOrCreate("UI");
+uiGroup.Add(fadeTimer, animTimer);
+
+// Control groups by name from anywhere
+TimerGroups.Pause("UI");
+TimerGroups.Resume("UI");
+TimerGroups.Stop("Enemies");
+
+// Pause/Resume ALL groups
+TimerGroups.PauseAll();
+TimerGroups.ResumeAll();
+```
+
+### Cleanup
+
+```csharp
+group.Clear();              // Remove all timers from group
+group.Dispose();            // Dispose group only
+group.Dispose(true);        // Dispose group AND all timers in it
 ```
 
 ---
