@@ -18,6 +18,10 @@ namespace Eraflo.UnityImportPackage
         [Tooltip("If enabled, log debug messages for network events.")]
         [SerializeField] private bool _networkDebugMode = false;
 
+        [Header("Timer System")]
+        [Tooltip("If enabled, log debug messages for timer events.")]
+        [SerializeField] private bool _enableTimerDebugLogs = false;
+
         /// <summary>
         /// Gets the singleton instance of the package settings.
         /// </summary>
@@ -48,6 +52,11 @@ namespace Eraflo.UnityImportPackage
         /// Whether to log debug messages for network events.
         /// </summary>
         public bool NetworkDebugMode => _networkDebugMode;
+
+        /// <summary>
+        /// Whether to log debug messages for timer events.
+        /// </summary>
+        public bool EnableTimerDebugLogs => _enableTimerDebugLogs;
 
         /// <summary>
         /// Reloads the settings from Resources.
