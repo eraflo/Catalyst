@@ -178,6 +178,7 @@ Debug.Log(timer.IsInfinite);      // true if repeatCount = 0
 | `IsFinished` | `bool` | Whether the timer has completed |
 | `Progress` | `float` | 0.0 to 1.0 progress ratio |
 | `UseUnscaledTime` | `bool` | Use real-time (ignores `Time.timeScale`) |
+| `TimeScale` | `float` | Individual speed multiplier (default: 1.0) |
 
 ### Events
 

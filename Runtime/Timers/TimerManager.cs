@@ -265,6 +265,7 @@ namespace Eraflo.UnityImportPackage.Timers
                 if (timer.IsRunning)
                 {
                     float deltaTime = timer.UseUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
+                    deltaTime *= timer.TimeScale;
                     timer.Tick(deltaTime);
                     
                     if (timer.IsFinished)
@@ -335,6 +336,7 @@ namespace Eraflo.UnityImportPackage.Timers
                 if (timer.IsRunning)
                 {
                     float deltaTime = timer.UseUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
+                    deltaTime *= timer.TimeScale;
                     timer.Tick(deltaTime);
                     
                     if (timer.IsFinished)

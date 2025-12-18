@@ -35,6 +35,13 @@ namespace Eraflo.UnityImportPackage.Timers
         public bool UseUnscaledTime { get; set; }
         
         /// <summary>
+        /// Individual time scale multiplier for this timer.
+        /// Default is 1.0. Values > 1 speed up, values < 1 slow down.
+        /// Set to 0 to pause, negative values reverse the timer.
+        /// </summary>
+        public float TimeScale { get; set; } = 1f;
+        
+        /// <summary>
         /// Progress of the timer from 0 to 1 (based on initial time).
         /// </summary>
         public float Progress => initialTime > 0 ? Mathf.Clamp01(CurrentTime / initialTime) : 0f;
