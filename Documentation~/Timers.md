@@ -32,10 +32,22 @@ A high-performance, extensible timer system that integrates directly into Unity'
 | **Self-Managing** | Timers auto-register/unregister with the TimerManager |
 | **Multiple Timer Types** | Countdown, Stopwatch, Frequency, Delay, Repeating |
 | **One-Liner Delays** | `TimerManager.Delay(2f, action)` helper |
+| **Timer Pooling** | `TimerPool.Get<T>()` with reflection support |
+| **Timer Chaining** | Sequential execution with `TimerChain` |
 | **Scaled/Unscaled Time** | Support for `Time.deltaTime` and `Time.unscaledDeltaTime` |
-| **Event-Based** | Subscribe to `OnTimerStart`, `OnTimerStop`, `OnTick` |
+| **Individual TimeScale** | Per-timer speed multiplier |
 | **Thread-Safe Mode** | Optional concurrent access from any thread |
-| **Network Sync** | NetworkedTimer variants for multiplayer with lag compensation |
+| **Network Sync** | NetworkedTimer variants for multiplayer |
+
+### Folder Structure
+
+```
+Runtime/Timers/
+├── Core/       Timer, TimerManager, TimerBootstrapper, TimerPool
+├── Types/      CountdownTimer, StopwatchTimer, FrequencyTimer, RepeatingTimer, DelayTimer
+├── Chaining/   TimerChain, ChainSteps (IChainStep implementations)
+└── Network/    NetworkedTimer
+```
 
 ---
 
