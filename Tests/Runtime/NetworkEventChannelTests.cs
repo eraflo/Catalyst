@@ -1,16 +1,34 @@
 using NUnit.Framework;
 using Eraflo.UnityImportPackage.Events;
+using Eraflo.UnityImportPackage.Networking;
+using Eraflo.UnityImportPackage.Networking.Backends;
 using UnityEngine;
 
 namespace Eraflo.UnityImportPackage.Tests
 {
     public class NetworkEventChannelTests
     {
+        [SetUp]
+        public void SetUp()
+        {
+            NetworkManager.Reset();
+            var mock = new MockNetworkBackend(isServer: true, isClient: true, isConnected: true);
+            mock.EnableLoopback = true;
+            NetworkManager.SetBackend(mock);
+            NetworkManager.Handlers.Register(new EventNetworkHandler());
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            NetworkManager.Reset();
+        }
+
         [Test]
-        public void NetworkEventChannel_DefaultModeIsLocalOnly()
+        public void NetworkEventChannel_EnableNetwork_DefaultsFalse()
         {
             var channel = ScriptableObject.CreateInstance<NetworkEventChannel>();
-            Assert.AreEqual(NetworkEventMode.LocalOnly, channel.NetworkMode);
+            Assert.IsFalse(channel.EnableNetwork);
             Object.DestroyImmediate(channel);
         }
 
@@ -28,19 +46,6 @@ namespace Eraflo.UnityImportPackage.Tests
         }
 
         [Test]
-        public void NetworkIntEventChannel_RaiseLocal_PassesValue()
-        {
-            var channel = ScriptableObject.CreateInstance<NetworkIntEventChannel>();
-            int received = 0;
-
-            channel.Subscribe((v) => received = v);
-            channel.RaiseLocal(42);
-
-            Assert.AreEqual(42, received);
-            Object.DestroyImmediate(channel);
-        }
-
-        [Test]
         public void NetworkEventChannel_ChannelId_DefaultsToName()
         {
             var channel = ScriptableObject.CreateInstance<NetworkEventChannel>();
@@ -51,17 +56,31 @@ namespace Eraflo.UnityImportPackage.Tests
         }
 
         [Test]
-        public void NetworkEventChannel_FallsBackToLocal_WhenNoHandler()
+        public void NetworkEventChannel_FallsBackToLocal_WhenNoNetwork()
         {
-            // Ensure no handler is registered
-            NetworkEventManager.UnregisterHandler();
+            // Clear backend to simulate no network
+            NetworkManager.ClearBackend();
 
             var channel = ScriptableObject.CreateInstance<NetworkEventChannel>();
-            channel.NetworkMode = NetworkEventMode.Broadcast;
+            channel.EnableNetwork = true;
             bool called = false;
 
             channel.Subscribe(() => called = true);
-            channel.Raise(); // Should fallback to local since no network
+            channel.Raise(); // Should fallback to local
+
+            Assert.IsTrue(called);
+            Object.DestroyImmediate(channel);
+        }
+
+        [Test]
+        public void NetworkEventChannel_Raise_WithTarget()
+        {
+            var channel = ScriptableObject.CreateInstance<NetworkEventChannel>();
+            channel.EnableNetwork = true;
+            bool called = false;
+
+            channel.Subscribe(() => called = true);
+            channel.Raise(NetworkTarget.All);
 
             Assert.IsTrue(called);
             Object.DestroyImmediate(channel);
