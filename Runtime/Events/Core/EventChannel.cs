@@ -14,6 +14,9 @@ namespace Eraflo.UnityImportPackage.Events
         [SerializeField, TextArea]
         private string _description = "";
 
+        protected virtual void OnEnable() { }
+        protected virtual void OnDisable() { }
+
         /// <summary>
         /// Raises this event, notifying all subscribers.
         /// </summary>
@@ -58,6 +61,9 @@ namespace Eraflo.UnityImportPackage.Events
 
         [SerializeField, Tooltip("Debug value for testing in editor.")]
         protected T _debugValue;
+
+        protected virtual void OnEnable() { }
+        protected virtual void OnDisable() { }
 
         /// <summary>
         /// Raises this event with the specified value, notifying all subscribers.

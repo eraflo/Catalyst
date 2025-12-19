@@ -1,98 +1,157 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
-using Eraflo.UnityImportPackage.Timers;
+using Eraflo.UnityImportPackage.Networking;
 
 namespace Eraflo.UnityImportPackage.Editor
 {
     /// <summary>
-    /// Custom inspector for PackageSettings with organized sections.
+    /// Custom inspector for PackageSettings.
     /// </summary>
     [CustomEditor(typeof(PackageSettings))]
     public class PackageSettingsInspector : UnityEditor.Editor
     {
-        private SerializedProperty _enableNetworking;
-        private SerializedProperty _networkDebugMode;
+        private List<Type> _availableHandlers;
+        private bool _handlersFoldout = true;
+
         private SerializedProperty _threadMode;
+        private SerializedProperty _networkBackendId;
+        private SerializedProperty _networkDebugMode;
+        private SerializedProperty _handlerMode;
+        private SerializedProperty _enabledHandlers;
+        private SerializedProperty _useBurstTimers;
         private SerializedProperty _enableTimerDebugLogs;
         private SerializedProperty _enableDebugOverlay;
-        private SerializedProperty _useBurstTimers;
-
-        private bool _showNetworkSettings = true;
-        private bool _showTimerSettings = true;
 
         private void OnEnable()
         {
-            _enableNetworking = serializedObject.FindProperty("_enableNetworking");
-            _networkDebugMode = serializedObject.FindProperty("_networkDebugMode");
             _threadMode = serializedObject.FindProperty("_threadMode");
+            _networkBackendId = serializedObject.FindProperty("_networkBackendId");
+            _networkDebugMode = serializedObject.FindProperty("_networkDebugMode");
+            _handlerMode = serializedObject.FindProperty("_handlerMode");
+            _enabledHandlers = serializedObject.FindProperty("_enabledHandlers");
+            _useBurstTimers = serializedObject.FindProperty("_useBurstTimers");
             _enableTimerDebugLogs = serializedObject.FindProperty("_enableTimerDebugLogs");
             _enableDebugOverlay = serializedObject.FindProperty("_enableDebugOverlay");
-            _useBurstTimers = serializedObject.FindProperty("_useBurstTimers");
+            
+            RefreshHandlerList();
+        }
+
+        private void RefreshHandlerList()
+        {
+            _availableHandlers = NetworkBootstrapper.FindAllHandlerTypes();
         }
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
 
-            EditorGUILayout.Space(5);
-            EditorGUILayout.LabelField("Unity Import Package Settings", EditorStyles.boldLabel);
+            DrawHeader("⚙ Global Settings");
+            EditorGUILayout.PropertyField(_threadMode, new GUIContent("Thread Mode"));
+            
             EditorGUILayout.Space(10);
 
-            // Network Settings
-            _showNetworkSettings = EditorGUILayout.BeginFoldoutHeaderGroup(_showNetworkSettings, "Network Events");
-            if (_showNetworkSettings)
+            DrawHeader("🌐 Networking");
+            EditorGUILayout.PropertyField(_networkBackendId, new GUIContent("Backend ID", "mock, netcode, or custom"));
+            EditorGUILayout.PropertyField(_networkDebugMode, new GUIContent("Debug Mode"));
+            EditorGUILayout.PropertyField(_handlerMode, new GUIContent("Handler Mode"));
+
+            if ((NetworkHandlerMode)_handlerMode.enumValueIndex == NetworkHandlerMode.Manual)
             {
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(_enableNetworking, new GUIContent("Enable Networking"));
-                
-                using (new EditorGUI.DisabledScope(!_enableNetworking.boolValue))
-                {
-                    EditorGUILayout.PropertyField(_networkDebugMode, new GUIContent("Debug Mode"));
-                }
-                EditorGUI.indentLevel--;
+                DrawHandlerList();
             }
-            EditorGUILayout.EndFoldoutHeaderGroup();
-
-            EditorGUILayout.Space(5);
-
-            // Global Settings
-            EditorGUILayout.LabelField("Global Settings", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(_threadMode, new GUIContent("Thread Mode", 
-                "SingleThread = faster, ThreadSafe = safe from any thread"));
-            EditorGUILayout.Space(5);
-
-            // Timer Settings
-            _showTimerSettings = EditorGUILayout.BeginFoldoutHeaderGroup(_showTimerSettings, "Timer System");
-            if (_showTimerSettings)
+            else
             {
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(_useBurstTimers, new GUIContent("Use Optimized Backend", 
-                    "Uses array-based backend for better performance"));
-                EditorGUILayout.PropertyField(_enableTimerDebugLogs, new GUIContent("Debug Logs"));
-                EditorGUILayout.PropertyField(_enableDebugOverlay, new GUIContent("Debug Overlay", 
-                    "Show runtime overlay with active timers"));
+                EditorGUILayout.HelpBox("All INetworkMessageHandler implementations will be auto-registered.", MessageType.Info);
+            }
+            
+            EditorGUILayout.Space(10);
 
-                // Timer stats in play mode
-                if (Application.isPlaying)
+            DrawHeader("⏱ Timers");
+            EditorGUILayout.PropertyField(_useBurstTimers, new GUIContent("Use Burst"));
+            EditorGUILayout.PropertyField(_enableTimerDebugLogs, new GUIContent("Debug Logs"));
+            EditorGUILayout.PropertyField(_enableDebugOverlay, new GUIContent("Debug Overlay"));
+
+            serializedObject.ApplyModifiedProperties();
+        }
+
+        private void DrawHeader(string title)
+        {
+            EditorGUILayout.Space(5);
+            var style = new GUIStyle(EditorStyles.boldLabel) { fontSize = 13 };
+            EditorGUILayout.LabelField(title, style);
+            var rect = GUILayoutUtility.GetRect(1, 1);
+            EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.3f));
+            EditorGUILayout.Space(3);
+        }
+
+        private void DrawHandlerList()
+        {
+            EditorGUILayout.Space(5);
+            _handlersFoldout = EditorGUILayout.Foldout(_handlersFoldout, "Enabled Handlers", true);
+            
+            if (!_handlersFoldout) return;
+
+            EditorGUI.indentLevel++;
+
+            if (_availableHandlers == null || _availableHandlers.Count == 0)
+            {
+                EditorGUILayout.HelpBox("No handlers found.", MessageType.Warning);
+                if (GUILayout.Button("Refresh")) RefreshHandlerList();
+            }
+            else
+            {
+                var enabledSet = new HashSet<string>();
+                for (int i = 0; i < _enabledHandlers.arraySize; i++)
+                    enabledSet.Add(_enabledHandlers.GetArrayElementAtIndex(i).stringValue);
+
+                foreach (var type in _availableHandlers)
                 {
-                    EditorGUILayout.Space(5);
-                    EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                    EditorGUILayout.LabelField("Timer Status", EditorStyles.boldLabel);
-                    EditorGUILayout.LabelField($"Active Timers: {Timer.Count}");
-                    EditorGUILayout.LabelField($"Backend: {(Timer.IsBurstMode ? "Optimized" : "Standard")}");
-                    EditorGUILayout.EndVertical();
-
-                    if (GUILayout.Button("Clear All Timers"))
+                    var typeName = type.FullName;
+                    var isEnabled = enabledSet.Contains(typeName);
+                    var newEnabled = EditorGUILayout.ToggleLeft(type.Name, isEnabled);
+                    
+                    if (newEnabled != isEnabled)
                     {
-                        Timer.Clear();
+                        if (newEnabled)
+                        {
+                            _enabledHandlers.arraySize++;
+                            _enabledHandlers.GetArrayElementAtIndex(_enabledHandlers.arraySize - 1).stringValue = typeName;
+                        }
+                        else
+                        {
+                            for (int i = 0; i < _enabledHandlers.arraySize; i++)
+                            {
+                                if (_enabledHandlers.GetArrayElementAtIndex(i).stringValue == typeName)
+                                {
+                                    _enabledHandlers.DeleteArrayElementAtIndex(i);
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
 
-                EditorGUI.indentLevel--;
+                EditorGUILayout.Space(3);
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("All", GUILayout.Width(50)))
+                {
+                    _enabledHandlers.ClearArray();
+                    foreach (var t in _availableHandlers)
+                    {
+                        _enabledHandlers.arraySize++;
+                        _enabledHandlers.GetArrayElementAtIndex(_enabledHandlers.arraySize - 1).stringValue = t.FullName;
+                    }
+                }
+                if (GUILayout.Button("None", GUILayout.Width(50))) _enabledHandlers.ClearArray();
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("↻", GUILayout.Width(25))) RefreshHandlerList();
+                EditorGUILayout.EndHorizontal();
             }
-            EditorGUILayout.EndFoldoutHeaderGroup();
 
-            serializedObject.ApplyModifiedProperties();
+            EditorGUI.indentLevel--;
         }
     }
 }

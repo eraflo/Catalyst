@@ -364,7 +364,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 300000}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0c2b41da0a63b6c4a957cbbf34b84dfe, type: 3}
+  m_Script: {fileID: 11500000, guid: f4684ffa67585eb4b94c6a6646578a29, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Eraflo.UnityImportPackage.Samples.Timers.TimerSample
   prefab: {fileID: 1322091987}

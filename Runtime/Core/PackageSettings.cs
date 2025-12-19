@@ -1,40 +1,41 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Eraflo.UnityImportPackage
 {
     /// <summary>
-    /// Global settings for the UnityImportPackage.
-    /// Located in Assets/Resources/UnityImportPackageSettings.
+    /// Handler registration mode.
+    /// </summary>
+    public enum NetworkHandlerMode
+    {
+        /// <summary>Auto-register all handlers found via reflection.</summary>
+        Auto,
+        /// <summary>Only register handlers selected in the list.</summary>
+        Manual
+    }
+
+    /// <summary>
+    /// Global settings for the package.
     /// </summary>
     public class PackageSettings : ScriptableObject
     {
         private const string ResourcePath = "UnityImportPackageSettings";
         private static PackageSettings _instance;
 
-        [Header("Global Settings")]
-        [Tooltip("Thread mode for all package systems. SingleThread = faster, ThreadSafe = safe from any thread.")]
+        // Global
         [SerializeField] private PackageThreadMode _threadMode = PackageThreadMode.SingleThread;
 
-        [Header("Network Events")]
-        [Tooltip("If enabled, the NetworkEventManager singleton will be automatically instantiated on game start.")]
-        [SerializeField] private bool _enableNetworking = false;
-
-        [Tooltip("If enabled, log debug messages for network events.")]
+        // Networking
+        [SerializeField] private string _networkBackendId = "";
         [SerializeField] private bool _networkDebugMode = false;
+        [SerializeField] private NetworkHandlerMode _handlerMode = NetworkHandlerMode.Auto;
+        [SerializeField] private List<string> _enabledHandlers = new List<string>();
 
-        [Header("Timer System")]
-        [Tooltip("Use optimized array-based backend for better performance with many timers.")]
+        // Timers
         [SerializeField] private bool _useBurstTimers = false;
-
-        [Tooltip("If enabled, log debug messages for timer events.")]
         [SerializeField] private bool _enableTimerDebugLogs = false;
-
-        [Tooltip("Show runtime debug overlay with active timers.")]
         [SerializeField] private bool _enableDebugOverlay = false;
 
-        /// <summary>
-        /// Gets the singleton instance of the package settings.
-        /// </summary>
         public static PackageSettings Instance
         {
             get
@@ -42,10 +43,9 @@ namespace Eraflo.UnityImportPackage
                 if (_instance == null)
                 {
                     _instance = Resources.Load<PackageSettings>(ResourcePath);
-                    
                     if (_instance == null)
                     {
-                        Debug.LogWarning($"[PackageSettings] No settings found at Resources/{ResourcePath}. Using defaults.");
+                        Debug.LogWarning($"[PackageSettings] Not found at Resources/{ResourcePath}");
                         _instance = CreateInstance<PackageSettings>();
                     }
                 }
@@ -53,43 +53,16 @@ namespace Eraflo.UnityImportPackage
             }
         }
 
-        /// <summary>
-        /// Whether networking features are enabled.
-        /// </summary>
-        public bool EnableNetworking => _enableNetworking;
-
-        /// <summary>
-        /// Whether to log debug messages for network events.
-        /// </summary>
+        public string NetworkBackendId => _networkBackendId;
+        public bool EnableNetworking => !string.IsNullOrEmpty(_networkBackendId);
         public bool NetworkDebugMode => _networkDebugMode;
-
-        /// <summary>
-        /// Global thread mode for all package systems.
-        /// </summary>
+        public NetworkHandlerMode HandlerMode => _handlerMode;
+        public IReadOnlyList<string> EnabledHandlers => _enabledHandlers;
         public PackageThreadMode ThreadMode => _threadMode;
-
-        /// <summary>
-        /// Whether to use optimized backend for timer updates.
-        /// </summary>
         public bool UseBurstTimers => _useBurstTimers;
-
-        /// <summary>
-        /// Whether to log debug messages for timer events.
-        /// </summary>
         public bool EnableTimerDebugLogs => _enableTimerDebugLogs;
-
-        /// <summary>
-        /// Whether to show the runtime debug overlay for timers.
-        /// </summary>
         public bool EnableDebugOverlay => _enableDebugOverlay;
 
-        /// <summary>
-        /// Reloads the settings from Resources.
-        /// </summary>
-        public static void Reload()
-        {
-            _instance = null;
-            _ = Instance;
-        }
+        public static void Reload() { _instance = null; _ = Instance; }
     }
 }

@@ -45,6 +45,11 @@ namespace Eraflo.UnityImportPackage.Timers
         void Resume(TimerHandle handle);
 
         /// <summary>
+        /// Starts a timer that was created but not yet started.
+        /// </summary>
+        void Start(TimerHandle handle);
+
+        /// <summary>
         /// Cancels and removes a timer.
         /// </summary>
         void Cancel(TimerHandle handle);

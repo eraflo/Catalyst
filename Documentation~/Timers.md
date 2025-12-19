@@ -284,16 +284,39 @@ Enable: **PackageSettings** → **Use Burst Timers**
 
 ## Multiplayer Support
 
+Handlers are auto-registered via `PackageSettings`.
+
+### Creating Networked Timers (Server)
+
 ```csharp
-var (handle, netId) = Timer.CreateNetworked<CountdownTimer>(10f);
-
-// Server
-NetworkTimerSync.OnSendSyncData = (data) => MyNetwork.Send(data);
-NetworkTimerSync.BroadcastAllSyncData();
-
-// Client
-void OnReceive(NetworkTimerSyncData data) => NetworkTimerSync.ApplySyncData(data);
+// SERVER: Create and register a networked timer
+var handle = Timer.Create<CountdownTimer>(10f);
+handle.MakeNetworked();  // Extension method
+Timer.Start(handle);
 ```
+
+### Syncing State (Server → Clients)
+
+```csharp
+// SERVER: Periodically sync all networked timers to clients
+void Update()
+{
+    if (NetworkManager.IsServer && Time.time > _nextSync)
+    {
+        TimerNetworkExtensions.BroadcastTimerSync();
+        _nextSync = Time.time + 1f;
+    }
+}
+```
+
+### Cleanup
+
+```csharp
+// SERVER or CLIENT: Remove networking from a timer
+handle.RemoveNetworking();  // Extension method
+```
+
+See [Networking.md](Networking.md) for details.
 
 ---
 

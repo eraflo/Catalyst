@@ -159,6 +159,8 @@ namespace Eraflo.UnityImportPackage.Timers.Backends
             }
         }
 
+        public void Start(TimerHandle handle) => Resume(handle);
+
         public void Cancel(TimerHandle handle)
         {
             if (IsMainThread)

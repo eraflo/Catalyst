@@ -23,7 +23,9 @@
     "com.unity.nuget.newtonsoft-json": "3.2.1",
     "com.unity.addressables": "1.21.19",
     "com.unity.burst": "1.8.12",
-    "com.unity.collections": "2.2.1"
+    "com.unity.collections": "2.4.0",
+    "com.unity.netcode.gameobjects": "1.8.1",
+    "com.unity.transport": "2.6.0"
   },
   "samples": [
     {
@@ -45,6 +47,11 @@
       "displayName": "Easing Sample",
       "description": "Visual demonstration of easing functions",
       "path": "Samples~/EasingSample"
+    },
+    {
+      "displayName": "Networking Sample",
+      "description": "Demonstrates the Networking system",
+      "path": "Samples~/NetworkingSample"
     },
     {
       "displayName": "VR Example Sample",

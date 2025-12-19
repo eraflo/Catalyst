@@ -30,8 +30,6 @@ The version is automatically updated on merge to `main` following **Conventional
 
 | Commit Type | Bump | Example |
 |-------------|------|---------|
-| `fix:`, `perf:`, `refactor:`, `enhancement:` | **Patch** (1.0.0 → 1.0.1) | `fix: fixed EventBus bug` |
-| `feat:` | **Minor** (1.0.0 → 1.1.0) | `feat: added NetworkEventChannel` |
 | `feat!:` or `BREAKING CHANGE` | **Major** (1.0.0 → 2.0.0) | `feat!: new API` |
 | `feat:` | **Minor** (1.0.0 → 1.1.0) | `feat: added NetworkEventChannel` |
 | `fix:` | **Patch** (1.0.0 → 1.0.1) | `fix: fixed EventBus bug` |

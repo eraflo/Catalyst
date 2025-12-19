@@ -139,6 +139,9 @@ namespace Eraflo.UnityImportPackage.Timers
         /// <summary>Resumes a paused timer.</summary>
         public static void Resume(TimerHandle handle) => _backend?.Resume(handle);
 
+        /// <summary>Starts a timer that was created but not yet running.</summary>
+        public static void Start(TimerHandle handle) => _backend?.Start(handle);
+
         /// <summary>Cancels and removes a timer.</summary>
         public static void Cancel(TimerHandle handle)
         {

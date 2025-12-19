@@ -1,0 +1,17 @@
+{
+    "name": "Eraflo.UnityImportPackage.Samples.Networking",
+    "rootNamespace": "Eraflo.UnityImportPackage.Samples.Networking",
+    "references": [
+        "Eraflo.UnityImportPackage.Runtime",
+        "Eraflo.UnityImportPackage.Networking"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -364,12 +364,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 300000}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d6567f1dff03c864988cbb8e1bae4539, type: 3}
+  m_Script: {fileID: 11500000, guid: 71138863ff9779e40bd8b3f772950967, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Eraflo.UnityImportPackage.Samples.Events.EventBusSample
-  onDamageChannel: {fileID: 11400000, guid: ca7839c9d9e45864eba8d46f8ee96803, type: 2}
-  onHealChannel: {fileID: 11400000, guid: da952b607ab082f47b050d8948d52d8f, type: 2}
-  onScoreChannel: {fileID: 11400000, guid: 227466439d56ecc4a9757321077376e8, type: 2}
+  onDamageChannel: {fileID: 11400000, guid: 8fd199897dc64b647a2328fc194de7b9, type: 2}
+  onHealChannel: {fileID: 11400000, guid: 0f62669bb9a58a64ca32536b30edde76, type: 2}
+  onScoreChannel: {fileID: 11400000, guid: 07836fbf1da4c804b814abd0458e22f4, type: 2}
   publishDamageKey: 100
   publishHealKey: 104
   publishScoreKey: 115

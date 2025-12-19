@@ -31,12 +31,12 @@ A configuration ScriptableObject is **automatically created** when you import th
 
 | Setting | Description |
 |---------|-------------|
-| **Enable Networking** | Auto-instantiate `NetworkEventManager` singleton on game start |
+| **Network Backend** | Backend to use: None, Mock, Netcode, or Custom |
 | **Debug Mode** | Log network event messages to console |
 
-When **Enable Networking** is checked:
-- A `NetworkEventManager` singleton is created automatically at runtime
-- It persists across scenes with `DontDestroyOnLoad`
+When **Network Backend** is not `None`:
+- The backend is automatically initialized by `NetworkBootstrapper`
+- Network event channels will sync across the network
 - No manual setup required!
 
 ---
@@ -249,134 +249,40 @@ public class PlayerDataChannelListener : EventChannelListener<PlayerDataChannel,
 
 ## Network Events
 
-### Network Modes
+Handlers are auto-registered via `PackageSettings`.
 
-| Mode | Behavior |
-|------|----------|
-| `LocalOnly` | No network sync (default) |
-| `Broadcast` | Send to all clients (including self) |
-| `BroadcastOthers` | Send to all except self |
-| `ServerOnly` | Client → Server only |
-| `LocalAndBroadcast` | Raise locally + send to others |
+### Settings
 
-### Setup
+| Setting | Description |
+|---------|-------------|
+| `EnableNetwork` | Send over network |
+| `NetworkTarget` | `All`, `Others`, `Server`, `Clients` |
+| `RaiseLocally` | Also trigger locally |
 
-1. Create a network channel: **Create > Events > Network > [Type] Channel**
-2. Set the **Network Mode** in the inspector
-3. Implement `INetworkEventHandler` for your networking solution
-4. Register the handler on network start
-
-### Receiving Network Events
+### Usage
 
 ```csharp
-// When receiving an event from the network, use RaiseLocal
-// to avoid re-sending it over the network
-networkChannel.RaiseLocal(receivedValue);
+// Use default target from inspector settings
+myNetworkChannel.Raise();
+
+// Override target at runtime
+myNetworkChannel.Raise(NetworkTarget.Server);   // Send to server only
+myNetworkChannel.Raise(NetworkTarget.Others);   // Send to others
+myNetworkChannel.Raise(NetworkTarget.Clients);  // Send to all clients
+
+// Local only (no network)
+myNetworkChannel.RaiseLocal();
 ```
 
----
-
-## Netcode for GameObjects Integration
-
-### Step 1: Create the Handler
+### Receiving Events (Client/Server)
 
 ```csharp
-using Unity.Netcode;
-using Eraflo.UnityImportPackage.Events;
-
-public class NetcodeEventHandler : NetworkBehaviour, INetworkEventHandler
-{
-    public static NetcodeEventHandler Instance { get; private set; }
-
-    public bool IsServer => NetworkManager.Singleton?.IsServer ?? false;
-    public bool IsConnected => NetworkManager.Singleton?.IsConnectedClient ?? false;
-
-    public override void OnNetworkSpawn()
-    {
-        Instance = this;
-        NetworkEventManager.RegisterHandler(this);
-    }
-
-    public override void OnNetworkDespawn()
-    {
-        NetworkEventManager.UnregisterHandler();
-        Instance = null;
-    }
-
-    public void SendEvent(string channelId, byte[] data, NetworkEventTarget target)
-    {
-        switch (target)
-        {
-            case NetworkEventTarget.All:
-                BroadcastEventClientRpc(channelId, data);
-                break;
-            case NetworkEventTarget.Others:
-                BroadcastToOthersClientRpc(channelId, data);
-                break;
-            case NetworkEventTarget.Server:
-                SendToServerServerRpc(channelId, data);
-                break;
-        }
-    }
-
-    [ClientRpc]
-    private void BroadcastEventClientRpc(string channelId, byte[] data)
-    {
-        HandleReceivedEvent(channelId, data);
-    }
-
-    [ClientRpc]
-    private void BroadcastToOthersClientRpc(string channelId, byte[] data)
-    {
-        // Server already raised locally, skip
-        if (!IsServer)
-        {
-            HandleReceivedEvent(channelId, data);
-        }
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void SendToServerServerRpc(string channelId, byte[] data)
-    {
-        HandleReceivedEvent(channelId, data);
-    }
-
-    private void HandleReceivedEvent(string channelId, byte[] data)
-    {
-        // Find the channel by ID and raise locally
-        // You can use a registry or Resources.FindObjectsOfTypeAll
-        var channels = Resources.FindObjectsOfTypeAll<NetworkEventChannel>();
-        foreach (var channel in channels)
-        {
-            if (channel.ChannelId == channelId)
-            {
-                channel.RaiseLocal();
-                return;
-            }
-        }
-
-        // For typed channels, implement similar logic
-    }
-}
+// CLIENT or SERVER: Subscribe to receive
+var handler = NetworkManager.Handlers.Get<EventNetworkHandler>();
+handler.OnEventReceived += (channelId, payload) => { /* handle */ };
 ```
 
-### Step 2: Add to Scene
-
-1. Create an empty GameObject named "NetworkEventHandler"
-2. Add the `NetcodeEventHandler` component
-3. Make sure it spawns with your NetworkManager
-
-### Step 3: Use Network Channels
-
-```csharp
-[SerializeField] NetworkIntEventChannel onScoreChanged;
-
-void AddScore(int points)
-{
-    // Automatically syncs based on NetworkMode setting
-    onScoreChanged.Raise(points);
-}
-```
+See [Networking.md](Networking.md) for details.
 
 ---
 
@@ -386,43 +292,28 @@ void AddScore(int points)
 
 | Method | Description |
 |--------|-------------|
-| `Raise()` / `Raise(T value)` | Notifies all subscribers |
-| `Subscribe(Action)` / `Subscribe(Action<T>)` | Adds a subscriber |
-| `Unsubscribe(Action)` / `Unsubscribe(Action<T>)` | Removes a subscriber |
-| `SubscriberCount` | Number of current subscribers |
+| `Raise()` | Notifies subscribers |
+| `Subscribe(Action)` | Adds subscriber |
+| `Unsubscribe(Action)` | Removes |
 
 ### NetworkEventChannel / NetworkEventChannel\<T\>
 
-| Method | Description |
-|--------|-------------|
-| `Raise()` / `Raise(T value)` | Raises with network sync based on mode |
-| `RaiseLocal()` / `RaiseLocal(T value)` | Raises locally only (for incoming network events) |
-| `NetworkMode` | Get/set the sync mode |
-| `ChannelId` | Unique ID for network identification |
-
-### EventBus (Static)
+| Property | Description |
+|----------|-------------|
+| `EnableNetwork` | Network sync |
+| `NetworkTarget` | Recipients |
+| `RaiseLocally` | Also local |
 
 | Method | Description |
 |--------|-------------|
-| `ClearAll()` | Removes all subscriptions |
-| `Clear(channel)` | Removes subscriptions for a specific channel |
-
-### NetworkEventManager (Static)
-
-| Method | Description |
-|--------|-------------|
-| `RegisterHandler(INetworkEventHandler)` | Sets the network handler |
-| `UnregisterHandler()` | Removes the network handler |
-| `IsNetworkAvailable` | Whether network is connected |
-| `IsServer` | Whether local client is server |
+| `Raise()` | With network |
+| `RaiseLocal()` | Local only |
 
 ---
 
 ## Best Practices
 
-1. **Always unsubscribe** in `OnDisable()` to prevent memory leaks (or use `EventSubscriber`)
-2. **Use typed channels** for data-carrying events
-3. **Call `EventBus.ClearAll()`** on scene transitions if needed
-4. **Keep channels as assets** in a dedicated folder (e.g., `Assets/Events/`)
-5. **Use `RaiseLocal()`** when receiving network events to avoid infinite loops
-6. **Set meaningful Channel IDs** for network channels to ensure proper routing
+1. **Unsubscribe** in `OnDisable()` or use `EventSubscriber`
+2. **Use typed channels** for data events
+3. **Set Handler** on network channels before use
+4. **Use `RaiseLocal()`** for received network events

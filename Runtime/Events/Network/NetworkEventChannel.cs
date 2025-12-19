@@ -1,181 +1,128 @@
-using System;
 using UnityEngine;
+using Eraflo.UnityImportPackage.Networking;
 
 namespace Eraflo.UnityImportPackage.Events
 {
     /// <summary>
     /// Network-aware EventChannel for void events.
-    /// Can be configured to automatically send events over the network.
+    /// Auto-registers with EventNetworkHandler.
     /// </summary>
     [CreateAssetMenu(fileName = "NewNetworkEventChannel", menuName = "Events/Network/Event Channel", order = 100)]
     public class NetworkEventChannel : EventChannel
     {
         [Header("Network Settings")]
-        [SerializeField, Tooltip("How this event should be synchronized over the network.")]
-        private NetworkEventMode _networkMode = NetworkEventMode.LocalOnly;
+        [SerializeField] private bool _enableNetwork = false;
+        [SerializeField] private NetworkTarget _networkTarget = NetworkTarget.All;
+        [SerializeField] private bool _raiseLocally = true;
+        [SerializeField] private string _channelId = "";
 
-        [SerializeField, Tooltip("Unique identifier for network synchronization. Auto-generated from asset name if empty.")]
-        private string _channelId = "";
-
-        /// <summary>
-        /// The network synchronization mode.
-        /// </summary>
-        public NetworkEventMode NetworkMode
-        {
-            get => _networkMode;
-            set => _networkMode = value;
-        }
-
-        /// <summary>
-        /// Unique identifier for this channel on the network.
-        /// </summary>
+        public bool EnableNetwork { get => _enableNetwork; set => _enableNetwork = value; }
+        public NetworkTarget NetworkTarget { get => _networkTarget; set => _networkTarget = value; }
+        public bool RaiseLocally { get => _raiseLocally; set => _raiseLocally = value; }
         public string ChannelId => string.IsNullOrEmpty(_channelId) ? name : _channelId;
 
-        /// <summary>
-        /// Raises this event with network synchronization based on NetworkMode.
-        /// </summary>
-        public new void Raise()
+        private EventNetworkHandler _handler;
+
+        protected override void OnEnable()
         {
-            switch (_networkMode)
+            base.OnEnable();
+            if (_enableNetwork)
             {
-                case NetworkEventMode.LocalOnly:
-                    base.Raise();
-                    break;
-
-                case NetworkEventMode.Broadcast:
-                    SendOverNetwork(NetworkEventTarget.All);
-                    break;
-
-                case NetworkEventMode.BroadcastOthers:
-                    SendOverNetwork(NetworkEventTarget.Others);
-                    break;
-
-                case NetworkEventMode.ServerOnly:
-                    SendOverNetwork(NetworkEventTarget.Server);
-                    break;
-
-                case NetworkEventMode.LocalAndBroadcast:
-                    base.Raise();
-                    SendOverNetwork(NetworkEventTarget.Others);
-                    break;
+                _handler = NetworkManager.Handlers.Get<EventNetworkHandler>();
+                _handler?.Register(this);
             }
         }
 
-        /// <summary>
-        /// Raises this event locally only, ignoring network settings.
-        /// Use this when receiving events from the network.
-        /// </summary>
-        public void RaiseLocal()
+        protected virtual void OnDisable()
         {
-            base.Raise();
+            _handler?.Unregister(ChannelId);
+            _handler = null;
         }
 
-        private void SendOverNetwork(NetworkEventTarget target)
+        public new void Raise()
         {
-            if (!NetworkEventManager.IsNetworkAvailable)
+            Raise(_networkTarget);
+        }
+
+        /// <summary>
+        /// Raises the event to a specific target.
+        /// </summary>
+        public void Raise(NetworkTarget target)
+        {
+            // Lazy get handler if not yet available (ScriptableObject timing)
+            if (_enableNetwork && _handler == null)
             {
-                // Fallback to local if no network
+                _handler = NetworkManager.Handlers.Get<EventNetworkHandler>();
+                _handler?.Register(this);
+            }
+
+            if (!_enableNetwork || _handler == null || !_handler.IsNetworkAvailable)
+            {
                 base.Raise();
                 return;
             }
 
-            NetworkEventManager.SendEvent(ChannelId, null, target);
+            if (_raiseLocally) base.Raise();
+            _handler.Send(ChannelId, target);
         }
+
+        public void RaiseLocal() => base.Raise();
     }
 
     /// <summary>
-    /// Generic network-aware EventChannel that carries typed data.
+    /// Generic network-aware EventChannel.
     /// </summary>
-    /// <typeparam name="T">The type of data the event carries. Must be serializable.</typeparam>
     public abstract class NetworkEventChannel<T> : EventChannel<T>
     {
         [Header("Network Settings")]
-        [SerializeField, Tooltip("How this event should be synchronized over the network.")]
-        private NetworkEventMode _networkMode = NetworkEventMode.LocalOnly;
+        [SerializeField] private bool _enableNetwork = false;
+        [SerializeField] private NetworkTarget _networkTarget = NetworkTarget.All;
+        [SerializeField] private bool _raiseLocally = true;
+        [SerializeField] private string _channelId = "";
 
-        [SerializeField, Tooltip("Unique identifier for network synchronization. Auto-generated from asset name if empty.")]
-        private string _channelId = "";
-
-        /// <summary>
-        /// The network synchronization mode.
-        /// </summary>
-        public NetworkEventMode NetworkMode
-        {
-            get => _networkMode;
-            set => _networkMode = value;
-        }
-
-        /// <summary>
-        /// Unique identifier for this channel on the network.
-        /// </summary>
+        public bool EnableNetwork { get => _enableNetwork; set => _enableNetwork = value; }
+        public NetworkTarget NetworkTarget { get => _networkTarget; set => _networkTarget = value; }
+        public bool RaiseLocally { get => _raiseLocally; set => _raiseLocally = value; }
         public string ChannelId => string.IsNullOrEmpty(_channelId) ? name : _channelId;
 
-        /// <summary>
-        /// Raises this event with network synchronization based on NetworkMode.
-        /// </summary>
-        public new void Raise(T value)
+        private EventNetworkHandler _handler;
+
+        protected override void OnEnable()
         {
-            switch (_networkMode)
+            base.OnEnable();
+            if (_enableNetwork)
             {
-                case NetworkEventMode.LocalOnly:
-                    base.Raise(value);
-                    break;
-
-                case NetworkEventMode.Broadcast:
-                    SendOverNetwork(value, NetworkEventTarget.All);
-                    break;
-
-                case NetworkEventMode.BroadcastOthers:
-                    SendOverNetwork(value, NetworkEventTarget.Others);
-                    break;
-
-                case NetworkEventMode.ServerOnly:
-                    SendOverNetwork(value, NetworkEventTarget.Server);
-                    break;
-
-                case NetworkEventMode.LocalAndBroadcast:
-                    base.Raise(value);
-                    SendOverNetwork(value, NetworkEventTarget.Others);
-                    break;
+                _handler = NetworkManager.Handlers.Get<EventNetworkHandler>();
+                _handler?.Register(this);
             }
         }
 
-        /// <summary>
-        /// Raises this event locally only, ignoring network settings.
-        /// Use this when receiving events from the network.
-        /// </summary>
-        public void RaiseLocal(T value)
+        protected virtual void OnDisable()
         {
-            base.Raise(value);
+            _handler?.Unregister(ChannelId);
+            _handler = null;
         }
 
-        private void SendOverNetwork(T value, NetworkEventTarget target)
+        public new void Raise(T value)
         {
-            if (!NetworkEventManager.IsNetworkAvailable)
+            if (!_enableNetwork || _handler == null || !_handler.IsNetworkAvailable)
             {
-                // Fallback to local if no network
                 base.Raise(value);
                 return;
             }
 
-            byte[] data = SerializeValue(value);
-            NetworkEventManager.SendEvent(ChannelId, data, target);
+            if (_raiseLocally) base.Raise(value);
+            _handler.Send(ChannelId, SerializeValue(value), _networkTarget);
         }
 
-        /// <summary>
-        /// Serializes the value to bytes for network transmission.
-        /// Override this for custom serialization.
-        /// </summary>
+        public void RaiseLocal(T value) => base.Raise(value);
+
         protected virtual byte[] SerializeValue(T value)
         {
             string json = Newtonsoft.Json.JsonConvert.SerializeObject(value);
             return System.Text.Encoding.UTF8.GetBytes(json);
         }
 
-        /// <summary>
-        /// Deserializes bytes back to the value type.
-        /// Override this for custom deserialization.
-        /// </summary>
         public virtual T DeserializeValue(byte[] data)
         {
             string json = System.Text.Encoding.UTF8.GetString(data);

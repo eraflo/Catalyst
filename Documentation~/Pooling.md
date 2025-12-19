@@ -142,25 +142,56 @@ await Task.Run(() =>
 
 ## Networking
 
+Handlers are auto-registered via `PackageSettings`.
+
+### Spawning (Server → Target)
+
 ```csharp
-// Spawn with network sync
-var (handle, networkId) = PoolNetworkExtensions.SpawnNetworked(
-    prefab, position, rotation, isServerAuthoritative: true
+// SERVER: Spawn and broadcast to all clients (default)
+var (handle, networkId) = PoolNetworkExtensions.SpawnNetworked(prefab, pos);
+
+// SERVER: Spawn and broadcast to specific target
+var (h, id) = PoolNetworkExtensions.SpawnNetworked(
+    prefab, pos, Quaternion.identity,
+    serverAuth: true,
+    target: NetworkTarget.All  // or Others, Server, Clients
 );
 
-// Subscribe to network events
-NetworkPoolSync.OnSpawnRequested += (data) => {
-    // Send to clients via your network layer
-};
-
-NetworkPoolSync.OnDespawnRequested += (networkId) => {
-    // Send to clients
-};
-
-// Broadcast to clients
-NetworkPoolSync.BroadcastSpawn(handle, prefab, position, rotation);
-NetworkPoolSync.BroadcastDespawn(handle);
+// LOCAL ONLY: Spawn without network broadcast (UI elements, etc.)
+var localHandle = PoolNetworkExtensions.SpawnLocal(prefab, pos);
 ```
+
+### Despawning (Server → Target)
+
+```csharp
+// SERVER: Despawn and notify all clients (default)
+handle.DespawnNetworked();
+
+// SERVER: Despawn with specific target
+handle.DespawnNetworked(NetworkTarget.All);
+```
+
+### Manual Registration
+
+```csharp
+// SERVER: Register existing object for networking
+var handle = Pool.Spawn(prefab, pos);
+handle.RegisterNetworked();
+
+// SERVER: Unregister when done
+handle.UnregisterNetworked();
+```
+
+### Client Handling
+
+```csharp
+// CLIENT: React to spawn/despawn messages
+var handler = NetworkManager.Handlers.Get<PoolNetworkHandler>();
+handler.OnSpawnReceived += msg => { /* spawn locally */ };
+handler.OnDespawnReceived += id => { /* despawn locally */ };
+```
+
+See [Networking.md](Networking.md) for details.
 
 ---
 

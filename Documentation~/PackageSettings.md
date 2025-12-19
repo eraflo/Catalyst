@@ -1,99 +1,74 @@
 # Package Settings
 
-Central configuration for the UnityImportPackage.
-
----
+Central configuration for the package.
 
 ## Location
-
-The configuration file is **automatically created** when the package is imported:
 
 ```
 Assets/Resources/UnityImportPackageSettings.asset
 ```
 
----
-
-## Access
-
-### Via Menu
-**Tools > Unity Import Package > Settings**
-
-### Via Code
-```csharp
-using Eraflo.UnityImportPackage;
-
-var settings = PackageSettings.Instance;
-bool networkEnabled = settings.EnableNetworking;
-bool debugMode = settings.NetworkDebugMode;
-```
-
----
+**Menu**: Tools > Unity Import Package > Settings
 
 ## Settings
 
-### Network Events
+### Global
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| **Enable Networking** | `bool` | `false` | Auto-instantiate `NetworkEventManager` on startup |
-| **Network Debug Mode** | `bool` | `false` | Display network debug logs |
+| **Thread Mode** | `PackageThreadMode` | `SingleThread` | Thread safety mode |
+
+### Networking
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| **Network Backend ID** | `string` | *(empty)* | Backend to use |
+| **Network Debug Mode** | `bool` | `false` | Log debug messages |
+
+#### Backend IDs
+
+| ID | Description |
+|----|-------------|
+| *(empty)* | Disabled |
+| `mock` | Testing backend |
+| `netcode` | Unity Netcode for GameObjects |
+
+Custom backends: Register via `NetworkBackendRegistry.Register()`.
 
 ### Timer System
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| **Thread Mode** | `enum` | `SingleThread` | `SingleThread` = faster, `ThreadSafe` = safe from any thread |
-| **Enable Timer Debug Logs** | `bool` | `false` | Display timer debug logs |
+| **Use Burst Timers** | `bool` | `false` | Optimized backend |
+| **Enable Timer Debug Logs** | `bool` | `false` | Log timer events |
+| **Enable Debug Overlay** | `bool` | `false` | Show overlay |
 
-### Timer Pool
+## Runtime Initialization
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| **Enable Timer Pooling** | `bool` | `true` | Enable/disable object pooling |
-| **Default Capacity** | `int` | `10` | Initial pool size per timer type |
-| **Max Capacity** | `int` | `50` | Maximum pooled timers per type |
-| **Prewarm Count** | `int` | `0` | Timers to prewarm on startup |
+At startup, `NetworkBootstrapper`:
 
----
+1. Registers built-in backends (`mock`, `netcode`)
+2. Creates backend from `NetworkBackendId` setting
 
-## Runtime Behavior
+## Code Access
 
-### If Enable Networking = true
-
-At game launch (`RuntimeInitializeOnLoadMethod`):
-1. A `[NetworkEventManager]` GameObject is created
-2. `DontDestroyOnLoad` is applied → persists across scenes
-3. Ready to receive an `INetworkEventHandler`
-
-```
-[PackageInitializer] NetworkEventManager initialized
-```
-
-### If Enable Networking = false
-
-No automatic action. You must handle it manually:
 ```csharp
-var go = new GameObject("NetworkEventManager");
-go.AddComponent<NetworkEventManagerBehaviour>();
-DontDestroyOnLoad(go);
+var settings = PackageSettings.Instance;
+settings.NetworkBackendId   // Current backend ID
+settings.EnableNetworking   // Is networking enabled?
+settings.ThreadMode         // Thread safety mode
 ```
 
----
+## Reload
 
-## Force Reload
-
-If you modify settings during execution:
 ```csharp
 PackageSettings.Reload();
 ```
-
----
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| "No settings found" warning | Create via **Tools > Unity Import Package > Create Settings** |
-| Settings not applied | Verify the file is in `Assets/Resources/` |
-| NetworkEventManager missing | Enable **Enable Networking** in settings |
+| "No settings found" | Create via menu |
+| Network not working | Check `NetworkBackendId` |
+| Backend not found | Register factory first |
