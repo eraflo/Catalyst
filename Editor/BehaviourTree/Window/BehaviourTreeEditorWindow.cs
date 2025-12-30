@@ -19,7 +19,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Window
         private BTInspectorPanel _inspectorPanel;
         private BTSearchWindow _searchWindow;
         
-        private BT _tree;
+        [SerializeField] private BT _tree;
         private Label _treeNameLabel;
         
         [MenuItem("Tools/Unity Import Package/Behaviour Tree Editor")]
@@ -85,8 +85,15 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Window
             _searchWindow.OnNodeSelected += (type, pos) => _canvas.CreateNode(type, pos);
             root.Add(_searchWindow);
             
-            // Load current selection
-            OnSelectionChange();
+            // Load current selection or restore from previous
+            if (_tree != null)
+            {
+                SelectTree(_tree);
+            }
+            else
+            {
+                OnSelectionChange();
+            }
         }
         
         private VisualElement CreateToolbar()

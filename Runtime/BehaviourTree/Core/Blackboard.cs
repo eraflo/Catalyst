@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Eraflo.UnityImportPackage;
+using Newtonsoft.Json;
 
 namespace Eraflo.UnityImportPackage.BehaviourTree
 {
@@ -10,10 +11,10 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
     /// Thread-safe when PackageRuntime.IsThreadSafe is enabled.
     /// </summary>
     [Serializable]
-    public class Blackboard
+    public class Blackboard : ISerializationCallbackReceiver
     {
         [Serializable]
-        private class BlackboardEntry
+        public class BlackboardEntry
         {
             public string Key;
             public string TypeName;
@@ -32,11 +33,32 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
 
         private bool _initialized = false;
 
+        public void OnBeforeSerialize() { }
+        public void OnAfterDeserialize() => _initialized = false;
+
         private void EnsureInitialized()
+        {
+            if (_initialized) return;
+            
+            if (IsThreadSafe)
+            {
+                lock (_lock)
+                {
+                    PerformInitialization();
+                }
+            }
+            else
+            {
+                PerformInitialization();
+            }
+        }
+
+        private void PerformInitialization()
         {
             if (_initialized) return;
             _initialized = true;
 
+            _runtimeData.Clear();
             foreach (var entry in _entries)
             {
                 if (string.IsNullOrEmpty(entry.Key)) continue;
@@ -45,11 +67,27 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
                 if (!string.IsNullOrEmpty(entry.TypeName))
                 {
                     var type = Type.GetType(entry.TypeName);
+                    if (type == null)
+                    {
+                        // Fallback: search all assemblies
+                        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                        {
+                            type = assembly.GetType(entry.TypeName);
+                            if (type != null) break;
+                        }
+                    }
+
                     if (type != null)
                     {
                         try {
-                            value = JsonUtility.FromJson(entry.JsonValue, type);
-                        } catch { }
+                            value = JsonConvert.DeserializeObject(entry.JsonValue, type);
+                        } catch (Exception e) {
+                            Debug.LogWarning($"[Blackboard] Failed to deserialize '{entry.Key}': {e.Message}");
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[Blackboard] Could not find type '{entry.TypeName}' for key '{entry.Key}'");
                     }
                 }
 
@@ -93,7 +131,7 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
             if (value != null)
             {
                 entry.TypeName = value.GetType().AssemblyQualifiedName;
-                entry.JsonValue = JsonUtility.ToJson(value);
+                entry.JsonValue = JsonConvert.SerializeObject(value);
             }
             else
             {

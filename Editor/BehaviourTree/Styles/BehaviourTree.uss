@@ -137,11 +137,12 @@
 .blackboard-row {
     flex-direction: row;
     align-items: center;
-    padding: 4px 8px;
+    padding: 2px 4px;
     background-color: rgba(50, 50, 50, 0.5);
     border-radius: 4px;
-    margin-bottom: 4px;
-    overflow: hidden;
+    margin-bottom: 2px;
+    width: 100%;
+    flex-shrink: 0;
 }
 
 .key-label {
@@ -320,15 +321,17 @@
    ============================================ */
 
 .delete-button {
-    width: 18px;
-    height: 18px;
-    font-size: 12px;
-    background-color: transparent;
+    width: 20px;
+    min-width: 20px;
+    height: 20px;
+    font-size: 14px;
+    background-color: #444;
     border-width: 0;
     border-radius: 3px;
-    color: #888;
+    color: #aaa;
     margin-left: 4px;
     padding: 0;
+    flex-shrink: 0;
 }
 
 .delete-button:hover {
@@ -341,7 +344,8 @@
 .blackboard-row FloatField,
 .blackboard-row TextField {
     flex-grow: 1;
-    min-width: 0;
+    flex-shrink: 1;
+    min-width: 40px;
     margin: 0;
     padding: 0;
 }
@@ -357,12 +361,23 @@
 .blackboard-row Toggle {
     margin: 0;
     flex-grow: 1;
+    flex-shrink: 1;
     align-items: center;
+}
+
+.blackboard-row Toggle .unity-toggle__input {
+    flex-grow: 1;
+}
+
+.blackboard-row Toggle .unity-toggle__checkmark {
+    margin: 0;
 }
 
 
 .blackboard-row TextField.key-field {
-    width: 80px;
+    width: 65px;
+    flex-grow: 0;
+    flex-shrink: 0;
     margin-right: 4px;
 }
 
@@ -370,6 +385,8 @@
     background-color: #1a1a1a;
     border-color: #444;
     border-width: 1px;
+    padding: 1px 3px;
+    font-size: 11px;
 }
 
 .selection-rect {

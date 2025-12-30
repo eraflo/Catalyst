@@ -133,6 +133,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
                 Undo.RecordObject(_tree, "Rename Blackboard Key");
                 _tree.Blackboard.Rename(evt.previousValue, evt.newValue);
                 EditorUtility.SetDirty(_tree);
+                AssetDatabase.SaveAssets();
                 // No need to RefreshKeys here as we only changed one row's key identity
             });
             row.Add(keyField);
@@ -148,6 +149,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
             // Delete button
             var deleteBtn = new Button(() => DeleteKey(key)) { text = "×" };
             deleteBtn.AddToClassList("delete-button");
+            deleteBtn.style.flexShrink = 0;
             row.Add(deleteBtn);
             
             return row;
@@ -163,6 +165,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
                 field.RegisterValueChangedCallback(evt => {
                     _tree.Blackboard.Set(key, evt.newValue);
                     EditorUtility.SetDirty(_tree);
+                    AssetDatabase.SaveAssets();
                 });
                 return field;
             }
@@ -175,6 +178,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
                 field.RegisterValueChangedCallback(evt => {
                     _tree.Blackboard.Set(key, evt.newValue);
                     EditorUtility.SetDirty(_tree);
+                    AssetDatabase.SaveAssets();
                 });
                 return field;
             }
@@ -186,6 +190,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
                 field.RegisterValueChangedCallback(evt => {
                     _tree.Blackboard.Set(key, evt.newValue);
                     EditorUtility.SetDirty(_tree);
+                    AssetDatabase.SaveAssets();
                 });
                 return field;
             }
@@ -198,6 +203,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
                 field.RegisterValueChangedCallback(evt => {
                     _tree.Blackboard.Set(key, evt.newValue);
                     EditorUtility.SetDirty(_tree);
+                    AssetDatabase.SaveAssets();
                 });
                 return field;
             }
@@ -209,6 +215,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
         {
             _tree.Blackboard.Remove(key);
             EditorUtility.SetDirty(_tree);
+            AssetDatabase.SaveAssets();
             RefreshKeys();
         }
         
@@ -231,6 +238,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
             while (_tree.Blackboard.Contains(k)) k = $"{key}{c++}";
             _tree.Blackboard.Set(k, value);
             EditorUtility.SetDirty(_tree);
+            AssetDatabase.SaveAssets();
             RefreshKeys();
         }
         
