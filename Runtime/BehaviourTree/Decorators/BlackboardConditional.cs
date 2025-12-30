@@ -3,10 +3,10 @@ using UnityEngine;
 namespace Eraflo.UnityImportPackage.BehaviourTree
 {
     /// <summary>
-    /// BlackboardCondition: Checks a blackboard value against a condition.
-    /// Returns Success if condition is met, Failure otherwise.
+    /// BlackboardConditional decorator: Checks a blackboard value and only executes
+    /// its child if the condition is met. Returns Failure if condition fails.
     /// </summary>
-    public class BlackboardCondition : ConditionNode
+    public class BlackboardConditional : DecoratorNode
     {
         /// <summary>The key to check in the blackboard.</summary>
         public string Key;
@@ -48,7 +48,24 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
             Exists
         }
         
-        protected override bool CheckCondition()
+        protected override NodeState OnUpdate()
+        {
+            // First check the condition
+            if (!CheckCondition())
+            {
+                return NodeState.Failure;
+            }
+            
+            // Condition passed, execute child
+            if (Child == null)
+            {
+                return NodeState.Success;
+            }
+            
+            return Child.Evaluate();
+        }
+        
+        private bool CheckCondition()
         {
             if (string.IsNullOrEmpty(Key) || Blackboard == null)
             {

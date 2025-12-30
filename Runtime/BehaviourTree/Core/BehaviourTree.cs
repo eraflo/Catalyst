@@ -21,7 +21,7 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         [HideInInspector] public List<Node> Nodes = new();
         
         /// <summary>The shared blackboard for this tree instance.</summary>
-        [System.NonSerialized] public Blackboard Blackboard = new();
+        public Blackboard Blackboard = new();
         
         /// <summary>The GameObject this tree is attached to.</summary>
         [System.NonSerialized] public GameObject Owner;
@@ -189,10 +189,6 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
             {
                 decorator.Child = child;
                 EditorUtility.SetDirty(decorator);
-            }
-            else if (parent is BehaviourTree tree)
-            {
-                // This case handles setting the root
             }
         }
         

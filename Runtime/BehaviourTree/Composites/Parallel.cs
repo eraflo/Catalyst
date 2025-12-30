@@ -6,7 +6,6 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
     /// Parallel node: Runs all children simultaneously.
     /// Configurable success/failure policy.
     /// </summary>
-    [CreateAssetMenu(fileName = "Parallel", menuName = "Behaviour Tree/Composites/Parallel")]
     public class Parallel : CompositeNode
     {
         /// <summary>Policy for determining when the parallel node succeeds.</summary>

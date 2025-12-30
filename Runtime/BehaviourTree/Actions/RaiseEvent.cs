@@ -10,7 +10,6 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
     /// Assign any EventChannel ScriptableObject and optionally provide a value from Blackboard.
     /// </summary>
     [BehaviourTreeNode("Actions", "Raise Event")]
-    [CreateAssetMenu(fileName = "RaiseEvent", menuName = "Behaviour Tree/Actions/Raise Event")]
     public class RaiseEvent : ActionNode
     {
         /// <summary>

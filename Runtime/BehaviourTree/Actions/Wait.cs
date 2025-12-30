@@ -6,7 +6,6 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
     /// <summary>
     /// Wait action: Waits for a specified duration using the Timer system, then returns Success.
     /// </summary>
-    [CreateAssetMenu(fileName = "Wait", menuName = "Behaviour Tree/Actions/Wait")]
     public class Wait : ActionNode
     {
         /// <summary>Duration to wait in seconds.</summary>

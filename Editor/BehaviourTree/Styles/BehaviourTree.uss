@@ -1,0 +1,380 @@
+/* ============================================
+   Behaviour Tree Editor - Custom Styles
+   ============================================ */
+
+/* ============================================
+   NODE ELEMENT - Simple colored box
+   ============================================ */
+
+.node-body {
+    background-color: #444;
+    border-radius: 8px;
+    padding: 10px 20px;
+    min-width: 60px;
+    align-items: center;
+    justify-content: center;
+    border-width: 0;
+}
+
+.node-title {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: white;
+    -unity-text-align: middle-center;
+}
+
+/* Node type colors */
+.node-body.composite {
+    background-color: #16a085;
+}
+
+.node-body.decorator {
+    background-color: #9b59b6;
+}
+
+.node-body.action {
+    background-color: #27ae60;
+}
+
+.node-body.condition {
+    background-color: #e67e22;
+}
+
+/* Highlight for connection target */
+.highlight .node-body {
+    border-width: 4px;
+    border-color: white;
+}
+
+/* Selection state */
+#bt-node.selected .node-body {
+    border-width: 3px;
+    border-color: #3498db;
+}
+
+/* Root node */
+#bt-node.root-node .node-body {
+    border-width: 3px;
+    border-color: #e74c3c;
+}
+
+/* Output port */
+.output-port {
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    background-color: #888;
+    margin-top: 6px;
+    align-self: center;
+    transition-duration: 0.15s;
+}
+
+.output-port:hover {
+    background-color: #fff;
+    width: 14px;
+    height: 14px;
+    border-radius: 7px;
+}
+
+/* ============================================
+   FLOATING PANELS
+   ============================================ */
+
+.floating-panel {
+    background-color: rgba(30, 30, 30, 0.95);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: #444;
+    min-width: 180px;
+    overflow: hidden;
+}
+
+.panel-header {
+    background-color: #333;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    padding: 8px 12px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+}
+
+.panel-title {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: #bbb;
+}
+
+.panel-button {
+    width: 24px;
+    height: 20px;
+    font-size: 14px;
+    -unity-font-style: bold;
+    background-color: #444;
+    border-width: 0;
+    border-radius: 4px;
+    color: #aaa;
+}
+
+.panel-button:hover {
+    background-color: #555;
+    color: #fff;
+}
+
+.panel-content {
+    padding: 10px;
+    background-color: rgba(25, 25, 25, 0.4);
+}
+
+.empty-label {
+    color: #666;
+    -unity-text-align: middle-center;
+    padding: 10px;
+}
+
+/* Blackboard rows */
+.blackboard-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 8px;
+    background-color: rgba(50, 50, 50, 0.5);
+    border-radius: 4px;
+    margin-bottom: 4px;
+    overflow: hidden;
+}
+
+.key-label {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: #ccc;
+    width: 70px;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.value-label {
+    font-size: 11px;
+    color: #8c8;
+}
+
+/* ============================================
+   RESIZE HANDLE
+   ============================================ */
+
+.resize-handle {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 12px;
+    height: 12px;
+    cursor: resize-se;
+    background-color: transparent;
+}
+
+.resize-handle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Add a small triangle icon for the resize handle */
+.resize-handle::after {
+    content: "";
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 0;
+    height: 0;
+    border-left-width: 6px;
+    border-left-color: transparent;
+    border-top-width: 6px;
+    border-top-color: transparent;
+    border-right-width: 6px;
+    border-right-color: #666;
+    border-bottom-width: 6px;
+    border-bottom-color: #666;
+}
+
+/* ============================================
+   TOOLBAR
+   ============================================ */
+
+.bt-toolbar {
+    flex-direction: row;
+    background-color: #2a2a2a;
+    padding: 4px 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: #1a1a1a;
+}
+
+.toolbar-button {
+    background-color: #3a3a3a;
+    border-width: 0;
+    border-radius: 4px;
+    padding: 4px 12px;
+    margin-right: 6px;
+    color: #bbb;
+    font-size: 12px;
+}
+
+.toolbar-button:hover {
+    background-color: #4a4a4a;
+    color: #fff;
+}
+
+.toolbar-label {
+    color: #888;
+    font-size: 12px;
+    -unity-text-align: middle-left;
+    padding: 4px 10px;
+}
+
+.toolbar-spacer {
+    flex-grow: 1;
+}
+
+/* ============================================
+   SEARCH WINDOW
+   ============================================ */
+
+.search-window {
+    background-color: rgba(35, 35, 35, 0.98);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: #555;
+    max-height: 350px;
+}
+
+.search-header {
+    padding: 8px;
+    background-color: #333;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+
+.search-field {
+    background-color: #222;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: #555;
+}
+
+.search-field > TextInput {
+    background-color: transparent;
+    color: white;
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.search-results {
+    padding: 4px;
+    overflow: scroll;
+    max-height: 280px;
+}
+
+.category-label {
+    color: #888;
+    font-size: 10px;
+    -unity-font-style: bold;
+    padding: 6px 4px 2px 4px;
+    margin-top: 4px;
+}
+
+.node-button {
+    background-color: #3a3a3a;
+    border-width: 0;
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin: 2px 0;
+    color: #ddd;
+    font-size: 12px;
+    -unity-text-align: middle-left;
+}
+
+.node-button:hover {
+    background-color: #4a4a4a;
+}
+
+.node-button.composite {
+    border-left-width: 3px;
+    border-left-color: #16a085;
+}
+
+.node-button.decorator {
+    border-left-width: 3px;
+    border-left-color: #9b59b6;
+}
+
+.node-button.action {
+    border-left-width: 3px;
+    border-left-color: #27ae60;
+}
+
+.node-button.condition {
+    border-left-width: 3px;
+    border-left-color: #e67e22;
+}
+
+/* ============================================
+   DELETE BUTTON
+   ============================================ */
+
+.delete-button {
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+    background-color: transparent;
+    border-width: 0;
+    border-radius: 3px;
+    color: #888;
+    margin-left: 4px;
+    padding: 0;
+}
+
+.delete-button:hover {
+    background-color: #c0392b;
+    color: white;
+}
+
+/* Field styles in blackboard */
+.blackboard-row IntegerField,
+.blackboard-row FloatField,
+.blackboard-row TextField {
+    flex-grow: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.blackboard-row .unity-base-field__input {
+    background-color: #222;
+    border-radius: 3px;
+    padding: 2px 4px;
+    border-width: 0;
+    min-height: 18px;
+}
+
+.blackboard-row Toggle {
+    margin: 0;
+    flex-grow: 1;
+    align-items: center;
+}
+
+
+.blackboard-row TextField.key-field {
+    width: 80px;
+    margin-right: 4px;
+}
+
+.blackboard-row TextField.key-field .unity-base-field__input {
+    background-color: #1a1a1a;
+    border-color: #444;
+    border-width: 1px;
+}
+
+.selection-rect {
+    position: absolute;
+    background-color: rgba(0, 120, 215, 0.2);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.6);
+}

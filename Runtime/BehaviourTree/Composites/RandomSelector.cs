@@ -7,7 +7,6 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
     /// RandomSelector node: Shuffles children before executing, then behaves like a Selector.
     /// Useful for adding variety to AI behavior.
     /// </summary>
-    [CreateAssetMenu(fileName = "RandomSelector", menuName = "Behaviour Tree/Composites/Random Selector")]
     public class RandomSelector : CompositeNode
     {
         private List<int> _shuffledIndices;

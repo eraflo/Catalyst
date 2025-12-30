@@ -6,7 +6,6 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
     /// UntilFail decorator: Repeats its child until it fails.
     /// Returns Success when the child finally fails.
     /// </summary>
-    [CreateAssetMenu(fileName = "UntilFail", menuName = "Behaviour Tree/Decorators/Until Fail")]
     public class UntilFail : DecoratorNode
     {
         protected override NodeState OnUpdate()

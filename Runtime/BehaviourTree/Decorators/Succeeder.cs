@@ -6,7 +6,6 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
     /// Succeeder decorator: Always returns Success, regardless of child result.
     /// Useful for optional tasks that shouldn't fail the parent sequence.
     /// </summary>
-    [CreateAssetMenu(fileName = "Succeeder", menuName = "Behaviour Tree/Decorators/Succeeder")]
     public class Succeeder : DecoratorNode
     {
         protected override NodeState OnUpdate()

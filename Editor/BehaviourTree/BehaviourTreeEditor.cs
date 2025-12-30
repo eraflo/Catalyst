@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEditor;
 using Eraflo.UnityImportPackage.BehaviourTree;
+using Eraflo.UnityImportPackage.Editor.BehaviourTree.Window;
+using BTNode = Eraflo.UnityImportPackage.BehaviourTree.Node;
 
 namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
 {
@@ -134,7 +136,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
             GUI.color = Color.white;
         }
         
-        private void CreateNode<T>(Eraflo.UnityImportPackage.BehaviourTree.BehaviourTree tree) where T : Node
+        private void CreateNode<T>(Eraflo.UnityImportPackage.BehaviourTree.BehaviourTree tree) where T : BTNode
         {
             Undo.RecordObject(tree, $"Create {typeof(T).Name}");
             var node = tree.CreateNode(typeof(T));
@@ -166,7 +168,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
             AssetDatabase.SaveAssets();
         }
         
-        private string GetNodePrefix(Node node)
+        private string GetNodePrefix(BTNode node)
         {
             if (node is CompositeNode) return "◇";
             if (node is DecoratorNode) return "◈";

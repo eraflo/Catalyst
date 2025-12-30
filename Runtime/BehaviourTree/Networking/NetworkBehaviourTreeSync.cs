@@ -1,3 +1,4 @@
+using System.IO;
 using UnityEngine;
 using Eraflo.UnityImportPackage.Networking;
 
@@ -106,8 +107,6 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         {
             if (_runner?.Blackboard == null) return;
             
-            // Sync all int values as an example
-            // In real implementation, you'd track which keys are networked
             var keys = _runner.Blackboard.GetAllKeys();
             foreach (var key in keys)
             {
@@ -141,7 +140,6 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         {
             if (NetworkManager.IsServer) return;
             
-            // Clients receive tree state updates
             Debug.Log($"[NetworkBT] Tree state: {(NodeState)msg.State}");
         }
         
@@ -163,11 +161,39 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
             public int IntValue;
             public float FloatValue;
             public bool BoolValue;
+            
+            public void Serialize(BinaryWriter writer)
+            {
+                writer.Write(Key ?? "");
+                writer.Write((byte)ValueType);
+                writer.Write(IntValue);
+                writer.Write(FloatValue);
+                writer.Write(BoolValue);
+            }
+            
+            public void Deserialize(BinaryReader reader)
+            {
+                Key = reader.ReadString();
+                ValueType = (ValueTypeId)reader.ReadByte();
+                IntValue = reader.ReadInt32();
+                FloatValue = reader.ReadSingle();
+                BoolValue = reader.ReadBoolean();
+            }
         }
         
         public struct TreeStateMessage : INetworkMessage
         {
             public int State;
+            
+            public void Serialize(BinaryWriter writer)
+            {
+                writer.Write(State);
+            }
+            
+            public void Deserialize(BinaryReader reader)
+            {
+                State = reader.ReadInt32();
+            }
         }
         
         #endregion

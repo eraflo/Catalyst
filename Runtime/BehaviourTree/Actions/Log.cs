@@ -6,7 +6,6 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
     /// Log action: Logs a message to the console and returns Success.
     /// Useful for debugging.
     /// </summary>
-    [CreateAssetMenu(fileName = "Log", menuName = "Behaviour Tree/Actions/Log")]
     public class Log : ActionNode
     {
         /// <summary>The message to log.</summary>
@@ -14,11 +13,11 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         public string Message = "Log";
         
         /// <summary>Log level.</summary>
-        public LogType LogType = LogType.Log;
+        public LogLevel Level = LogLevel.Info;
         
-        public enum LogType
+        public enum LogLevel
         {
-            Log,
+            Info,
             Warning,
             Error
         }
@@ -27,15 +26,15 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         {
             string formattedMessage = $"[BT] {Message}";
             
-            switch (LogType)
+            switch (Level)
             {
-                case LogType.Log:
+                case LogLevel.Info:
                     Debug.Log(formattedMessage, Owner);
                     break;
-                case LogType.Warning:
+                case LogLevel.Warning:
                     Debug.LogWarning(formattedMessage, Owner);
                     break;
-                case LogType.Error:
+                case LogLevel.Error:
                     Debug.LogError(formattedMessage, Owner);
                     break;
             }

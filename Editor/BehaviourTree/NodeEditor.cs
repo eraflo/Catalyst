@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using Eraflo.UnityImportPackage.BehaviourTree;
 using System.Linq;
+using BTNode = Eraflo.UnityImportPackage.BehaviourTree.Node;
 
 namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
 {
@@ -9,12 +10,12 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
     /// Custom inspector for Node ScriptableObjects.
     /// Shows node-type-specific editing and child management.
     /// </summary>
-    [CustomEditor(typeof(Node), true)]
+    [CustomEditor(typeof(BTNode), true)]
     public class NodeEditor : UnityEditor.Editor
     {
         public override void OnInspectorGUI()
         {
-            var node = target as Node;
+            var node = target as BTNode;
             
             // Header
             EditorGUILayout.Space();
@@ -45,7 +46,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
             serializedObject.ApplyModifiedProperties();
         }
         
-        private void DrawNodeSpecificProperties(Node node)
+        private void DrawNodeSpecificProperties(BTNode node)
         {
             var iterator = serializedObject.GetIterator();
             bool enterChildren = true;
@@ -224,7 +225,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
             }
         }
         
-        private Eraflo.UnityImportPackage.BehaviourTree.BehaviourTree FindTreeForNode(Node node)
+        private Eraflo.UnityImportPackage.BehaviourTree.BehaviourTree FindTreeForNode(BTNode node)
         {
             string assetPath = AssetDatabase.GetAssetPath(node);
             if (string.IsNullOrEmpty(assetPath)) return null;
@@ -233,7 +234,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
             return mainAsset as Eraflo.UnityImportPackage.BehaviourTree.BehaviourTree;
         }
         
-        private bool IsAncestor(Node potentialAncestor, Node node)
+        private bool IsAncestor(BTNode potentialAncestor, BTNode node)
         {
             if (potentialAncestor is CompositeNode composite)
             {
@@ -252,7 +253,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
             return false;
         }
         
-        private string GetNodeTypeName(Node node)
+        private string GetNodeTypeName(BTNode node)
         {
             if (node is CompositeNode) return "Composite";
             if (node is DecoratorNode) return "Decorator";

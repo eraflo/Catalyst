@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Eraflo.UnityImportPackage;
 
 namespace Eraflo.UnityImportPackage.BehaviourTree
 {
@@ -27,35 +28,86 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         private readonly Dictionary<string, object> _runtimeData = new();
         private readonly object _lock = new();
         
-        private static bool IsThreadSafe => Core.PackageRuntime.IsThreadSafe;
+        private static bool IsThreadSafe => PackageRuntime.IsThreadSafe;
+
+        private bool _initialized = false;
+
+        private void EnsureInitialized()
+        {
+            if (_initialized) return;
+            _initialized = true;
+
+            foreach (var entry in _entries)
+            {
+                if (string.IsNullOrEmpty(entry.Key)) continue;
+
+                object value = null;
+                if (!string.IsNullOrEmpty(entry.TypeName))
+                {
+                    var type = Type.GetType(entry.TypeName);
+                    if (type != null)
+                    {
+                        try {
+                            value = JsonUtility.FromJson(entry.JsonValue, type);
+                        } catch { }
+                    }
+                }
+
+                if (value != null)
+                {
+                    _runtimeData[entry.Key] = value;
+                }
+            }
+        }
         
         /// <summary>
         /// Sets a value in the blackboard.
         /// </summary>
-        /// <typeparam name="T">Type of the value.</typeparam>
-        /// <param name="key">Key to store the value under.</param>
-        /// <param name="value">The value to store.</param>
         public void Set<T>(string key, T value)
         {
+            EnsureInitialized();
             if (IsThreadSafe)
             {
                 lock (_lock)
                 {
                     _runtimeData[key] = value;
+                    SyncEntry(key, value);
                 }
             }
             else
             {
                 _runtimeData[key] = value;
+                SyncEntry(key, value);
             }
+        }
+
+        private void SyncEntry(string key, object value)
+        {
+            var entry = _entries.Find(e => e.Key == key);
+            if (entry == null)
+            {
+                entry = new BlackboardEntry { Key = key };
+                _entries.Add(entry);
+            }
+            
+            if (value != null)
+            {
+                entry.TypeName = value.GetType().AssemblyQualifiedName;
+                entry.JsonValue = JsonUtility.ToJson(value);
+            }
+            else
+            {
+                entry.TypeName = null;
+                entry.JsonValue = null;
+            }
+            
+            entry.CachedValue = value;
+            entry.IsCached = true;
         }
         
         /// <summary>
         /// Gets a value from the blackboard.
         /// </summary>
-        /// <typeparam name="T">Expected type of the value.</typeparam>
-        /// <param name="key">Key to retrieve.</param>
-        /// <returns>The value, or default if not found.</returns>
         public T Get<T>(string key)
         {
             if (TryGet<T>(key, out var value))
@@ -68,12 +120,9 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         /// <summary>
         /// Tries to get a value from the blackboard.
         /// </summary>
-        /// <typeparam name="T">Expected type of the value.</typeparam>
-        /// <param name="key">Key to retrieve.</param>
-        /// <param name="value">The retrieved value.</param>
-        /// <returns>True if the key exists and the value is of the correct type.</returns>
         public bool TryGet<T>(string key, out T value)
         {
+            EnsureInitialized();
             object obj;
             
             if (IsThreadSafe)
@@ -109,10 +158,9 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         /// <summary>
         /// Checks if a key exists in the blackboard.
         /// </summary>
-        /// <param name="key">Key to check.</param>
-        /// <returns>True if the key exists.</returns>
         public bool Contains(string key)
         {
+            EnsureInitialized();
             if (IsThreadSafe)
             {
                 lock (_lock)
@@ -126,18 +174,52 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         /// <summary>
         /// Removes a key from the blackboard.
         /// </summary>
-        /// <param name="key">Key to remove.</param>
-        /// <returns>True if the key was removed.</returns>
         public bool Remove(string key)
         {
+            EnsureInitialized();
             if (IsThreadSafe)
             {
                 lock (_lock)
                 {
+                    _entries.RemoveAll(e => e.Key == key);
                     return _runtimeData.Remove(key);
                 }
             }
+            _entries.RemoveAll(e => e.Key == key);
             return _runtimeData.Remove(key);
+        }
+
+        /// <summary>
+        /// Renames an existing key in the blackboard.
+        /// </summary>
+        public void Rename(string oldKey, string newKey)
+        {
+            if (string.IsNullOrEmpty(newKey) || oldKey == newKey) return;
+            if (Contains(newKey)) return;
+
+            if (IsThreadSafe)
+            {
+                lock (_lock)
+                {
+                    PerformRename(oldKey, newKey);
+                }
+            }
+            else
+            {
+                PerformRename(oldKey, newKey);
+            }
+        }
+
+        private void PerformRename(string oldKey, string newKey)
+        {
+            var entry = _entries.Find(e => e.Key == oldKey);
+            if (entry != null) entry.Key = newKey;
+
+            if (_runtimeData.TryGetValue(oldKey, out var value))
+            {
+                _runtimeData.Remove(oldKey);
+                _runtimeData[newKey] = value;
+            }
         }
         
         /// <summary>
@@ -150,20 +232,22 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
                 lock (_lock)
                 {
                     _runtimeData.Clear();
+                    _entries.Clear();
                 }
             }
             else
             {
                 _runtimeData.Clear();
+                _entries.Clear();
             }
         }
         
         /// <summary>
         /// Gets a snapshot of all keys in the blackboard.
         /// </summary>
-        /// <returns>Array of all keys.</returns>
         public string[] GetAllKeys()
         {
+            EnsureInitialized();
             if (IsThreadSafe)
             {
                 lock (_lock)
@@ -184,9 +268,9 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         /// <summary>
         /// Creates a copy of this blackboard.
         /// </summary>
-        /// <returns>A new Blackboard with copied data.</returns>
         public Blackboard Clone()
         {
+            EnsureInitialized();
             var clone = new Blackboard();
             
             if (IsThreadSafe)
@@ -195,7 +279,7 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
                 {
                     foreach (var kvp in _runtimeData)
                     {
-                        clone._runtimeData[kvp.Key] = kvp.Value;
+                        clone.Set(kvp.Key, kvp.Value);
                     }
                 }
             }
@@ -203,7 +287,7 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
             {
                 foreach (var kvp in _runtimeData)
                 {
-                    clone._runtimeData[kvp.Key] = kvp.Value;
+                    clone.Set(kvp.Key, kvp.Value);
                 }
             }
             
@@ -211,3 +295,4 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         }
     }
 }
+

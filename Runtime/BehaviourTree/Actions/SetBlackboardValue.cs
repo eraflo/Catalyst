@@ -5,7 +5,6 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
     /// <summary>
     /// SetBlackboardValue action: Sets a value in the blackboard.
     /// </summary>
-    [CreateAssetMenu(fileName = "SetBlackboardValue", menuName = "Behaviour Tree/Actions/Set Blackboard Value")]
     public class SetBlackboardValue : ActionNode
     {
         /// <summary>The key to set in the blackboard.</summary>

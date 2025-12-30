@@ -6,7 +6,6 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
     /// Repeater decorator: Repeats its child a specified number of times.
     /// Set repeatCount to 0 for infinite repetition.
     /// </summary>
-    [CreateAssetMenu(fileName = "Repeater", menuName = "Behaviour Tree/Decorators/Repeater")]
     public class Repeater : DecoratorNode
     {
         /// <summary>Number of times to repeat. 0 = infinite.</summary>
