@@ -302,6 +302,35 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
                 return keys;
             }
         }
+
+        /// <summary>
+        /// Gets all keys and their value types.
+        /// </summary>
+        public Dictionary<string, Type> GetKeysAndTypes()
+        {
+            EnsureInitialized();
+            var result = new Dictionary<string, Type>();
+            
+            if (IsThreadSafe)
+            {
+                lock (_lock)
+                {
+                    foreach (var kvp in _runtimeData)
+                    {
+                        result[kvp.Key] = kvp.Value?.GetType();
+                    }
+                }
+            }
+            else
+            {
+                foreach (var kvp in _runtimeData)
+                {
+                    result[kvp.Key] = kvp.Value?.GetType();
+                }
+            }
+            
+            return result;
+        }
         
         /// <summary>
         /// Creates a copy of this blackboard.

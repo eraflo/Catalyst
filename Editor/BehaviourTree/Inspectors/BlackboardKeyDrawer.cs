@@ -83,44 +83,48 @@ namespace Eraflo.UnityImportPackage.BehaviourTree.Editor
         
         private List<string> GetAvailableKeys(SerializedProperty property)
         {
-            var keys = new List<string>();
+            var keysWithTypes = new Dictionary<string, System.Type>();
+            var attr = attribute as BlackboardKeyAttribute;
             
-            // Try to find the BehaviourTree this node belongs to
+            // Try to find the BehaviourTree context
             var targetObject = property.serializedObject.targetObject;
-            
+            BehaviourTree btContext = null;
+
             if (targetObject is Node node)
             {
-                // Get from node's Tree reference (runtime)
-                if (node.Tree?.Blackboard != null)
-                {
-                    keys.AddRange(node.Tree.Blackboard.GetAllKeys());
-                }
+                btContext = node.Tree;
                 
-                // Also try to get from asset path (editor time)
-                if (keys.Count == 0)
+                if (btContext == null)
                 {
                     var path = AssetDatabase.GetAssetPath(node);
                     if (!string.IsNullOrEmpty(path))
                     {
-                        var mainAsset = AssetDatabase.LoadMainAssetAtPath(path);
-                        if (mainAsset is BehaviourTree bt && bt.Blackboard != null)
-                        {
-                            keys.AddRange(bt.Blackboard.GetAllKeys());
-                        }
+                        btContext = AssetDatabase.LoadMainAssetAtPath(path) as BehaviourTree;
                     }
                 }
             }
             
-            // Try from BTInspectorPanel context via Selection
-            if (keys.Count == 0 && Selection.activeObject is BehaviourTree selectedTree)
+            if (btContext == null && Selection.activeObject is BehaviourTree selectedTree)
             {
-                if (selectedTree.Blackboard != null)
-                {
-                    keys.AddRange(selectedTree.Blackboard.GetAllKeys());
-                }
+                btContext = selectedTree;
+            }
+
+            if (btContext?.Blackboard != null)
+            {
+                keysWithTypes = btContext.Blackboard.GetKeysAndTypes();
+            }
+
+            // Filter by type if requested
+            if (attr != null && attr.ExpectedType != null)
+            {
+                return keysWithTypes
+                    .Where(kvp => kvp.Value == null || attr.ExpectedType.IsAssignableFrom(kvp.Value))
+                    .Select(kvp => kvp.Key)
+                    .OrderBy(k => k)
+                    .ToList();
             }
             
-            return keys.Distinct().OrderBy(k => k).ToList();
+            return keysWithTypes.Keys.OrderBy(k => k).ToList();
         }
     }
 }

@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
+using UnityEditor.UIElements;
 using Eraflo.UnityImportPackage.BehaviourTree;
 using BT = Eraflo.UnityImportPackage.BehaviourTree.BehaviourTree;
 
@@ -208,6 +209,45 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
                 return field;
             }
             
+            if (_tree.Blackboard.TryGet<Vector3>(key, out Vector3 vecVal))
+            {
+                var field = new Vector3Field { label = "" };
+                field.labelElement.style.display = DisplayStyle.None;
+                field.value = vecVal;
+                field.RegisterValueChangedCallback(evt => {
+                    _tree.Blackboard.Set(key, evt.newValue);
+                    EditorUtility.SetDirty(_tree);
+                    AssetDatabase.SaveAssets();
+                });
+                return field;
+            }
+
+            if (_tree.Blackboard.TryGet<GameObject>(key, out GameObject goVal))
+            {
+                var field = new ObjectField { label = "", objectType = typeof(GameObject) };
+                field.labelElement.style.display = DisplayStyle.None;
+                field.value = goVal;
+                field.RegisterValueChangedCallback(evt => {
+                    _tree.Blackboard.Set(key, evt.newValue as GameObject);
+                    EditorUtility.SetDirty(_tree);
+                    AssetDatabase.SaveAssets();
+                });
+                return field;
+            }
+
+            if (_tree.Blackboard.TryGet<Transform>(key, out Transform transVal))
+            {
+                var field = new ObjectField { label = "", objectType = typeof(Transform) };
+                field.labelElement.style.display = DisplayStyle.None;
+                field.value = transVal;
+                field.RegisterValueChangedCallback(evt => {
+                    _tree.Blackboard.Set(key, evt.newValue as Transform);
+                    EditorUtility.SetDirty(_tree);
+                    AssetDatabase.SaveAssets();
+                });
+                return field;
+            }
+            
             return new Label("?");
         }
         
@@ -228,6 +268,10 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
             menu.AddItem(new GUIContent("Int"), false, () => AddKey<int>("newInt", 0));
             menu.AddItem(new GUIContent("Float"), false, () => AddKey<float>("newFloat", 0f));
             menu.AddItem(new GUIContent("String"), false, () => AddKey<string>("newString", ""));
+            menu.AddSeparator("");
+            menu.AddItem(new GUIContent("Vector3"), false, () => AddKey<Vector3>("newVector", Vector3.zero));
+            menu.AddItem(new GUIContent("GameObject"), false, () => AddKey<GameObject>("newGameObject", null));
+            menu.AddItem(new GUIContent("Transform"), false, () => AddKey<Transform>("newTransform", null));
             menu.ShowAsContext();
         }
         
