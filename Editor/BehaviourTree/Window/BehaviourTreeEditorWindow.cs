@@ -95,6 +95,25 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Window
                 OnSelectionChange();
             }
         }
+
+        private void OnEnable()
+        {
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+
+        private void OnDisable()
+        {
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+        }
+
+        private void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.EnteredEditMode)
+            {
+                _canvas?.UpdateDebugStates();
+                _blackboardPanel?.UpdateView(_tree);
+            }
+        }
         
         private VisualElement CreateToolbar()
         {
@@ -168,6 +187,13 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Window
             if (tree != null && tree != _tree)
             {
                 SelectTree(tree);
+                return;
+            }
+
+            var runner = Selection.activeGameObject?.GetComponent<BehaviourTreeRunner>();
+            if (runner != null && runner.RuntimeTree != null && runner.RuntimeTree != _tree)
+            {
+                SelectTree(runner.RuntimeTree);
             }
         }
         
@@ -206,6 +232,8 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Window
             if (Application.isPlaying && _tree != null)
             {
                 _blackboardPanel?.UpdateView(_tree);
+                _canvas?.UpdateDebugStates();
+                Repaint(); // Force window repaint for live visual updates
             }
         }
     }

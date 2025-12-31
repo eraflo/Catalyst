@@ -18,6 +18,8 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
         private const float EdgeWidth = 2f;
         private const float ArrowSize = 8f;
         
+        private Label _indexLabel;
+        
         public BTEdgeElement(BTNodeElement from, BTNodeElement to)
         {
             FromNode = from;
@@ -29,11 +31,35 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             style.top = 0;
             pickingMode = PickingMode.Position;
             
+            // Index label
+            _indexLabel = new Label("") { name = "edge-index" };
+            _indexLabel.AddToClassList("edge-index");
+            _indexLabel.style.position = Position.Absolute;
+            _indexLabel.style.display = DisplayStyle.None; // Hide by default
+            _indexLabel.pickingMode = PickingMode.Ignore;
+            Add(_indexLabel);
+            
             generateVisualContent += OnGenerateVisualContent;
             
             // Update when geometry changes
             RegisterCallback<GeometryChangedEvent>(evt => MarkDirtyRepaint());
             RegisterCallback<MouseDownEvent>(OnMouseDown);
+            
+            // Listen to geometry changes in the nodes to update edge position
+            RegisterNodeCallbacks();
+        }
+
+        private void RegisterNodeCallbacks()
+        {
+            if (FromNode != null)
+                FromNode.RegisterCallback<GeometryChangedEvent>(OnNodeGeometryChanged);
+            if (ToNode != null)
+                ToNode.RegisterCallback<GeometryChangedEvent>(OnNodeGeometryChanged);
+        }
+
+        private void OnNodeGeometryChanged(GeometryChangedEvent evt)
+        {
+            UpdatePath();
         }
 
         private void OnMouseDown(MouseDownEvent evt)
@@ -68,6 +94,23 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             style.top = yMin;
             style.width = xMax - xMin;
             style.height = yMax - yMin;
+            
+            // Update index label position (middle of the curve)
+            if (_indexLabel.resolvedStyle.display == DisplayStyle.Flex)
+            {
+                float yDistance = Mathf.Abs(endPos.y - startPos.y);
+                float controlOffset = Mathf.Min(yDistance * 0.5f, 50f);
+                var cp1 = new Vector2(startPos.x, startPos.y + controlOffset);
+                var cp2 = new Vector2(endPos.x, endPos.y - controlOffset);
+                var center = GetBezierPoint(startPos, cp1, cp2, endPos, 0.5f);
+                
+                // Position relative to edge element
+                var localCenter = center - new Vector2(xMin, yMin);
+                float labelWidth = _indexLabel.layout.width > 0 ? _indexLabel.layout.width : 16f;
+                float labelHeight = _indexLabel.layout.height > 0 ? _indexLabel.layout.height : 16f;
+                _indexLabel.style.left = localCenter.x - (labelWidth / 2);
+                _indexLabel.style.top = localCenter.y - (labelHeight / 2);
+            }
             
             MarkDirtyRepaint();
         }
@@ -173,6 +216,28 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
         {
             _edgeColor = color;
             MarkDirtyRepaint();
+        }
+
+        public void SetIndex(int index)
+        {
+            if (index < 0)
+            {
+                _indexLabel.style.display = DisplayStyle.None;
+            }
+            else
+            {
+                _indexLabel.text = (index + 1).ToString(); // 1-based for users
+                _indexLabel.style.display = DisplayStyle.Flex;
+                UpdatePath();
+            }
+        }
+
+        public void ClearCallbacks()
+        {
+            if (FromNode != null)
+                FromNode.UnregisterCallback<GeometryChangedEvent>(OnNodeGeometryChanged);
+            if (ToNode != null)
+                ToNode.UnregisterCallback<GeometryChangedEvent>(OnNodeGeometryChanged);
         }
     }
 }

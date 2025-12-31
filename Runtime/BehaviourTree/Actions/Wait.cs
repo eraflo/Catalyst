@@ -34,20 +34,23 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         {
             if (_completed)
             {
+                DebugMessage = "Done";
                 return NodeState.Success;
             }
+            
+            float remaining = Duration - (Time.time - StartTime); // Fallback if handles don't give time
+            // Timer doesn't easily expose remaining time, but we can track it
+            DebugMessage = $"Waiting... {remaining:F1}s";
             
             return NodeState.Running;
         }
         
         protected override void OnStop()
         {
-            // Cancel timer if node is stopped early
-            if (!_completed && _timerHandle != TimerHandle.None)
-            {
-                Timer.Cancel(_timerHandle);
-            }
+            // Cancel timer if node is stopped
+            Timer.Cancel(_timerHandle);
             _timerHandle = TimerHandle.None;
+            _completed = false;
         }
         
         public override void Abort()

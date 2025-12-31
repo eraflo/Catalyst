@@ -31,51 +31,29 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             
             var painter = ctx.painter2D;
             
-            // Draw thin lines
-            painter.strokeColor = new Color(0.3f, 0.3f, 0.3f, 0.3f);
-            painter.lineWidth = 1f;
+            // Draw dots
+            var dotColor = new Color(0.4f, 0.4f, 0.4f, 0.3f);
+            var thickDotColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
             
+            float dotSize = 1f;
             float startX = 0;
             float startY = 0;
             
-            // Vertical lines
-            for (float x = startX; x < rect.width; x += GridSize)
-            {
-                painter.BeginPath();
-                painter.MoveTo(new Vector2(x, 0));
-                painter.LineTo(new Vector2(x, rect.height));
-                painter.Stroke();
-            }
-            
-            // Horizontal lines
-            for (float y = startY; y < rect.height; y += GridSize)
-            {
-                painter.BeginPath();
-                painter.MoveTo(new Vector2(0, y));
-                painter.LineTo(new Vector2(rect.width, y));
-                painter.Stroke();
-            }
-            
-            // Draw thick lines
-            painter.strokeColor = new Color(0.35f, 0.35f, 0.35f, 0.5f);
-            painter.lineWidth = 2f;
-            
             float thickInterval = GridSize * ThickLineInterval;
             
-            for (float x = startX; x < rect.width; x += thickInterval)
+            for (float x = startX; x < rect.width; x += GridSize)
             {
-                painter.BeginPath();
-                painter.MoveTo(new Vector2(x, 0));
-                painter.LineTo(new Vector2(x, rect.height));
-                painter.Stroke();
-            }
-            
-            for (float y = startY; y < rect.height; y += thickInterval)
-            {
-                painter.BeginPath();
-                painter.MoveTo(new Vector2(0, y));
-                painter.LineTo(new Vector2(rect.width, y));
-                painter.Stroke();
+                for (float y = startY; y < rect.height; y += GridSize)
+                {
+                    bool isThick = (Mathf.Abs(x % thickInterval) < 0.1f) && (Mathf.Abs(y % thickInterval) < 0.1f);
+                    
+                    painter.BeginPath();
+                    float currentDotSize = isThick ? dotSize * 1.5f : dotSize;
+                    painter.fillColor = isThick ? thickDotColor : dotColor;
+                    
+                    painter.Arc(new Vector2(x, y), currentDotSize, 0, 360);
+                    painter.Fill();
+                }
             }
         }
     }

@@ -78,7 +78,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
             
             if (GUILayout.Button("+ Log"))
             {
-                CreateNode<Log>(tree);
+                CreateNode<BTLog>(tree);
             }
             
             EditorGUILayout.EndHorizontal();

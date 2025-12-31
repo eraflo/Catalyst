@@ -10,13 +10,29 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
     [BehaviourTreeNode("Actions/Navigation", "Move To")]
     public class MoveTo : ActionNode
     {
+        public enum TargetSource
+        {
+            Provider,
+            Blackboard,
+            StaticPosition,
+            Tag
+        }
+
         [Header("Target")]
-        [Tooltip("Target provider for the destination.")]
+        public TargetSource Source = TargetSource.Blackboard;
+
+        [Tooltip("Target provider for the destination (used if Source is Provider).")]
         public TargetProvider Target;
         
-        [Tooltip("Alternative: Blackboard key for target position/transform.")]
+        [Tooltip("Blackboard key for target (used if Source is Blackboard).")]
         [BlackboardKey]
         public string BlackboardKey;
+
+        [Tooltip("Static position in world space (used if Source is StaticPosition).")]
+        public Vector3 StaticPosition;
+
+        [Tooltip("Tag of the target object (used if Source is Tag).")]
+        public string TargetTag;
         
         [Header("Settings")]
         [Tooltip("How close to get before considering arrived.")]
@@ -31,14 +47,17 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         private NavMeshAgent _agent;
         private Vector3 _lastDestination;
         private bool _pathSet;
+        private GameObject _cachedTagTarget;
         
         protected override void OnStart()
         {
             _agent = Owner?.GetComponent<NavMeshAgent>();
             _pathSet = false;
+            _cachedTagTarget = null;
             
             if (_agent == null)
             {
+                DebugMessage = "Error: No NavMeshAgent found";
                 Debug.LogWarning("[BT] MoveTo: No NavMeshAgent found on Owner", Owner);
                 return;
             }
@@ -100,7 +119,7 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         {
             Vector3 destination = GetTargetPosition();
             
-            if (destination == Vector3.zero && Target == null && string.IsNullOrEmpty(BlackboardKey))
+            if (destination == Vector3.zero && Source != TargetSource.StaticPosition)
             {
                 _pathSet = false;
                 return;
@@ -112,23 +131,45 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
             
             _lastDestination = destination;
             _pathSet = _agent.SetDestination(destination);
+            
+            if (_pathSet)
+                DebugMessage = $"Moving to {destination}";
+            else
+                DebugMessage = $"Error: Failed to set path to {destination}";
         }
         
         private Vector3 GetTargetPosition()
         {
-            // Priority 1: TargetProvider
-            if (Target != null)
-                return Target.GetTargetPosition(this);
-            
-            // Priority 2: Blackboard key
-            if (!string.IsNullOrEmpty(BlackboardKey) && Blackboard != null)
+            switch (Source)
             {
-                if (Blackboard.TryGet<Vector3>(BlackboardKey, out var pos))
-                    return pos;
-                if (Blackboard.TryGet<Transform>(BlackboardKey, out var t))
-                    return t != null ? t.position : Vector3.zero;
-                if (Blackboard.TryGet<GameObject>(BlackboardKey, out var go))
-                    return go != null ? go.transform.position : Vector3.zero;
+                case TargetSource.Provider:
+                    return Target != null ? Target.GetTargetPosition(this) : Vector3.zero;
+
+                case TargetSource.Blackboard:
+                    if (!string.IsNullOrEmpty(BlackboardKey) && Blackboard != null)
+                    {
+                        if (Blackboard.TryGet<Vector3>(BlackboardKey, out var pos))
+                            return pos;
+                        if (Blackboard.TryGet<Transform>(BlackboardKey, out var t))
+                            return t != null ? t.position : Vector3.zero;
+                        if (Blackboard.TryGet<GameObject>(BlackboardKey, out var go))
+                            return go != null ? go.transform.position : Vector3.zero;
+                    }
+                    break;
+
+                case TargetSource.StaticPosition:
+                    return StaticPosition;
+
+                case TargetSource.Tag:
+                    if (!string.IsNullOrEmpty(TargetTag))
+                    {
+                        if (_cachedTagTarget == null)
+                        {
+                            _cachedTagTarget = GameObject.FindWithTag(TargetTag);
+                        }
+                        return _cachedTagTarget != null ? _cachedTagTarget.transform.position : Vector3.zero;
+                    }
+                    break;
             }
             
             return Vector3.zero;

@@ -25,6 +25,18 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         
         /// <summary>Optional description for this node.</summary>
         [TextArea] public string Description;
+
+        /// <summary>Runtime only: The time this node started its last execution.</summary>
+        [System.NonSerialized] public float StartTime;
+
+        /// <summary>Runtime only: Last time this node was evaluated.</summary>
+        [System.NonSerialized] public float LastTickTime;
+        
+        /// <summary>Runtime only: Last evaluated state.</summary>
+        [System.NonSerialized] public NodeState LastState;
+
+        /// <summary>Runtime only: Last debug message from this node.</summary>
+        [System.NonSerialized] public string DebugMessage;
         
         /// <summary>
         /// Evaluates this node and returns its state.
@@ -34,11 +46,16 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         {
             if (!Started)
             {
+                StartTime = Time.time;
                 OnStart();
                 Started = true;
             }
             
             State = OnUpdate();
+            
+            // Debugging
+            LastTickTime = Time.time;
+            LastState = State;
             
             if (State != NodeState.Running)
             {
@@ -86,6 +103,18 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         public virtual Node Clone()
         {
             return Instantiate(this);
+        }
+
+        /// <summary>
+        /// Resets runtime debugging states.
+        /// </summary>
+        public virtual void ResetRuntimeStates()
+        {
+            Started = false;
+            State = NodeState.Running;
+            LastTickTime = 0;
+            LastState = NodeState.Running;
+            DebugMessage = "";
         }
         
         /// <summary>

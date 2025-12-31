@@ -141,7 +141,25 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
                 fieldContainer.Add(field);
             }
             
-            // Perform initial visibility update for nodes with a "Type" enum
+            // Runtime Debug Message
+            if (Application.isPlaying)
+            {
+                var debugHeader = new Label("Debug Info") { style = { marginTop = 10, unityFontStyleAndWeight = FontStyle.Bold, color = new Color(0.1f, 0.6f, 1f) } };
+                fieldContainer.Add(debugHeader);
+                
+                var debugLabel = new Label(node.DebugMessage ?? "(No debug message)") { name = "node-debug-message" };
+                debugLabel.style.whiteSpace = WhiteSpace.Normal;
+                debugLabel.style.marginBottom = 5;
+                fieldContainer.Add(debugLabel);
+                
+                // Add a schedule to update this label every frame
+                fieldContainer.schedule.Execute(() => {
+                    if (node != null) debugLabel.text = node.DebugMessage ?? "(No debug message)";
+                }).Every(100);
+            }
+            
+            // Add spacer at bottom
+            fieldContainer.Add(new VisualElement { style = { height = 10 } });
             var typeProp = _serializedObject.FindProperty("Type");
             if (typeProp != null && typeProp.propertyType == SerializedPropertyType.Enum)
             {
@@ -150,6 +168,17 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
                 {
                     typeField.RegisterValueChangeCallback(evt => UpdateBlackboardVisibility(fieldContainer, evt.changedProperty));
                     UpdateBlackboardVisibility(fieldContainer, typeProp);
+                }
+            }
+
+            var sourceProp = _serializedObject.FindProperty("Source");
+            if (sourceProp != null && sourceProp.propertyType == SerializedPropertyType.Enum)
+            {
+                var sourceField = fieldContainer.Q<PropertyField>("Source");
+                if (sourceField != null)
+                {
+                    sourceField.RegisterValueChangeCallback(evt => UpdateMoveToVisibility(fieldContainer, evt.changedProperty));
+                    UpdateMoveToVisibility(fieldContainer, sourceProp);
                 }
             }
             
@@ -166,11 +195,9 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
         {
             if (typeProp == null) return;
             
-            // Identify the target value field based on the enum name (e.g., "Bool" -> "BoolValue")
             string typeName = typeProp.enumNames[typeProp.enumValueIndex];
             string targetField = typeName + "Value";
             
-            // Known value fields to manage
             string[] valueFields = { "BoolValue", "IntValue", "FloatValue", "StringValue", "Vector3Value" };
 
             foreach (var fieldName in valueFields)
@@ -180,6 +207,28 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
                 {
                     field.style.display = (fieldName == targetField) ? DisplayStyle.Flex : DisplayStyle.None;
                 }
+            }
+        }
+
+        private void UpdateMoveToVisibility(VisualElement container, SerializedProperty sourceProp)
+        {
+            if (sourceProp == null) return;
+
+            string sourceName = sourceProp.enumNames[sourceProp.enumValueIndex];
+            
+            // Manage field visibility for MoveTo
+            SetFieldVisible(container, "Target", sourceName == "Provider");
+            SetFieldVisible(container, "BlackboardKey", sourceName == "Blackboard");
+            SetFieldVisible(container, "StaticPosition", sourceName == "StaticPosition");
+            SetFieldVisible(container, "TargetTag", sourceName == "Tag");
+        }
+
+        private void SetFieldVisible(VisualElement container, string fieldName, bool visible)
+        {
+            var field = container.Q<PropertyField>(fieldName);
+            if (field != null)
+            {
+                field.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             }
         }
         

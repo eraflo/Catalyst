@@ -55,6 +55,11 @@
       "path": "Samples~/NetworkingSample"
     },
     {
+      "displayName": "BehaviourTree Sample",
+      "description": "Demonstrates the BehaviourTree system",
+      "path": "Samples~/BehaviourTreeSample"
+    },
+    {
       "displayName": "VR Example Sample",
       "description": "A basic example demonstrating VR usage",
       "path": "Samples~/VRExampleSample"

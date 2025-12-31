@@ -99,34 +99,81 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             else
                 RemoveFromClassList("highlight");
         }
+
+        public void UpdateDebugState()
+        {
+            RemoveFromClassList("running");
+            RemoveFromClassList("success");
+            RemoveFromClassList("failure");
+
+            if (!Application.isPlaying || Node == null)
+            {
+                style.opacity = 1.0f;
+                return;
+            }
+
+            float timeSinceTick = Time.time - Node.LastTickTime;
+            
+            // If the node was ticked recently (or currently running)
+            // Increased threshold to 0.3s to avoid flickering at low frame rates/tick rates
+            if (timeSinceTick < 0.3f)
+            {
+                style.opacity = 1.0f;
+                if (Node.State == NodeState.Running)
+                {
+                    AddToClassList("running");
+                }
+                else if (Node.LastState == NodeState.Success)
+                {
+                    AddToClassList("success");
+                }
+                else if (Node.LastState == NodeState.Failure)
+                {
+                    AddToClassList("failure");
+                }
+            }
+            else
+            {
+                // Fade out nodes that haven't been ticked recently (min opacity 0.4)
+                float opacity = Mathf.Lerp(1.0f, 0.4f, (timeSinceTick - 0.3f) * 1.5f);
+                style.opacity = Mathf.Max(0.4f, opacity);
+            }
+        }
         
         public Vector2 GetOutputPortCenter()
         {
             if (_outputPort == null) return GetCenter();
             
-            var portRect = _outputPort.worldBound;
-            return new Vector2(
-                portRect.x + portRect.width / 2 - parent.worldBound.x,
-                portRect.y + portRect.height / 2 - parent.worldBound.y
-            );
+            // Use layout for local position relative to node, then add Node.Position
+            var portRect = _outputPort.layout;
+            
+            // Fallback if layout is not yet ready
+            float portX = portRect.width > 0 ? portRect.x + portRect.width / 2 : 0;
+            float portY = portRect.height > 0 ? portRect.y + portRect.height / 2 : 60; // Estimated height
+            
+            return new Vector2(Node.Position.x + portX, Node.Position.y + portY);
         }
         
         public Vector2 GetInputCenter()
         {
-            var rect = _body.worldBound;
-            return new Vector2(
-                rect.x + rect.width / 2 - parent.worldBound.x,
-                rect.y - parent.worldBound.y
-            );
+            var rect = _body.layout;
+            
+            // Fallback if layout is not yet ready
+            float inputX = rect.width > 0 ? rect.x + rect.width / 2 : 50; // Estimated width center
+            float inputY = rect.height > 0 ? rect.y : 0;
+            
+            return new Vector2(Node.Position.x + inputX, Node.Position.y + inputY);
         }
         
         public Vector2 GetCenter()
         {
-            var rect = _body.worldBound;
-            return new Vector2(
-                rect.x + rect.width / 2 - parent.worldBound.x,
-                rect.y + rect.height / 2 - parent.worldBound.y
-            );
+            var rect = _body.layout;
+            
+            // Fallback if layout is not yet ready
+            float centerX = rect.width > 0 ? rect.x + rect.width / 2 : 50;
+            float centerY = rect.height > 0 ? rect.y + rect.height / 2 : 20;
+            
+            return new Vector2(Node.Position.x + centerX, Node.Position.y + centerY);
         }
         
         private void OnMouseDown(MouseDownEvent evt)

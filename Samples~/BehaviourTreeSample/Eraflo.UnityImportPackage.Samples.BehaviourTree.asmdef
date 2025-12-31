@@ -1,0 +1,16 @@
+{
+    "name": "Eraflo.UnityImportPackage.Samples.BehaviourTree",
+    "rootNamespace": "Eraflo.UnityImportPackage.Samples.BehaviourTree",
+    "references": [
+        "GUID:0a0b8ab39a8e46b4596ce092c10a1fea"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

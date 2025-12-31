@@ -29,7 +29,10 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
             
             foreach (var child in Children)
             {
-                clone.Children.Add(child.Clone());
+                if (child != null)
+                {
+                    clone.Children.Add(child.Clone());
+                }
             }
             
             return clone;
@@ -42,9 +45,23 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         {
             foreach (var child in Children)
             {
-                child.Abort();
+                child?.Abort();
             }
             base.Abort();
+        }
+        /// <summary>
+        /// Sorts the children nodes based on their visual X position.
+        /// This ensures visual order (left-to-right) matches execution order.
+        /// </summary>
+        public void SortChildrenByPosition()
+        {
+            Children.Sort((a, b) =>
+            {
+                if (a == null && b == null) return 0;
+                if (a == null) return 1;
+                if (b == null) return -1;
+                return a.Position.x.CompareTo(b.Position.x);
+            });
         }
     }
 }

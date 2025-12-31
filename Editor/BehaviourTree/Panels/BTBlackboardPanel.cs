@@ -85,8 +85,16 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
         
         public void UpdateView(BT tree)
         {
-            _tree = tree;
-            RefreshKeys();
+            if (_tree != tree || !Application.isPlaying)
+            {
+                _tree = tree;
+                RefreshKeys();
+            }
+            else if (Application.isPlaying)
+            {
+                // In play mode, just update the values if we already have the same keys
+                UpdateRuntimeValues();
+            }
         }
         
         private void RefreshKeys()
@@ -110,6 +118,59 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
             {
                 var row = CreateEditableRow(key);
                 _contentContainer.Add(row);
+            }
+        }
+
+        private void UpdateRuntimeValues()
+        {
+            if (_tree?.Blackboard == null) return;
+
+            // Only update if keys didn't change (addition/removal handled by full RefreshKeys)
+            var currentKeys = _tree.Blackboard.GetAllKeys();
+            var rowCount = _contentContainer.Query(className: "blackboard-row").ToList().Count;
+            
+            if (currentKeys.Length != rowCount)
+            {
+                RefreshKeys();
+                return;
+            }
+
+            // Sync values from blackboard to existing fields
+            _contentContainer.Query(className: "blackboard-row").ForEach(row => {
+                var keyField = row.Q<TextField>(className: "key-field");
+                if (keyField == null) return;
+                
+                string key = keyField.value;
+                var valueField = row.Q<VisualElement>(name: "value-field");
+                if (valueField == null) return;
+
+                UpdateFieldValue(key, valueField);
+            });
+        }
+
+        private void UpdateFieldValue(string key, VisualElement field)
+        {
+            if (field is IntegerField intField) {
+                if (_tree.Blackboard.TryGet<int>(key, out int val)) intField.SetValueWithoutNotify(val);
+            }
+            else if (field is FloatField floatField) {
+                if (_tree.Blackboard.TryGet<float>(key, out float val)) floatField.SetValueWithoutNotify(val);
+            }
+            else if (field is Toggle toggle) {
+                if (_tree.Blackboard.TryGet<bool>(key, out bool val)) toggle.SetValueWithoutNotify(val);
+            }
+            else if (field is TextField textField) {
+                if (_tree.Blackboard.TryGet<string>(key, out string val)) textField.SetValueWithoutNotify(val ?? "");
+            }
+            else if (field is Vector3Field vecField) {
+                if (_tree.Blackboard.TryGet<Vector3>(key, out Vector3 val)) vecField.SetValueWithoutNotify(val);
+            }
+            else if (field is ObjectField objField) {
+                if (objField.objectType == typeof(GameObject)) {
+                    if (_tree.Blackboard.TryGet<GameObject>(key, out GameObject val)) objField.SetValueWithoutNotify(val);
+                } else if (objField.objectType == typeof(Transform)) {
+                    if (_tree.Blackboard.TryGet<Transform>(key, out Transform val)) objField.SetValueWithoutNotify(val);
+                }
             }
         }
         
@@ -143,6 +204,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
             var valueField = CreateValueField(key);
             if (valueField != null)
             {
+                valueField.name = "value-field";
                 valueField.style.flexGrow = 1;
                 row.Add(valueField);
             }

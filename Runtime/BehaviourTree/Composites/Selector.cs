@@ -14,6 +14,11 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
             while (CurrentChildIndex < Children.Count)
             {
                 var child = Children[CurrentChildIndex];
+                if (child == null)
+                {
+                    CurrentChildIndex++;
+                    continue;
+                }
                 var state = child.Evaluate();
                 
                 switch (state)

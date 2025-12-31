@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using Eraflo.UnityImportPackage.BehaviourTree;
+using Eraflo.UnityImportPackage.Editor.BehaviourTree.Window;
 
 namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
 {
@@ -41,7 +42,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
                 // Blackboard viewer
                 if (runner.Blackboard != null)
                 {
-                    EditorGUILayout.LabelField("Blackboard", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("Blackboard (Runtime Values)", EditorStyles.boldLabel);
                     
                     var keys = runner.Blackboard.GetAllKeys();
                     if (keys.Length == 0)
@@ -53,7 +54,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
                         EditorGUI.indentLevel++;
                         foreach (var key in keys)
                         {
-                            EditorGUILayout.LabelField($"{key}: (value)");
+                            DrawBlackboardEntry(runner.Blackboard, key);
                         }
                         EditorGUI.indentLevel--;
                     }
@@ -75,6 +76,13 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
                 }
                 
                 EditorGUILayout.EndHorizontal();
+
+                GUI.backgroundColor = new Color(0.4f, 0.7f, 1f);
+                if (GUILayout.Button("Open Runtime Graph", GUILayout.Height(30)))
+                {
+                    BehaviourTreeEditorWindow.OpenWindow(runner.RuntimeTree);
+                }
+                GUI.backgroundColor = Color.white;
                 
                 // Force repaint for live updates
                 Repaint();
@@ -83,6 +91,54 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree
             {
                 EditorGUILayout.HelpBox("Enter Play Mode to see runtime state.", MessageType.Info);
             }
+        }
+
+        private void DrawBlackboardEntry(Blackboard blackboard, string key)
+        {
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(key, GUILayout.Width(100));
+
+            if (blackboard.TryGet<bool>(key, out bool boolVal))
+            {
+                var newVal = EditorGUILayout.Toggle(boolVal);
+                if (newVal != boolVal) blackboard.Set(key, newVal);
+            }
+            else if (blackboard.TryGet<int>(key, out int intVal))
+            {
+                var newVal = EditorGUILayout.IntField(intVal);
+                if (newVal != intVal) blackboard.Set(key, newVal);
+            }
+            else if (blackboard.TryGet<float>(key, out float floatVal))
+            {
+                var newVal = EditorGUILayout.FloatField(floatVal);
+                if (newVal != floatVal) blackboard.Set(key, newVal);
+            }
+            else if (blackboard.TryGet<string>(key, out string strVal))
+            {
+                var newVal = EditorGUILayout.TextField(strVal);
+                if (newVal != strVal) blackboard.Set(key, newVal);
+            }
+            else if (blackboard.TryGet<Vector3>(key, out Vector3 vecVal))
+            {
+                var newVal = EditorGUILayout.Vector3Field("", vecVal);
+                if (newVal != vecVal) blackboard.Set(key, newVal);
+            }
+            else if (blackboard.TryGet<GameObject>(key, out GameObject goVal))
+            {
+                var newVal = EditorGUILayout.ObjectField(goVal, typeof(GameObject), true) as GameObject;
+                if (newVal != goVal) blackboard.Set(key, newVal);
+            }
+            else if (blackboard.TryGet<Transform>(key, out Transform transVal))
+            {
+                var newVal = EditorGUILayout.ObjectField(transVal, typeof(Transform), true) as Transform;
+                if (newVal != transVal) blackboard.Set(key, newVal);
+            }
+            else
+            {
+                EditorGUILayout.LabelField("(Unsupported Type)");
+            }
+
+            EditorGUILayout.EndHorizontal();
         }
     }
 }

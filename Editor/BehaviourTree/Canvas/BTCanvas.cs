@@ -118,13 +118,30 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             // Create node elements
             foreach (var node in tree.Nodes)
             {
-                CreateNodeElement(node);
+                if (node != null)
+                {
+                    CreateNodeElement(node);
+                }
             }
             
             // Create edge elements
             foreach (var node in tree.Nodes)
             {
-                CreateEdgesForNode(node);
+                if (node != null)
+                {
+                    CreateEdgesForNode(node);
+                }
+            }
+            
+            // Initial sort and index update
+            foreach (var node in tree.Nodes)
+            {
+                if (node is CompositeNode composite)
+                {
+                    composite.SortChildrenByPosition();
+                    var element = FindNodeElement(node);
+                    if (element != null) UpdateEdgeIndices(element);
+                }
             }
             
             // Center view on root if exists - wait for layout to be ready
@@ -155,6 +172,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             
             foreach (var edge in _edgeElements)
             {
+                edge.ClearCallbacks();
                 _edgeLayer.Remove(edge);
             }
             _edgeElements.Clear();
@@ -165,6 +183,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
         
         private BTNodeElement CreateNodeElement(Node node)
         {
+            if (node == null) return null;
             var element = new BTNodeElement(node, _tree);
             element.OnSelected += nodeEl => SelectNode(nodeEl, EditorGUI.actionKey);
             element.OnStartEdge += OnStartEdgeCreation;
@@ -210,7 +229,38 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             _edgeLayer.Add(edge);
             
             // Schedule UpdatePath so it runs after layout
-            edge.schedule.Execute(() => edge.UpdatePath()).ExecuteLater(1);
+            edge.schedule.Execute(() => {
+                edge.UpdatePath();
+                UpdateEdgeIndices(from);
+            }).ExecuteLater(1);
+        }
+        
+        private void UpdateEdgeIndices(BTNodeElement parent)
+        {
+            if (parent?.Node is CompositeNode composite)
+            {
+                // Find all edges from this parent
+                var outgoingEdges = _edgeElements.Where(e => e.FromNode == parent).ToList();
+                
+                // Set index based on the sorted Children list in the data
+                for (int i = 0; i < composite.Children.Count; i++)
+                {
+                    var child = composite.Children[i];
+                    if (child == null) continue;
+
+                    var edge = outgoingEdges.FirstOrDefault(e => e.ToNode != null && e.ToNode.Node == child);
+                    if (edge != null)
+                    {
+                        edge.SetIndex(i);
+                    }
+                }
+            }
+            else
+            {
+                // Non-composite parents have only one child or none, no index needed
+                var outgoingEdges = _edgeElements.Where(e => e.FromNode == parent).ToList();
+                foreach (var edge in outgoingEdges) edge.SetIndex(-1);
+            }
         }
         
         private BTNodeElement FindNodeElement(Node node)
@@ -247,6 +297,18 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
                 element.SetSelected(true);
                 _selectedNodes.Add(element);
                 OnNodeSelected?.Invoke(element);
+            }
+        }
+
+        public void UpdateDebugStates()
+        {
+            foreach (var node in _nodeElements)
+            {
+                if (!Application.isPlaying && node.Node != null)
+                {
+                    node.Node.ResetRuntimeStates();
+                }
+                node.UpdateDebugState();
             }
         }
 
@@ -397,7 +459,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
                 if (_selectedNodes.Count == 1)
                 {
                     var node = _selectedNodes[0].Node;
-                    if (_tree != null && _tree.RootNode != node)
+                    if (node != null && _tree != null && _tree.RootNode != node)
                     {
                         menu.AddSeparator("");
                         menu.AddItem(new GUIContent("Set as Root"), false, () => SetAsRoot(node));
@@ -410,7 +472,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
 
         private void CopySelectedNode(BTNodeElement node)
         {
-            if (node == null) return;
+            if (node == null || node.Node == null) return;
             _clipboardType = node.Node.GetType();
             _clipboardName = node.Node.name;
         }
@@ -520,16 +582,39 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
                 if (!_isDraggingNodes)
                 {
                     _isDraggingNodes = true;
-                    Undo.RecordObjects(_selectedNodes.Select(n => n.Node).ToArray(), "Move Nodes");
+                    var nodesToRecord = _selectedNodes.Select(n => n.Node).Where(n => n != null).ToArray();
+                    if (nodesToRecord.Length > 0)
+                    {
+                        Undo.RecordObjects(nodesToRecord, "Move Nodes");
+                    }
                 }
                 
+                // 1. Update all node positions first
                 foreach (var nodeElement in _selectedNodes)
                 {
                     nodeElement.Node.Position += delta;
                     nodeElement.style.left = nodeElement.Node.Position.x;
                     nodeElement.style.top = nodeElement.Node.Position.y;
-                    
+                }
+                
+                // 2. Update all connected edges and parent sorting in a second pass
+                HashSet<BTNodeElement> parentsToUpdate = new HashSet<BTNodeElement>();
+                foreach (var nodeElement in _selectedNodes)
+                {
                     OnNodePositionChanged(nodeElement);
+                    
+                    // Find if this node has a parent to update its sorting
+                    var parentEdge = _edgeElements.FirstOrDefault(e => e.ToNode == nodeElement);
+                    if (parentEdge != null && parentEdge.FromNode.Node is CompositeNode)
+                    {
+                        parentsToUpdate.Add(parentEdge.FromNode);
+                    }
+                }
+                
+                foreach (var parentEl in parentsToUpdate)
+                {
+                    (parentEl.Node as CompositeNode).SortChildrenByPosition();
+                    UpdateEdgeIndices(parentEl);
                 }
             }
         }
@@ -591,7 +676,10 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
                 // Mark dirty at the end of drag
                 foreach (var nodeElement in _selectedNodes)
                 {
-                    EditorUtility.SetDirty(nodeElement.Node);
+                    if (nodeElement.Node != null)
+                    {
+                        EditorUtility.SetDirty(nodeElement.Node);
+                    }
                 }
             }
 
@@ -663,6 +751,13 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
                     {
                         Undo.RecordObject(_tree, "Create Connection");
                         CreateEdge(_edgeStartNode, targetNode);
+                        
+                        if (_edgeStartNode.Node is CompositeNode comp)
+                        {
+                            comp.SortChildrenByPosition();
+                            UpdateEdgeIndices(_edgeStartNode);
+                        }
+                        
                         EditorUtility.SetDirty(_tree);
                     }
                 }
@@ -720,21 +815,32 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             // Delete edges
             foreach (var edge in _selectedEdges)
             {
+                if (edge == null) continue;
+                
                 // Remove from parent data
-                var parentNode = edge.FromNode.Node;
-                if (parentNode is CompositeNode composite)
+                var parentNode = edge.FromNode?.Node;
+                var childNode = edge.ToNode?.Node;
+                
+                if (parentNode != null && childNode != null)
                 {
-                    Undo.RecordObject(composite, "Remove Child");
-                    composite.Children.Remove(edge.ToNode.Node);
-                }
-                else if (parentNode is DecoratorNode decorator)
-                {
-                    Undo.RecordObject(decorator, "Remove Child");
-                    decorator.Child = null;
+                    if (parentNode is CompositeNode composite)
+                    {
+                        Undo.RecordObject(composite, "Remove Child");
+                        composite.Children.Remove(childNode);
+                    }
+                    else if (parentNode is DecoratorNode decorator)
+                    {
+                        Undo.RecordObject(decorator, "Remove Child");
+                        decorator.Child = null;
+                    }
                 }
                 
+                edge.ClearCallbacks();
                 _edgeLayer.Remove(edge);
                 _edgeElements.Remove(edge);
+                
+                // Update indices for remaining siblings
+                if (edge.FromNode != null) UpdateEdgeIndices(edge.FromNode);
             }
             _selectedEdges.Clear();
 
@@ -742,7 +848,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             foreach (var nodeElement in _selectedNodes.ToList())
             {
                 var node = nodeElement.Node;
-                _tree.DeleteNode(node);
+                if (node != null) _tree.DeleteNode(node);
                 
                 _nodeLayer.Remove(nodeElement);
                 _nodeElements.Remove(nodeElement);

@@ -112,7 +112,7 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         public BehaviourTree Clone()
         {
             var clone = Instantiate(this);
-            clone.Blackboard = new Blackboard();
+            clone.Blackboard = Blackboard.Clone();
             clone.RootNode = RootNode?.Clone();
             clone.Nodes = new List<Node>();
             

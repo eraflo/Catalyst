@@ -7,7 +7,7 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
     /// Useful for debugging.
     /// </summary>
     [BehaviourTreeNode("Actions/Debug", "Log")]
-    public class Log : ActionNode
+    public class BTLog : ActionNode
     {
         /// <summary>The message to log.</summary>
         [TextArea]
