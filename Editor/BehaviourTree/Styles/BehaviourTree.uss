@@ -7,46 +7,51 @@
    ============================================ */
 
 .node-body {
-    background-color: #333;
-    border-radius: 12px;
+    background-color: rgba(25, 25, 25, 0.8);
+    border-radius: 14px;
     padding: 12px 24px;
-    min-width: 80px;
+    min-width: 100px;
     align-items: center;
     justify-content: center;
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.1);
+    /* Depth shadow matching floating panels */
+    border-bottom-width: 3px;
+    border-bottom-color: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
 }
 
 .node-title {
     font-size: 13px;
     -unity-font-style: bold;
-    color: white;
+    color: #ffffff;
     -unity-text-align: middle-center;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
-/* Node type colors with subtle gradients */
+/* Node Category - Vibrant Colored Glass */
 .node-body.composite {
-    background-color: #1e3a34;
-    border-left-width: 4px;
-    border-left-color: #16a085;
+    background-color: rgba(26, 188, 156, 0.9); /* Vibrant Turquoise */
+    border-color: rgba(26, 188, 156, 0.6);
+    border-top-color: rgba(255, 255, 255, 0.4);
 }
 
 .node-body.decorator {
-    background-color: #3d2b45;
-    border-left-width: 4px;
-    border-left-color: #9b59b6;
+    background-color: rgba(142, 68, 173, 0.9); /* Vibrant Amethyst */
+    border-color: rgba(142, 68, 173, 0.6);
+    border-top-color: rgba(255, 255, 255, 0.4);
 }
 
 .node-body.action {
-    background-color: #1b3d29;
-    border-left-width: 4px;
-    border-left-color: #27ae60;
+    background-color: rgba(46, 204, 113, 0.9); /* Vibrant Emerald */
+    border-color: rgba(46, 204, 113, 0.6);
+    border-top-color: rgba(255, 255, 255, 0.4);
 }
 
 .node-body.condition {
-    background-color: #45301d;
-    border-left-width: 4px;
-    border-left-color: #e67e22;
+    background-color: rgba(243, 156, 18, 0.9); /* Vibrant Orange */
+    border-color: rgba(243, 156, 18, 0.6);
+    border-top-color: rgba(255, 255, 255, 0.4);
 }
 
 /* Highlight for connection target */
@@ -90,28 +95,28 @@
    ============================================ */
 
 .floating-panel {
-    background-color: rgba(25, 25, 25, 0.85);
-    border-radius: 10px;
+    background-color: rgba(15, 15, 15, 0.75);
+    border-radius: 14px;
     border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.15);
-    min-width: 180px;
+    border-color: rgba(255, 255, 255, 0.12);
+    min-width: 200px;
     overflow: hidden;
-    /* Basic drop shadow */
-    border-bottom-width: 2px;
-    border-bottom-color: rgba(0, 0, 0, 0.3);
+    /* Simulate depth */
+    border-bottom-width: 3px;
+    border-bottom-color: rgba(0, 0, 0, 0.5);
 }
 
 .panel-header {
-    background-color: rgba(45, 45, 45, 0.9);
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-    padding: 10px 14px;
+    background-color: rgba(60, 60, 60, 0.8);
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    padding: 12px 16px;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
     cursor: move;
     border-bottom-width: 1px;
-    border-bottom-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .panel-title {
@@ -137,8 +142,8 @@
 }
 
 .panel-content {
-    padding: 10px;
-    background-color: rgba(25, 25, 25, 0.4);
+    padding: 12px;
+    background-color: rgba(20, 20, 20, 0.2);
 }
 
 .empty-label {
@@ -216,10 +221,10 @@
 
 .bt-toolbar {
     flex-direction: row;
-    background-color: #2a2a2a;
-    padding: 4px 10px;
+    background-color: rgba(25, 25, 25, 0.95);
+    padding: 6px 12px;
     border-bottom-width: 1px;
-    border-bottom-color: #1a1a1a;
+    border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .toolbar-button {
@@ -253,32 +258,34 @@
    ============================================ */
 
 .search-window {
-    background-color: rgba(35, 35, 35, 0.98);
-    border-radius: 6px;
+    background-color: rgba(20, 20, 20, 0.9);
+    border-radius: 12px;
     border-width: 1px;
-    border-color: #555;
-    max-height: 350px;
+    border-color: rgba(255, 255, 255, 0.15);
+    max-height: 400px;
+    border-bottom-width: 4px;
+    border-bottom-color: rgba(0, 0, 0, 0.4);
 }
 
 .search-header {
-    padding: 8px;
-    background-color: #333;
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
+    padding: 10px;
+    background-color: rgba(70, 70, 70, 0.6);
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
 }
 
 .search-field {
-    background-color: #222;
-    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
     border-width: 1px;
-    border-color: #555;
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
 .search-field > TextInput {
     background-color: transparent;
-    color: white;
-    padding: 4px 8px;
-    font-size: 12px;
+    color: #fff;
+    padding: 6px 10px;
+    font-size: 13px;
 }
 
 .search-results {
@@ -415,24 +422,59 @@
    VISUAL DEBUGGING
    ============================================ */
 
+/* Pulsing animation for running nodes */
+@keyframes running-pulse {
+    from { 
+        border-color: #f1c40f;
+        box-shadow: 0 0 12px rgba(241, 196, 15, 0.5); 
+    }
+    to { 
+        border-color: #ffda44;
+        box-shadow: 0 0 28px rgba(241, 196, 15, 0.9); 
+    }
+}
+
 #bt-node.running .node-body {
-    border-width: 3px;
-    border-color: #f1c40f; /* Yellow */
+    border-width: 2px;
+    animation-name: running-pulse;
+    animation-duration: 0.7s;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
 }
 
 #bt-node.success .node-body {
-    border-width: 3px;
-    border-color: #2ecc71; /* Green */
+    border-color: #2ecc71;
+    border-width: 2px;
+    box-shadow: 0 0 20px rgba(46, 204, 113, 0.5);
 }
 
 #bt-node.failure .node-body {
-    border-width: 3px;
-    border-color: #e74c3c; /* Red */
+    border-color: #e74c3c;
+    border-width: 2px;
+    box-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
 }
 
-/* Optional: Subtle glow for the running node */
-#bt-node.running .node-body {
-    box-shadow: 0 0 10px #f1c40f;
+/* Debug Badge Style - "Floating Bubble" */
+.node-badge {
+    position: absolute;
+    top: -24px;
+    left: 20px;
+    right: 20px;
+    height: 20px;
+    background-color: rgba(15, 15, 15, 0.95);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: #f1c40f;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.debug-label {
+    color: #f1c40f;
+    font-size: 10px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
 }
 
 

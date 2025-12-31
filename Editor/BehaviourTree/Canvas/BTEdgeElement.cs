@@ -239,5 +239,31 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             if (ToNode != null)
                 ToNode.UnregisterCallback<GeometryChangedEvent>(OnNodeGeometryChanged);
         }
+
+        public void UpdateDebugState()
+        {
+            if (ToNode == null) return;
+            
+            bool isRunning = ToNode.ClassListContains("running");
+            bool isSuccess = ToNode.ClassListContains("success");
+            bool isFailure = ToNode.ClassListContains("failure");
+            bool isActive = isRunning || isSuccess || isFailure;
+            
+            if (isActive)
+            {
+                if (isRunning) _edgeColor = new Color(0.95f, 0.77f, 0.06f); // Yellow
+                else if (isSuccess) _edgeColor = new Color(0.18f, 0.8f, 0.44f); // Green
+                else if (isFailure) _edgeColor = new Color(0.91f, 0.3f, 0.24f); // Red
+                
+                style.opacity = 1.0f;
+            }
+            else
+            {
+                _edgeColor = IsSelected ? new Color(0.2f, 0.6f, 1f) : new Color(0.4f, 0.4f, 0.4f, 0.5f);
+                style.opacity = ToNode.style.opacity;
+            }
+            
+            MarkDirtyRepaint();
+        }
     }
 }

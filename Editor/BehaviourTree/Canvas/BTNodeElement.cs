@@ -22,6 +22,8 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
         private VisualElement _body;
         private Label _titleLabel;
         private VisualElement _outputPort;
+        private VisualElement _debugBadge;
+        private Label _debugLabel;
         private BT _tree;
         
         private bool _isDragging;
@@ -50,6 +52,15 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             _titleLabel = new Label(node.name) { name = "node-title" };
             _titleLabel.AddToClassList("node-title");
             _body.Add(_titleLabel);
+            
+            // Debug Badge
+            _debugBadge = new VisualElement { name = "node-badge" };
+            _debugBadge.AddToClassList("node-badge");
+            _debugLabel = new Label("") { name = "debug-label" };
+            _debugLabel.AddToClassList("debug-label");
+            _debugBadge.Add(_debugLabel);
+            _debugBadge.style.display = DisplayStyle.None;
+            Add(_debugBadge);
             
             // Output port (only for non-leaf nodes)
             if (node is CompositeNode || node is DecoratorNode)
@@ -109,6 +120,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             if (!Application.isPlaying || Node == null)
             {
                 style.opacity = 1.0f;
+                _debugBadge.style.display = DisplayStyle.None;
                 return;
             }
 
@@ -137,6 +149,18 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
                 // Fade out nodes that haven't been ticked recently (min opacity 0.4)
                 float opacity = Mathf.Lerp(1.0f, 0.4f, (timeSinceTick - 0.3f) * 1.5f);
                 style.opacity = Mathf.Max(0.4f, opacity);
+            }
+
+            // Update debug badge
+            if (Application.isPlaying && !string.IsNullOrEmpty(Node.DebugMessage) && timeSinceTick < 1.0f)
+            {
+                if (_debugLabel.text != Node.DebugMessage)
+                    _debugLabel.text = Node.DebugMessage;
+                _debugBadge.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                _debugBadge.style.display = DisplayStyle.None;
             }
         }
         

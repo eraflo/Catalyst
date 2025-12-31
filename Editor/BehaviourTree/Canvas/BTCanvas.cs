@@ -310,6 +310,11 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
                 }
                 node.UpdateDebugState();
             }
+
+            foreach (var edge in _edgeElements)
+            {
+                edge.UpdateDebugState();
+            }
         }
 
         public void SelectEdge(BTEdgeElement edge, bool additive)

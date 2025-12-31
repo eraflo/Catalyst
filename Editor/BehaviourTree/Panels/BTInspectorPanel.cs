@@ -154,7 +154,15 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
                 
                 // Add a schedule to update this label every frame
                 fieldContainer.schedule.Execute(() => {
-                    if (node != null) debugLabel.text = node.DebugMessage ?? "(No debug message)";
+                    if (node != null && Application.isPlaying)
+                    {
+                        debugLabel.text = node.DebugMessage ?? "(No debug message)";
+                    }
+                    else if (!Application.isPlaying)
+                    {
+                        debugHeader.style.display = DisplayStyle.None;
+                        debugLabel.style.display = DisplayStyle.None;
+                    }
                 }).Every(100);
             }
             

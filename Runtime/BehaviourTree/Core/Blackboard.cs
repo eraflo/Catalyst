@@ -29,6 +29,14 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         private readonly Dictionary<string, object> _runtimeData = new();
         private readonly object _lock = new();
         
+        /// <summary>
+        /// Triggered when a value is changed in the blackboard.
+        /// (object oldValue, object newValue)
+        /// </summary>
+        public Action<string, object, object> OnValueChanged;
+        
+        private readonly Dictionary<string, Action<object, object>> _keyListeners = new();
+        
         private static bool IsThreadSafe => PackageRuntime.IsThreadSafe;
 
         private bool _initialized = false;
@@ -104,18 +112,32 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         public void Set<T>(string key, T value)
         {
             EnsureInitialized();
+            object oldValue = null;
+            bool found = false;
+
             if (IsThreadSafe)
             {
                 lock (_lock)
                 {
+                    found = _runtimeData.TryGetValue(key, out oldValue);
                     _runtimeData[key] = value;
                     SyncEntry(key, value);
                 }
             }
             else
             {
+                found = _runtimeData.TryGetValue(key, out oldValue);
                 _runtimeData[key] = value;
                 SyncEntry(key, value);
+            }
+
+            // Trigger global event
+            OnValueChanged?.Invoke(key, oldValue, value);
+
+            // Trigger specific key event
+            if (_keyListeners.TryGetValue(key, out var action))
+            {
+                action?.Invoke(oldValue, value);
             }
         }
 
@@ -257,6 +279,13 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
             {
                 _runtimeData.Remove(oldKey);
                 _runtimeData[newKey] = value;
+                
+                // Trigger events for the new key as a "change" from null to value
+                OnValueChanged?.Invoke(newKey, null, value);
+                if (_keyListeners.TryGetValue(newKey, out var action))
+                {
+                    action?.Invoke(null, value);
+                }
             }
         }
         
@@ -332,6 +361,53 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
             return result;
         }
         
+        /// <summary>
+        /// Registers a listener for a specific key.
+        /// (object oldValue, object newValue)
+        /// </summary>
+        public void RegisterListener(string key, Action<object, object> callback)
+        {
+            if (IsThreadSafe)
+            {
+                lock (_lock)
+                {
+                    if (!_keyListeners.ContainsKey(key)) _keyListeners[key] = null;
+                    _keyListeners[key] += callback;
+                }
+            }
+            else
+            {
+                if (!_keyListeners.ContainsKey(key)) _keyListeners[key] = null;
+                _keyListeners[key] += callback;
+            }
+        }
+
+        /// <summary>
+        /// Unregisters a listener from a specific key.
+        /// </summary>
+        public void UnregisterListener(string key, Action<object, object> callback)
+        {
+            if (IsThreadSafe)
+            {
+                lock (_lock)
+                {
+                    if (_keyListeners.ContainsKey(key))
+                    {
+                        _keyListeners[key] -= callback;
+                        if (_keyListeners[key] == null) _keyListeners.Remove(key);
+                    }
+                }
+            }
+            else
+            {
+                if (_keyListeners.ContainsKey(key))
+                {
+                    _keyListeners[key] -= callback;
+                    if (_keyListeners[key] == null) _keyListeners.Remove(key);
+                }
+            }
+        }
+
         /// <summary>
         /// Creates a copy of this blackboard.
         /// </summary>
