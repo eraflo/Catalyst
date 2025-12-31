@@ -40,6 +40,8 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
         private List<BTEdgeElement> _selectedEdges = new List<BTEdgeElement>();
         private List<BTStickyNoteElement> _selectedStickyNotes = new List<BTStickyNoteElement>();
         
+        private BTMinimapElement _minimap;
+        
         // Clipboard
         private System.Type _clipboardType;
         private string _clipboardName;
@@ -119,6 +121,10 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             RegisterCallback<KeyDownEvent>(OnKeyDown);
             
             focusable = true;
+            
+            // Minimap (added last to be on top)
+            _minimap = new BTMinimapElement(this);
+            Add(_minimap);
         }
         
         public void LoadTree(BT tree)
@@ -165,6 +171,8 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
                     if (element != null) UpdateEdgeIndices(element);
                 }
             }
+            
+            _minimap?.UpdateMinimap();
             
             // Center view on root if exists - wait for layout to be ready
             if (tree.RootNode != null)
@@ -399,6 +407,31 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
                 edge.SetSelected(true);
                 _selectedEdges.Add(edge);
             }
+        }
+        
+        public Rect GetTreeBounds()
+        {
+            if (_nodeElements.Count == 0) return new Rect(0, 0, 0, 0);
+            
+            Rect bounds = new Rect(_nodeElements[0].Node.Position, Vector2.zero);
+            
+            foreach (var nodeEl in _nodeElements)
+            {
+                var pos = nodeEl.Node.Position;
+                bounds.xMin = Mathf.Min(bounds.xMin, pos.x);
+                bounds.yMin = Mathf.Min(bounds.yMin, pos.y);
+                bounds.xMax = Mathf.Max(bounds.xMax, pos.x + 150);
+                bounds.yMax = Mathf.Max(bounds.yMax, pos.y + 100);
+            }
+            
+            return bounds;
+        }
+
+        public List<BTNodeElement> GetNodes() => _nodeElements;
+
+        public Rect GetViewport()
+        {
+            return new Rect(-_pan.x / _zoom, -_pan.y / _zoom, layout.width / _zoom, layout.height / _zoom);
         }
         
         private void OnStartEdgeCreation(BTNodeElement fromNode)
@@ -855,6 +888,8 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
                     (parentEl.Node as CompositeNode).SortChildrenByPosition();
                     UpdateEdgeIndices(parentEl);
                 }
+                
+                _minimap?.UpdateMinimap();
             }
         }
         
@@ -1061,6 +1096,16 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
                     evt.StopPropagation();
                 }
             }
+            else if (evt.keyCode == KeyCode.F)
+            {
+                FocusSelection();
+                evt.StopPropagation();
+            }
+            else if (evt.keyCode == KeyCode.Z)
+            {
+                ZoomToFit();
+                evt.StopPropagation();
+            }
         }
         
         private void DeleteSelection()
@@ -1142,6 +1187,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
         {
             _contentContainer.transform.position = new Vector3(_pan.x, _pan.y, 0);
             _contentContainer.transform.scale = new Vector3(_zoom, _zoom, 1);
+            _minimap?.UpdateMinimap();
         }
         
         private Vector2 ScreenToCanvas(Vector2 screenPos)
@@ -1149,7 +1195,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             return (screenPos - _pan) / _zoom;
         }
         
-        private void CenterOnPosition(Vector2 position)
+        public void CenterOnPosition(Vector2 position)
         {
             // If not laid out yet, we can't center accurately
             if (resolvedStyle.width <= 0) return;
@@ -1157,6 +1203,46 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             var center = new Vector2(resolvedStyle.width / 2, resolvedStyle.height / 2);
             _pan = center - position * _zoom;
             ApplyTransform();
+        }
+
+        public void ZoomToFit()
+        {
+            Rect bounds = GetTreeBounds();
+            if (bounds.width <= 0 || bounds.height <= 0) return;
+            
+            // Wait for layout
+            if (resolvedStyle.width <= 0) return;
+            
+            float padding = 40f;
+            float availableWidth = resolvedStyle.width - padding * 2;
+            float availableHeight = resolvedStyle.height - padding * 2;
+            
+            float zoomX = availableWidth / bounds.width;
+            float zoomY = availableHeight / bounds.height;
+            
+            _zoom = Mathf.Clamp(Mathf.Min(zoomX, zoomY), MinZoom, MaxZoom);
+            CenterOnPosition(bounds.center);
+        }
+
+        public void FocusSelection()
+        {
+            if (_selectedNodes.Count > 0)
+            {
+                Rect bounds = new Rect(_selectedNodes[0].Node.Position, Vector2.zero);
+                foreach (var nodeEl in _selectedNodes)
+                {
+                    var pos = nodeEl.Node.Position;
+                    bounds.xMin = Mathf.Min(bounds.xMin, pos.x);
+                    bounds.yMin = Mathf.Min(bounds.yMin, pos.y);
+                    bounds.xMax = Mathf.Max(bounds.xMax, pos.x + 150);
+                    bounds.yMax = Mathf.Max(bounds.yMax, pos.y + 100);
+                }
+                CenterOnPosition(bounds.center);
+            }
+            else
+            {
+                ZoomToFit();
+            }
         }
     }
 }

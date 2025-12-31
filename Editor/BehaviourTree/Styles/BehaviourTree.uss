@@ -572,3 +572,34 @@
     white-space: normal;
     -unity-text-align: upper-left;
 }
+
+/* ============================================
+   MINIMAP
+   ============================================ */
+
+.bt-minimap {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 200px;
+    height: 150px;
+    background-color: rgba(30, 30, 30, 0.7);
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.15);
+    overflow: hidden;
+}
+
+.bt-minimap-viewport {
+    position: absolute;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.bt-minimap-node {
+    position: absolute;
+    background-color: #3498db;
+    border-radius: 2px;
+}
+
