@@ -66,10 +66,10 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Window
             _canvas = new BTCanvas();
             _canvas.OnNodeSelected += OnNodeSelected;
             _canvas.OnSelectionCleared += () => _inspectorPanel?.ClearSelection();
-            _canvas.OnShowSearchWindow += (localPos, canvasPos) => {
+            _canvas.OnShowSearchWindow += (localPos, canvasPos, baseType) => {
                 var worldPos = _canvas.LocalToWorld(localPos);
                 var rootPos = root.WorldToLocal(worldPos);
-                _searchWindow?.Show(rootPos, canvasPos);
+                _searchWindow?.Show(rootPos, canvasPos, baseType);
             };
             canvasContainer.Add(_canvas);
             
@@ -78,11 +78,22 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Window
             canvasContainer.Add(_blackboardPanel);
             
             _inspectorPanel = new BTInspectorPanel();
+            _inspectorPanel.OnServiceRemoved += (node) => _canvas.UpdateBadgeForNode(node);
             canvasContainer.Add(_inspectorPanel);
             
             // Search window (last = on top)
             _searchWindow = new BTSearchWindow();
-            _searchWindow.OnNodeSelected += (type, pos) => _canvas.CreateNode(type, pos);
+            _searchWindow.OnNodeSelected += (type, pos) => {
+                // Services are handled by BTCanvas.AddService, not CreateNode
+                if (typeof(ServiceNode).IsAssignableFrom(type))
+                {
+                    _canvas.HandleServiceSelection(type);
+                }
+                else
+                {
+                    _canvas.CreateNode(type, pos);
+                }
+            };
             root.Add(_searchWindow);
             
             // Load current selection or restore from previous

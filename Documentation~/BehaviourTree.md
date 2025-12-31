@@ -103,7 +103,47 @@ Create via: Right-click → Create → Eraflo → BehaviourTree → Target Provi
 
 ---
 
+## Services
+
+Services are background tasks attached to nodes that run at intervals while the node is active.
+
+### Built-in Services
+| Service | Description |
+|---------|-------------|
+| `FindTargetService` | Finds GameObject by tag |
+| `FindClosestByTagService` | Finds nearest object with tag |
+| `UpdateDistanceService` | Calculates distance to target |
+| `CheckRangeService` | Checks if target is within range |
+| `UpdateSelfPositionService` | Stores owner position |
+| `DebugLogService` | Logs debug messages |
+
+### Adding Services in Editor
+1. Right-click on any node → **Add Service**
+2. Select service from list
+3. Configure properties in Inspector
+4. ⚙️ badge appears on nodes with services
+
+### Custom Service
+```csharp
+[BehaviourTreeNode("Services", "My Service")]
+public class MyService : ServiceNode
+{
+    public float Interval = 0.5f; // Tick rate
+    
+    protected override void OnServiceUpdate()
+    {
+        // Runs every Interval seconds while parent is active
+    }
+}
+```
+
+---
+
 ## Blackboard
+
+Shared data container for nodes. Supports reactive callbacks.
+
+**Supported Types:** `bool`, `int`, `float`, `string`, `Vector3`, `GameObject`, `Transform`
 
 ```csharp
 // Set values
@@ -115,6 +155,11 @@ Vector3 pos = Blackboard.Get<Vector3>("target");
 
 // Check existence
 if (Blackboard.Contains("key")) { ... }
+
+// Reactive: Listen to changes
+Blackboard.RegisterListener("health", (oldVal, newVal) => {
+    Debug.Log($"Health changed: {oldVal} → {newVal}");
+});
 ```
 
 ---

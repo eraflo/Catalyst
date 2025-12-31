@@ -31,6 +31,17 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         /// <summary>String value to compare against.</summary>
         public string StringValue;
         
+        /// <summary>Defines how this condition can abort running nodes.</summary>
+        public AbortType Abort = AbortType.None;
+        
+        public enum AbortType
+        {
+            None,
+            Self,
+            LowerPriority,
+            Both
+        }
+        
         public enum Operator
         {
             Equals,
@@ -50,11 +61,51 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
             Exists
         }
         
+        protected override void OnStart()
+        {
+            if (Abort != AbortType.None && !string.IsNullOrEmpty(Key) && Blackboard != null)
+            {
+                Blackboard.RegisterListener(Key, OnBlackboardChanged);
+            }
+        }
+
+        protected override void OnStop()
+        {
+            if (Abort != AbortType.None && !string.IsNullOrEmpty(Key) && Blackboard != null)
+            {
+                Blackboard.UnregisterListener(Key, OnBlackboardChanged);
+            }
+        }
+
+        private void OnBlackboardChanged(object oldVal, object newVal)
+        {
+            if (Abort == AbortType.None || Tree == null) return;
+            
+            bool resultNow = CheckCondition();
+            
+            // Case 1: We are NOT running, but condition becomes true -> Abort lower priority
+            if (!Started && resultNow && (Abort == AbortType.LowerPriority || Abort == AbortType.Both))
+            {
+                Tree.RequestAbort(this);
+            }
+            // Case 2: We ARE running, but condition becomes false -> Abort self
+            else if (Started && !resultNow && (Abort == AbortType.Self || Abort == AbortType.Both))
+            {
+                Tree.RequestAbort(this);
+            }
+        }
+
         protected override NodeState OnUpdate()
         {
             // First check the condition
-            if (!CheckCondition())
+            bool passed = CheckCondition();
+
+            if (!passed)
             {
+                if (Child != null && Child.Started)
+                {
+                    Child.Abort();
+                }
                 return NodeState.Failure;
             }
             

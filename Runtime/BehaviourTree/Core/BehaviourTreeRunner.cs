@@ -58,6 +58,15 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         
         private void Update()
         {
+            if (_runtimeTree == null) return;
+
+            // Reactive Abort check
+            if (_runtimeTree.IsAbortRequested())
+            {
+                Tick();
+                return;
+            }
+
             if (_updateMode == UpdateMode.Update)
             {
                 Tick();

@@ -23,6 +23,9 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
         private Label _placeholder;
         private VisualElement _header;
         
+        /// <summary>Called when a service is removed, with the parent Node.</summary>
+        public System.Action<Node> OnServiceRemoved;
+        
         private bool _isDragging;
         private Vector2 _dragStart;
         private Vector2 _posStart;
@@ -141,6 +144,59 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
                 fieldContainer.Add(field);
             }
             
+            // Services Section
+            if (node.Services.Count > 0)
+            {
+                var servicesHeader = new Label("Services") { style = { marginTop = 10, unityFontStyleAndWeight = FontStyle.Bold, color = new Color(0.1f, 0.8f, 0.4f) } };
+                fieldContainer.Add(servicesHeader);
+                
+                foreach (var service in node.Services)
+                {
+                    if (service == null) continue;
+                    
+                    var serviceBox = new VisualElement();
+                    serviceBox.style.marginTop = 5;
+                    serviceBox.style.marginBottom = 5;
+                    serviceBox.style.paddingLeft = 5;
+                    serviceBox.style.borderLeftColor = new Color(0.1f, 0.8f, 0.4f, 0.5f);
+                    serviceBox.style.borderLeftWidth = 2;
+                    serviceBox.style.backgroundColor = new Color(0, 0, 0, 0.1f);
+                    
+                    var serviceHeader = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, marginBottom = 2 } };
+                    serviceHeader.Add(new Label(service.name) { style = { unityFontStyleAndWeight = FontStyle.Bold, fontSize = 11 } });
+                    
+                    var removeBtn = new Button(() => RemoveService(node, service)) { text = "×", tooltip = "Remove Service" };
+                    removeBtn.style.width = 16;
+                    removeBtn.style.height = 16;
+                    removeBtn.style.paddingLeft = 0;
+                    removeBtn.style.paddingRight = 0;
+                    removeBtn.style.paddingTop = 0;
+                    removeBtn.style.paddingBottom = 0;
+                    removeBtn.style.marginTop = 0;
+                    removeBtn.style.marginRight = 0;
+                    serviceHeader.Add(removeBtn);
+                    
+                    serviceBox.Add(serviceHeader);
+
+                    // Service properties
+                    var serviceSO = new SerializedObject(service);
+                    var sProp = serviceSO.GetIterator();
+                    bool sEnterChildren = true;
+                    while (sProp.NextVisible(sEnterChildren))
+                    {
+                        sEnterChildren = false;
+                        if (sProp.name == "m_Script" || sProp.name == "Guid" || sProp.name == "Position" || sProp.name == "Children" || sProp.name == "Child" || sProp.name == "m_Name")
+                            continue;
+                            
+                        var sField = new PropertyField(sProp);
+                        sField.Bind(serviceSO);
+                        serviceBox.Add(sField);
+                    }
+                    
+                    fieldContainer.Add(serviceBox);
+                }
+            }
+            
             // Runtime Debug Message
             if (Application.isPlaying)
             {
@@ -197,6 +253,25 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Panels
         public void ClearSelection()
         {
             UpdateSelection(null);
+        }
+
+        private void RemoveService(Node node, ServiceNode service)
+        {
+            if (node == null || service == null) return;
+            
+            Undo.RecordObject(node, "Remove Service");
+            node.Services.Remove(service);
+            
+            Undo.DestroyObjectImmediate(service);
+            
+            AssetDatabase.SaveAssets();
+            EditorUtility.SetDirty(node);
+            
+            // Notify listeners to update badge
+            OnServiceRemoved?.Invoke(node);
+            
+            // Refresh
+            UpdateSelection(node);
         }
 
         private void UpdateBlackboardVisibility(VisualElement container, SerializedProperty typeProp)

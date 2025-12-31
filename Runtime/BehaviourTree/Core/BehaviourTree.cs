@@ -29,12 +29,18 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         /// <summary>Current state of the tree.</summary>
         public NodeState TreeState { get; private set; } = NodeState.Running;
         
+        /// <summary>The node that is currently executing.</summary>
+        [System.NonSerialized] public Node CurrentRunningNode;
+        
+        private bool _abortRequested = false;
+        
         /// <summary>
         /// Evaluates the tree, starting from the root node.
         /// </summary>
         /// <returns>The state of the root node after evaluation.</returns>
         public NodeState Evaluate()
         {
+            _abortRequested = false;
             if (RootNode != null)
             {
                 TreeState = RootNode.Evaluate();
@@ -47,31 +53,48 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         }
         
         /// <summary>
+        /// Signals that a conditional abort has been triggered.
+        /// </summary>
+        public void RequestAbort(Node source)
+        {
+            _abortRequested = true;
+            // The Runner will check for _abortRequested and tick again if needed
+        }
+        
+        public bool IsAbortRequested() => _abortRequested;
+        
+        /// <summary>
         /// Binds this tree to a GameObject owner.
         /// </summary>
         /// <param name="owner">The GameObject that owns this tree.</param>
         public void Bind(GameObject owner)
         {
             Owner = owner;
-            BindNodes(RootNode);
+            BindNodes(RootNode, null);
         }
         
-        private void BindNodes(Node node)
+        private void BindNodes(Node node, Node parent)
         {
             if (node == null) return;
             
             node.Tree = this;
+            node.Parent = parent;
+            
+            foreach (var service in node.Services)
+            {
+                BindNodes(service, node);
+            }
             
             if (node is CompositeNode composite)
             {
                 foreach (var child in composite.Children)
                 {
-                    BindNodes(child);
+                    BindNodes(child, node);
                 }
             }
             else if (node is DecoratorNode decorator)
             {
-                BindNodes(decorator.Child);
+                BindNodes(decorator.Child, node);
             }
         }
         
@@ -91,6 +114,11 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
             
             node.State = NodeState.Running;
             node.Started = false;
+            
+            foreach (var service in node.Services)
+            {
+                ResetNodes(service);
+            }
             
             if (node is CompositeNode composite)
             {
@@ -127,6 +155,11 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
             if (node == null) return;
             
             list.Add(node);
+            
+            foreach (var service in node.Services)
+            {
+                CollectNodes(service, list);
+            }
             
             if (node is CompositeNode composite)
             {

@@ -11,26 +11,24 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
     {
         protected override NodeState OnUpdate()
         {
-            while (CurrentChildIndex < Children.Count)
+            for (int i = CurrentChildIndex; i < Children.Count; i++)
             {
-                var child = Children[CurrentChildIndex];
-                if (child == null)
-                {
-                    CurrentChildIndex++;
-                    continue;
-                }
+                var child = Children[i];
+                if (child == null) continue;
+
                 var state = child.Evaluate();
                 
                 switch (state)
                 {
                     case NodeState.Running:
+                        CurrentChildIndex = i;
                         return NodeState.Running;
                     
                     case NodeState.Failure:
                         return NodeState.Failure;
                     
                     case NodeState.Success:
-                        CurrentChildIndex++;
+                        // Continue to next child
                         break;
                 }
             }

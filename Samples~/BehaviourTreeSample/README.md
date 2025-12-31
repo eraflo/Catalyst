@@ -1,6 +1,6 @@
 # Behaviour Tree Sample
 
-This sample demonstrates the core functionality of the Behaviour Tree system, including visual debugging, blackboard management, and navigation.
+This sample demonstrates the core functionality of the Behaviour Tree system, including visual debugging, blackboard management, services, and navigation.
 
 ## Overview
 
@@ -23,15 +23,40 @@ The sample scene contains:
     - Drag the **Target** object into the `MoveToTarget` slot in the Blackboard to see the agent move.
     - Alternatively, use the **Runner Inspector** to edit values at runtime.
 
+## Services
+
+Services are background tasks that run at intervals while their parent node is active. They are ideal for continuous logic like finding targets or updating distances.
+
+### Available Services:
+| Service | Description |
+|---------|-------------|
+| **Find Target** | Finds a GameObject by tag |
+| **Find Closest By Tag** | Finds the nearest object with a specific tag |
+| **Update Distance** | Calculates and stores distance to a target |
+| **Check Range** | Checks if target is within a specified range |
+| **Update Self Position** | Stores the agent's position in the Blackboard |
+| **Debug Log** | Logs debug messages for testing |
+
+### Adding a Service:
+1. **Right-click** on any node in the graph
+2. Select **"Add Service"**
+3. Choose a service from the list
+4. Configure its properties in the **Inspector**
+
+Services are displayed with a **⚙️ badge** on nodes that have them attached.
+
 ## Sample Scripts
 
 The sample includes a `BehaviourTreeDemo.cs` script (not attached by default) which shows how to:
 - Access the `BehaviourTreeRunner`.
 - Set blackboard values dynamically from other scripts.
-- Listen to tree events (planned for future updates).
 
 ```csharp
 // Example: Setting a target from code
 var runner = GetComponent<BehaviourTreeRunner>();
 runner.Blackboard.Set("MoveToTarget", someTransform);
 ```
+
+## Blackboard Types
+
+Supported types: `bool`, `int`, `float`, `string`, `Vector3`, `GameObject`, `Transform`

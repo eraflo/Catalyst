@@ -29,6 +29,24 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             var rect = contentRect;
             if (rect.width <= 0 || rect.height <= 0) return;
             
+            // Limit dots to prevent vertex overflow (max ~10000 dots = 40000 vertices for circles)
+            float effectiveGridSize = GridSize;
+            int maxDotsX = (int)(rect.width / effectiveGridSize);
+            int maxDotsY = (int)(rect.height / effectiveGridSize);
+            int totalDots = maxDotsX * maxDotsY;
+            
+            // If too many dots, increase grid spacing
+            while (totalDots > 8000 && effectiveGridSize < 200)
+            {
+                effectiveGridSize *= 2f;
+                maxDotsX = (int)(rect.width / effectiveGridSize);
+                maxDotsY = (int)(rect.height / effectiveGridSize);
+                totalDots = maxDotsX * maxDotsY;
+            }
+            
+            // Don't draw if still too many
+            if (totalDots > 10000) return;
+            
             var painter = ctx.painter2D;
             
             // Draw dots
@@ -39,11 +57,11 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             float startX = 0;
             float startY = 0;
             
-            float thickInterval = GridSize * ThickLineInterval;
+            float thickInterval = effectiveGridSize * ThickLineInterval;
             
-            for (float x = startX; x < rect.width; x += GridSize)
+            for (float x = startX; x < rect.width; x += effectiveGridSize)
             {
-                for (float y = startY; y < rect.height; y += GridSize)
+                for (float y = startY; y < rect.height; y += effectiveGridSize)
                 {
                     bool isThick = (Mathf.Abs(x % thickInterval) < 0.1f) && (Mathf.Abs(y % thickInterval) < 0.1f);
                     

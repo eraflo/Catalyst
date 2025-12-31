@@ -24,6 +24,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
         private VisualElement _outputPort;
         private VisualElement _debugBadge;
         private Label _debugLabel;
+        private VisualElement _serviceBadge;
         private BT _tree;
         
         private bool _isDragging;
@@ -79,6 +80,10 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
                 AddToClassList("root-node");
             }
             
+            
+            // Service indicator badge
+            UpdateServiceBadge();
+            
             // Events
             RegisterCallback<MouseDownEvent>(OnMouseDown);
             RegisterCallback<MouseMoveEvent>(OnMouseMove);
@@ -92,6 +97,41 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             if (Node is ActionNode) return "action";
             if (Node is ConditionNode) return "condition";
             return "unknown";
+        }
+        
+        /// <summary>
+        /// Updates the service badge to reflect current service count.
+        /// </summary>
+        public void UpdateServiceBadge()
+        {
+            // Remove existing badge if any
+            if (_serviceBadge != null)
+            {
+                _serviceBadge.RemoveFromHierarchy();
+                _serviceBadge = null;
+            }
+            
+            // Create new badge if services exist
+            if (Node != null && Node.Services != null && Node.Services.Count > 0)
+            {
+                _serviceBadge = new VisualElement { name = "service-badge" };
+                _serviceBadge.AddToClassList("service-badge");
+                
+                var serviceIcon = new Label("⚙") { name = "service-icon" };
+                serviceIcon.style.fontSize = 10;
+                serviceIcon.style.color = new Color(0.3f, 0.9f, 0.5f);
+                _serviceBadge.Add(serviceIcon);
+                
+                var countLabel = new Label(Node.Services.Count.ToString());
+                countLabel.style.fontSize = 9;
+                countLabel.style.color = new Color(0.3f, 0.9f, 0.5f);
+                _serviceBadge.Add(countLabel);
+                
+                _serviceBadge.tooltip = $"{Node.Services.Count} service(s) attached";
+                
+                // Add to body for proper positioning within the node
+                _body.Add(_serviceBadge);
+            }
         }
         
         public void SetSelected(bool selected)

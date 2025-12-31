@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
 using Eraflo.UnityImportPackage.BehaviourTree;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using BT = Eraflo.UnityImportPackage.BehaviourTree.BehaviourTree;
@@ -18,7 +20,8 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
         
         public System.Action<BTNodeElement> OnNodeSelected;
         public System.Action OnSelectionCleared;
-        public System.Action<Vector2, Vector2> OnShowSearchWindow; // screenPos, canvasPos
+        public System.Action<Vector2, Vector2, System.Type> OnShowSearchWindow; // screenPos, canvasPos, filterType
+        public System.Action<System.Type> OnServiceTypeSelected; // Called when a service type is selected
         
         private VisualElement _contentContainer;
         private VisualElement _edgeLayer;
@@ -53,6 +56,9 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
         
         // For node dragging
         private bool _isDraggingNodes;
+        
+        // For service addition
+        private BTNodeElement _pendingServiceTarget;
         
         public const float MinZoom = 0.25f;
         public const float MaxZoom = 2f;
@@ -404,7 +410,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             else if (evt.button == 0 && evt.clickCount == 2)
             {
                 var canvasPos = ScreenToCanvas(evt.localMousePosition);
-                OnShowSearchWindow?.Invoke(evt.localMousePosition, canvasPos);
+                OnShowSearchWindow?.Invoke(evt.localMousePosition, canvasPos, null);
                 evt.StopPropagation();
             }
             // Left click to clear selection or start selection
@@ -438,7 +444,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
         {
             var menu = new GenericMenu();
             
-            menu.AddItem(new GUIContent("Create Node"), false, () => OnShowSearchWindow?.Invoke(screenPos, canvasPos));
+            menu.AddItem(new GUIContent("Create Node"), false, () => OnShowSearchWindow?.Invoke(screenPos, canvasPos, typeof(Node)));
             
             if (_clipboardType != null)
             {
@@ -464,15 +470,79 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
                 if (_selectedNodes.Count == 1)
                 {
                     var node = _selectedNodes[0].Node;
-                    if (node != null && _tree != null && _tree.RootNode != node)
+                    if (node != null && _tree != null)
                     {
+                        if (_tree.RootNode != node)
+                        {
+                            menu.AddSeparator("");
+                            menu.AddItem(new GUIContent("Set as Root"), false, () => SetAsRoot(node));
+                        }
                         menu.AddSeparator("");
-                        menu.AddItem(new GUIContent("Set as Root"), false, () => SetAsRoot(node));
+                        menu.AddItem(new GUIContent("Add Service"), false, () => {
+                            _pendingServiceTarget = _selectedNodes[0];
+                            OnShowSearchWindow?.Invoke(screenPos, canvasPos, typeof(ServiceNode));
+                        });
                     }
                 }
             }
             
             menu.ShowAsContext();
+        }
+
+        /// <summary>
+        /// Called when a service type is selected from the search window.
+        /// Routes to AddService with the pending target node.
+        /// </summary>
+        public void HandleServiceSelection(Type serviceType)
+        {
+            if (_pendingServiceTarget != null)
+            {
+                AddService(_pendingServiceTarget, serviceType);
+                _pendingServiceTarget = null;
+            }
+        }
+
+        /// <summary>
+        /// Updates the service badge for a specific node.
+        /// </summary>
+        public void UpdateBadgeForNode(Node node)
+        {
+            if (node == null) return;
+            
+            foreach (var element in _nodeElements)
+            {
+                if (element.Node == node)
+                {
+                    element.UpdateServiceBadge();
+                    break;
+                }
+            }
+        }
+
+        private void AddService(BTNodeElement nodeElement, Type serviceType)
+        {
+            if (_tree == null || nodeElement == null || nodeElement.Node == null) return;
+
+            Undo.RecordObject(nodeElement.Node, "Add Service");
+
+            var service = ScriptableObject.CreateInstance(serviceType) as ServiceNode;
+            service.name = serviceType.Name;
+            service.Guid = GUID.Generate().ToString();
+            service.Tree = _tree;
+            service.Parent = nodeElement.Node;
+
+            nodeElement.Node.Services.Add(service);
+
+            AssetDatabase.AddObjectToAsset(service, _tree);
+            EditorUtility.SetDirty(nodeElement.Node);
+            EditorUtility.SetDirty(_tree);
+            AssetDatabase.SaveAssets();
+            
+            // Update the visual badge
+            nodeElement.UpdateServiceBadge();
+            
+            // Refresh visuals or inspector
+            OnNodeSelected?.Invoke(nodeElement);
         }
 
         private void CopySelectedNode(BTNodeElement node)

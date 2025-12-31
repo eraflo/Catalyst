@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace Eraflo.UnityImportPackage.BehaviourTree
 {
@@ -22,9 +23,15 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         
         /// <summary>Reference to the tree this node belongs to.</summary>
         [System.NonSerialized] public BehaviourTree Tree;
+
+        /// <summary>Reference to the parent node.</summary>
+        [System.NonSerialized] public Node Parent;
         
         /// <summary>Optional description for this node.</summary>
         [TextArea] public string Description;
+
+        /// <summary>List of services attached to this node.</summary>
+        [HideInInspector] public List<ServiceNode> Services = new();
 
         /// <summary>Runtime only: The time this node started its last execution.</summary>
         [System.NonSerialized] public float StartTime;
@@ -49,6 +56,18 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
                 StartTime = Time.time;
                 OnStart();
                 Started = true;
+                
+                // Start services
+                foreach (var service in Services)
+                {
+                    if (service != null) service.Evaluate();
+                }
+            }
+            
+            // Update services
+            foreach (var service in Services)
+            {
+                if (service != null) service.TickService();
             }
             
             State = OnUpdate();
@@ -102,7 +121,13 @@ namespace Eraflo.UnityImportPackage.BehaviourTree
         /// <returns>A clone of this node.</returns>
         public virtual Node Clone()
         {
-            return Instantiate(this);
+            var clone = Instantiate(this);
+            clone.Services = new List<ServiceNode>();
+            foreach (var service in Services)
+            {
+                if (service != null) clone.Services.Add(service.Clone() as ServiceNode);
+            }
+            return clone;
         }
 
         /// <summary>

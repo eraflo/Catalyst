@@ -22,6 +22,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
         private ScrollView _resultsScrollView;
         private List<NodeTypeInfo> _allNodeTypes;
         private List<NodeTypeInfo> _filteredTypes;
+        private Type _baseTypeFilter = typeof(Node);
         
         private struct NodeTypeInfo
         {
@@ -108,6 +109,7 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
         {
             if (typeof(CompositeNode).IsAssignableFrom(type)) return "Composite";
             if (typeof(DecoratorNode).IsAssignableFrom(type)) return "Decorator";
+            if (typeof(ServiceNode).IsAssignableFrom(type)) return "Service";
             if (typeof(ActionNode).IsAssignableFrom(type)) return "Action";
             if (typeof(ConditionNode).IsAssignableFrom(type)) return "Condition";
             return "Other";
@@ -123,16 +125,24 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
             return type.Name;
         }
         
-        public void Show(Vector2 position, Vector2 createPosition)
+        public void Show(Vector2 position, Vector2 createPosition, Type baseTypeFilter = null)
         {
             _createPosition = createPosition;
+            _baseTypeFilter = baseTypeFilter ?? typeof(Node);
             
             style.left = position.x;
             style.top = position.y;
             style.display = DisplayStyle.Flex;
             
             _searchField.value = "";
-            _filteredTypes = new List<NodeTypeInfo>(_allNodeTypes);
+            
+            // If filter is null or generic Node, exclude services from regular menu
+            bool excludeServices = _baseTypeFilter == null || _baseTypeFilter == typeof(Node);
+            
+            _filteredTypes = _allNodeTypes
+                .Where(n => _baseTypeFilter.IsAssignableFrom(n.Type) && 
+                           (!excludeServices || !typeof(ServiceNode).IsAssignableFrom(n.Type)))
+                .ToList();
             RefreshResults();
             
             _searchField.Focus();
@@ -146,16 +156,22 @@ namespace Eraflo.UnityImportPackage.Editor.BehaviourTree.Canvas
         private void OnSearchChanged(ChangeEvent<string> evt)
         {
             string search = evt.newValue.ToLower();
+            bool excludeServices = _baseTypeFilter == null || _baseTypeFilter == typeof(Node);
             
             if (string.IsNullOrEmpty(search))
             {
-                _filteredTypes = new List<NodeTypeInfo>(_allNodeTypes);
+                _filteredTypes = _allNodeTypes
+                    .Where(n => _baseTypeFilter.IsAssignableFrom(n.Type) && 
+                               (!excludeServices || !typeof(ServiceNode).IsAssignableFrom(n.Type)))
+                    .ToList();
             }
             else
             {
                 _filteredTypes = _allNodeTypes
-                    .Where(n => n.DisplayName.ToLower().Contains(search) || 
-                               n.Category.ToLower().Contains(search))
+                    .Where(n => _baseTypeFilter.IsAssignableFrom(n.Type) && 
+                               (!excludeServices || !typeof(ServiceNode).IsAssignableFrom(n.Type)) &&
+                               (n.DisplayName.ToLower().Contains(search) || 
+                                n.Category.ToLower().Contains(search)))
                     .ToList();
             }
             
