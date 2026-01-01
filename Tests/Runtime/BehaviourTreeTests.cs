@@ -3,6 +3,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Eraflo.Catalyst.BehaviourTree;
+using BT = Eraflo.Catalyst.BehaviourTree.BehaviourTree;
 
 namespace Eraflo.Catalyst.Tests.Runtime
 {
@@ -314,7 +315,7 @@ namespace Eraflo.Catalyst.Tests.Runtime
         [Test]
         public void Log_ReturnsSuccess()
         {
-            var log = ScriptableObject.CreateInstance<Log>();
+            var log = ScriptableObject.CreateInstance<BTLog>();
             log.Message = "Test message";
             
             var result = log.Evaluate();
@@ -331,7 +332,7 @@ namespace Eraflo.Catalyst.Tests.Runtime
         [Test]
         public void SetBlackboardValue_SetsIntValue()
         {
-            var tree = ScriptableObject.CreateInstance<BehaviourTree>();
+            var tree = ScriptableObject.CreateInstance<BT>();
             tree.Blackboard = new Blackboard();
             
             var setNode = ScriptableObject.CreateInstance<SetBlackboardValue>();
@@ -352,7 +353,7 @@ namespace Eraflo.Catalyst.Tests.Runtime
         [Test]
         public void SetBlackboardValue_SetsBoolValue()
         {
-            var tree = ScriptableObject.CreateInstance<BehaviourTree>();
+            var tree = ScriptableObject.CreateInstance<BT>();
             tree.Blackboard = new Blackboard();
             
             var setNode = ScriptableObject.CreateInstance<SetBlackboardValue>();
@@ -416,7 +417,7 @@ namespace Eraflo.Catalyst.Tests.Runtime
         [Test]
         public void BlackboardCondition_ReturnsSuccess_WhenConditionMet()
         {
-            var tree = ScriptableObject.CreateInstance<BehaviourTree>();
+            var tree = ScriptableObject.CreateInstance<BT>();
             tree.Blackboard = new Blackboard();
             tree.Blackboard.Set("health", 50);
             
@@ -438,7 +439,7 @@ namespace Eraflo.Catalyst.Tests.Runtime
         [Test]
         public void BlackboardCondition_ReturnsFailure_WhenConditionNotMet()
         {
-            var tree = ScriptableObject.CreateInstance<BehaviourTree>();
+            var tree = ScriptableObject.CreateInstance<BT>();
             tree.Blackboard = new Blackboard();
             tree.Blackboard.Set("health", 10);
             
@@ -460,7 +461,7 @@ namespace Eraflo.Catalyst.Tests.Runtime
         [Test]
         public void BlackboardCondition_Exists_ReturnsSuccess_WhenKeyExists()
         {
-            var tree = ScriptableObject.CreateInstance<BehaviourTree>();
+            var tree = ScriptableObject.CreateInstance<BT>();
             tree.Blackboard = new Blackboard();
             tree.Blackboard.Set("myKey", 1);
             
