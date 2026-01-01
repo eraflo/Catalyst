@@ -1,7 +1,7 @@
 using UnityEngine;
 
 
-namespace Eraflo.UnityImportPackage.EasingSystem
+namespace Eraflo.Catalyst.EasingSystem
 {
     /// <summary>
     /// Static class containing standard easing functions.

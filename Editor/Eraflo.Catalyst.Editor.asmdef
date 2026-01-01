@@ -1,0 +1,21 @@
+{
+    "name": "Eraflo.Catalyst.Editor",
+    "rootNamespace": "Eraflo.Catalyst.Editor",
+    "references": [
+        "Eraflo.Catalyst.Runtime",
+        "Unity.Addressables",
+        "Unity.Addressables.Editor",
+        "Unity.ResourceManager"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

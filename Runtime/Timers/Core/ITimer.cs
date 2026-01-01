@@ -1,4 +1,4 @@
-namespace Eraflo.UnityImportPackage.Timers
+namespace Eraflo.Catalyst.Timers
 {
     /// <summary>
     /// Base interface for all timer types.

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Eraflo.UnityImportPackage.Timers
+namespace Eraflo.Catalyst.Timers
 {
     /// <summary>
     /// Tracks timer system metrics for debugging and profiling.

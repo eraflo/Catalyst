@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Pooling
+namespace Eraflo.Catalyst.Pooling
 {
     /// <summary>
     /// Pool for prefab GameObjects.

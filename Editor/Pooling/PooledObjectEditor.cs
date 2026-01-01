@@ -1,8 +1,8 @@
 using UnityEditor;
 using UnityEngine;
-using Eraflo.UnityImportPackage.Pooling;
+using Eraflo.Catalyst.Pooling;
 
-namespace Eraflo.UnityImportPackage.Editor.Pooling
+namespace Eraflo.Catalyst.Editor.Pooling
 {
     /// <summary>
     /// Custom inspector for PooledObject component.

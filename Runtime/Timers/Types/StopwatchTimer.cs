@@ -1,4 +1,4 @@
-namespace Eraflo.UnityImportPackage.Timers
+namespace Eraflo.Catalyst.Timers
 {
     /// <summary>
     /// Stopwatch timer - counts up from 0 indefinitely.

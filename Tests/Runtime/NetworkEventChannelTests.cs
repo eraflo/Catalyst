@@ -1,10 +1,10 @@
 using NUnit.Framework;
-using Eraflo.UnityImportPackage.Events;
-using Eraflo.UnityImportPackage.Networking;
-using Eraflo.UnityImportPackage.Networking.Backends;
+using Eraflo.Catalyst.Events;
+using Eraflo.Catalyst.Networking;
+using Eraflo.Catalyst.Networking.Backends;
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Tests
+namespace Eraflo.Catalyst.Tests
 {
     public class NetworkEventChannelTests
     {

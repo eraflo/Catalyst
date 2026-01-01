@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Eraflo.UnityImportPackage.Timers
+namespace Eraflo.Catalyst.Timers
 {
     /// <summary>
     /// Groups timers together for batch operations.

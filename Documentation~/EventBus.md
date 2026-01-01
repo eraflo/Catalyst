@@ -25,7 +25,7 @@ A configuration ScriptableObject is **automatically created** when you import th
 
 **Location**: `Assets/Resources/UnityImportPackageSettings.asset`
 
-**Access**: Menu > **Tools > Unity Import Package > Settings**
+**Access**: Menu > **Tools > Eraflo Catalyst > Settings**
 
 ### Settings
 
@@ -127,7 +127,7 @@ EventChannels are **automatically registered** to Addressables when created.
 - **Group**: `EventChannels`
 - **Address**: `Events/{Type}/{AssetName}` (e.g., `Events/Int/OnScoreChanged`)
 
-**Manual registration**: Menu > **Tools > Unity Import Package > Register All EventChannels to Addressables**
+**Manual registration**: Menu > **Tools > Eraflo Catalyst > Register All EventChannels to Addressables**
 
 #### Concrete Example: Mod System
 

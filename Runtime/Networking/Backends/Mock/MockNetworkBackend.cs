@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Networking.Backends
+namespace Eraflo.Catalyst.Networking.Backends
 {
     /// <summary>
     /// Mock network backend for testing without actual network.

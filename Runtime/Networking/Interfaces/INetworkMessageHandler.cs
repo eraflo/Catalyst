@@ -1,4 +1,4 @@
-namespace Eraflo.UnityImportPackage.Networking
+namespace Eraflo.Catalyst.Networking
 {
     /// <summary>
     /// Interface for message handlers that process network messages for specific systems.

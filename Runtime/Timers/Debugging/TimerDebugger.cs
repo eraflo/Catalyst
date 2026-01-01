@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-namespace Eraflo.UnityImportPackage.Timers.Debugging
+namespace Eraflo.Catalyst.Timers.Debugging
 {
     /// <summary>
     /// Runtime debug overlay showing all active timers.

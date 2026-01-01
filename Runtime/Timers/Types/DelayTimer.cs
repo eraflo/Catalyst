@@ -1,4 +1,4 @@
-namespace Eraflo.UnityImportPackage.Timers
+namespace Eraflo.Catalyst.Timers
 {
     /// <summary>
     /// Delay timer - one-shot countdown, fires OnComplete at end.

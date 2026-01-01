@@ -1,4 +1,4 @@
-namespace Eraflo.UnityImportPackage.Timers
+namespace Eraflo.Catalyst.Timers
 {
     /// <summary>
     /// Frequency timer - ticks N times per second.

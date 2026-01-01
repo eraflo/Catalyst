@@ -1,4 +1,4 @@
-namespace Eraflo.UnityImportPackage.Pooling
+namespace Eraflo.Catalyst.Pooling
 {
     /// <summary>
     /// Interface for objects that can be pooled.

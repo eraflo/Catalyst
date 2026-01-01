@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Eraflo.UnityImportPackage.Networking
+namespace Eraflo.Catalyst.Networking
 {
     /// <summary>
     /// Base interface for all network messages.

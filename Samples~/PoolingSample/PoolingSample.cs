@@ -1,7 +1,7 @@
 using UnityEngine;
-using Eraflo.UnityImportPackage.Pooling;
+using Eraflo.Catalyst.Pooling;
 
-namespace Eraflo.UnityImportPackage.Samples.Pooling
+namespace Eraflo.Catalyst.Samples.Pooling
 {
     /// <summary>
     /// Sample demonstrating the Object Pooling system.

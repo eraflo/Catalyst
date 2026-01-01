@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Events
+namespace Eraflo.Catalyst.Events
 {
     /// <summary>
     /// ScriptableObject-based event channel for void events (no parameters).

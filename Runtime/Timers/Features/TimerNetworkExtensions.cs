@@ -1,6 +1,6 @@
-using Eraflo.UnityImportPackage.Networking;
+using Eraflo.Catalyst.Networking;
 
-namespace Eraflo.UnityImportPackage.Timers
+namespace Eraflo.Catalyst.Timers
 {
     /// <summary>
     /// Extension methods for networked timers.

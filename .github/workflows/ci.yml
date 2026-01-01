@@ -80,11 +80,14 @@ jobs:
           cat > TestProject/Packages/manifest.json << 'EOF'
           {
             "dependencies": {
-              "com.eraflo.unityimportpackage": "file:../../package",
-              "com.unity.test-framework": "1.3.9"
+              "com.eraflo.catalyst": "file:../../package",
+              "com.unity.test-framework": "1.3.9",
+              "com.unity.modules.animation": "1.0.0",
+              "com.unity.modules.ai": "1.0.0",
+              "com.unity.modules.physics": "1.0.0"
             },
             "testables": [
-              "com.eraflo.unityimportpackage"
+              "com.eraflo.catalyst"
             ]
           }
           EOF
@@ -95,8 +98,8 @@ jobs:
           m_EditorVersionWithRevision: 2022.3.62f1 (0000000000000)
           EOF
           
-          # Create ProjectSettings.asset
-          cat > TestProject/ProjectSettings/ProjectSettings.asset << EOF
+          # Create ProjectSettings.asset with Animation enabled
+          cat > TestProject/ProjectSettings/ProjectSettings.asset << 'EOF'
           %YAML 1.1
           %TAG !u! tag:unity3d.com,2011:
           --- !u!129 &1

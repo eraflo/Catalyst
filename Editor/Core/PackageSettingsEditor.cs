@@ -2,7 +2,7 @@ using UnityEditor;
 using UnityEngine;
 using System.IO;
 
-namespace Eraflo.UnityImportPackage.Editor
+namespace Eraflo.Catalyst.Editor
 {
     /// <summary>
     /// Editor script that auto-creates PackageSettings on package import.
@@ -11,7 +11,7 @@ namespace Eraflo.UnityImportPackage.Editor
     [InitializeOnLoad]
     public static class PackageSettingsEditor
     {
-        private const string SettingsPath = "Assets/Resources/UnityImportPackageSettings.asset";
+        private const string SettingsPath = "Assets/Resources/CatalystSettings.asset";
         private const string ResourcesPath = "Assets/Resources";
 
         static PackageSettingsEditor()
@@ -28,7 +28,7 @@ namespace Eraflo.UnityImportPackage.Editor
             }
         }
 
-        [MenuItem("Tools/Unity Import Package/Settings", priority = 0)]
+        [MenuItem("Tools/Eraflo Catalyst/Settings", priority = 0)]
         public static void OpenSettings()
         {
             var settings = GetOrCreateSettings();
@@ -36,7 +36,7 @@ namespace Eraflo.UnityImportPackage.Editor
             EditorGUIUtility.PingObject(settings);
         }
 
-        [MenuItem("Tools/Unity Import Package/Create Settings", priority = 1)]
+        [MenuItem("Tools/Eraflo Catalyst/Create Settings", priority = 1)]
         public static void CreateSettingsMenu()
         {
             var settings = CreateSettings();

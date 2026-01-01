@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Networking
+namespace Eraflo.Catalyst.Networking
 {
     /// <summary>
     /// Central network manager facade.

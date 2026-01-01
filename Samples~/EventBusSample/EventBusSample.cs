@@ -1,7 +1,7 @@
 using UnityEngine;
-using Eraflo.UnityImportPackage.Events;
+using Eraflo.Catalyst.Events;
 
-namespace Eraflo.UnityImportPackage.Samples.Events
+namespace Eraflo.Catalyst.Samples.Events
 {
     /// <summary>
     /// Sample demonstrating the EventChannel system.

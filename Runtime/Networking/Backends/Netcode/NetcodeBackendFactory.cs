@@ -1,7 +1,7 @@
 #if UNITY_NETCODE
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Networking.Backends
+namespace Eraflo.Catalyst.Networking.Backends
 {
     /// <summary>
     /// Factory for Netcode backend.

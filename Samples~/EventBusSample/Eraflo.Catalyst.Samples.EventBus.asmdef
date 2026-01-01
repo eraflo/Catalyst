@@ -1,0 +1,16 @@
+{
+    "name": "Eraflo.Catalyst.Samples.EventBus",
+    "rootNamespace": "Eraflo.Catalyst.Samples.Events",
+    "references": [
+        "Eraflo.Catalyst.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

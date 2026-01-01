@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Eraflo.UnityImportPackage.Networking;
+using Eraflo.Catalyst.Networking;
 
-namespace Eraflo.UnityImportPackage.Events
+namespace Eraflo.Catalyst.Events
 {
     /// <summary>
     /// Handles network synchronization for event channels.

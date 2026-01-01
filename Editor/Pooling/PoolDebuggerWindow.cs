@@ -1,9 +1,9 @@
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
-using Eraflo.UnityImportPackage.Pooling;
+using Eraflo.Catalyst.Pooling;
 
-namespace Eraflo.UnityImportPackage.Editor.Pooling
+namespace Eraflo.Catalyst.Editor.Pooling
 {
     /// <summary>
     /// Editor window to monitor and debug active pools.
@@ -17,7 +17,7 @@ namespace Eraflo.UnityImportPackage.Editor.Pooling
         private const double REFRESH_INTERVAL = 0.2;
         private List<PoolDebugInfo> _cachedPools = new List<PoolDebugInfo>();
 
-        [MenuItem("Tools/Unity Import Package/Pool Debugger")]
+        [MenuItem("Tools/Eraflo Catalyst/Pool Debugger")]
         public static void ShowWindow()
         {
             var window = GetWindow<PoolDebuggerWindow>("Pool Debugger");

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
-using Eraflo.UnityImportPackage.Networking;
+using Eraflo.Catalyst.Networking;
 
-namespace Eraflo.UnityImportPackage.Editor
+namespace Eraflo.Catalyst.Editor
 {
     /// <summary>
     /// Custom inspector for PackageSettings.

@@ -1,0 +1,16 @@
+{
+    "name": "Eraflo.Catalyst.Samples.BehaviourTree",
+    "rootNamespace": "Eraflo.Catalyst.Samples.BehaviourTree",
+    "references": [
+        "GUID:d61aa954a7e869d44a2105937c4e280d"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

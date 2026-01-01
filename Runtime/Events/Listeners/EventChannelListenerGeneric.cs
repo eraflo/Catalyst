@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace Eraflo.UnityImportPackage.Events
+namespace Eraflo.Catalyst.Events
 {
     /// <summary>
     /// Generic MonoBehaviour listener for typed EventChannel ScriptableObjects.

@@ -1,0 +1,16 @@
+{
+    "name": "Eraflo.Catalyst.Samples.Timers",
+    "rootNamespace": "Eraflo.Catalyst.Samples.Timers",
+    "references": [
+        "Eraflo.Catalyst.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

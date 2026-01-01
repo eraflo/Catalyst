@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Eraflo.UnityImportPackage.EasingSystem;
+using Eraflo.Catalyst.EasingSystem;
 
-namespace Eraflo.UnityImportPackage.Timers
+namespace Eraflo.Catalyst.Timers
 {
     /// <summary>
     /// Preset configuration for creating timers with predefined settings.

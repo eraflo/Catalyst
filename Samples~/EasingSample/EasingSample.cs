@@ -1,7 +1,7 @@
 using UnityEngine;
-using Eraflo.UnityImportPackage.EasingSystem;
+using Eraflo.Catalyst.EasingSystem;
 
-namespace Eraflo.UnityImportPackage.Samples.Easing
+namespace Eraflo.Catalyst.Samples.Easing
 {
     /// <summary>
     /// Sample demonstrating the Easing system.

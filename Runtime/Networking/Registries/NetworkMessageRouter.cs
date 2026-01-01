@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Networking
+namespace Eraflo.Catalyst.Networking
 {
     /// <summary>
     /// Routes network messages to handlers.

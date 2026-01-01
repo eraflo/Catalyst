@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using NetcodeMgr = Unity.Netcode.NetworkManager;
 
-namespace Eraflo.UnityImportPackage.Networking.Backends
+namespace Eraflo.Catalyst.Networking.Backends
 {
     /// <summary>
     /// Network backend implementation for Unity Netcode for GameObjects.

@@ -1,4 +1,4 @@
-namespace Eraflo.UnityImportPackage
+namespace Eraflo.Catalyst
 {
     /// <summary>
     /// Global thread safety mode for all package systems.

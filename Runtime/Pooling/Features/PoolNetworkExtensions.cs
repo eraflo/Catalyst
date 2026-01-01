@@ -1,7 +1,7 @@
 using UnityEngine;
-using Eraflo.UnityImportPackage.Networking;
+using Eraflo.Catalyst.Networking;
 
-namespace Eraflo.UnityImportPackage.Pooling
+namespace Eraflo.Catalyst.Pooling
 {
     /// <summary>
     /// Extension methods for networked pooling.

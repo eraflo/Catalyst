@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Events
+namespace Eraflo.Catalyst.Events
 {
     /// <summary>
     /// Base MonoBehaviour that automatically manages event subscriptions.

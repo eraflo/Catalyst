@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Utilities
+namespace Eraflo.Catalyst.Utilities
 {
     /// <summary>
     /// Stores callback metadata for serialization/persistence.

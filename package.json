@@ -1,8 +1,8 @@
 {
-  "name": "com.eraflo.unityimportpackage",
+  "name": "com.eraflo.catalyst",
   "version": "1.1.0",
-  "displayName": "Unity Import Package",
-  "description": "A Unity Package with basic scripts and editors",
+  "displayName": "Catalyst",
+  "description": "Essential Unity tools to accelerate development: Behaviour Tree, Networking, Event Bus, and more.",
   "unity": "2022.3",
   "unityRelease": "0f1",
   "documentationUrl": "",
@@ -25,7 +25,8 @@
     "com.unity.burst": "1.8.12",
     "com.unity.collections": "2.4.0",
     "com.unity.netcode.gameobjects": "1.8.1",
-    "com.unity.transport": "2.6.0"
+    "com.unity.transport": "2.6.0",
+    "com.unity.ai.navigation": "1.1.5"
   },
   "samples": [
     {
@@ -52,6 +53,11 @@
       "displayName": "Networking Sample",
       "description": "Demonstrates the Networking system",
       "path": "Samples~/NetworkingSample"
+    },
+    {
+      "displayName": "BehaviourTree Sample",
+      "description": "Demonstrates the BehaviourTree system",
+      "path": "Samples~/BehaviourTreeSample"
     },
     {
       "displayName": "VR Example Sample",

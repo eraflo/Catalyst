@@ -4,9 +4,9 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEngine;
 using System.IO;
-using Eraflo.UnityImportPackage.Events;
+using Eraflo.Catalyst.Events;
 
-namespace Eraflo.UnityImportPackage.Editor
+namespace Eraflo.Catalyst.Editor
 {
     /// <summary>
     /// Automatically registers EventChannel assets to Addressables.
@@ -132,7 +132,7 @@ namespace Eraflo.UnityImportPackage.Editor
         /// <summary>
         /// Menu item to manually register all EventChannels.
         /// </summary>
-        [MenuItem("Tools/Unity Import Package/Register All EventChannels to Addressables")]
+        [MenuItem("Tools/Eraflo Catalyst/Register All EventChannels to Addressables")]
         public static void RegisterAllEventChannels()
         {
             string[] guids = AssetDatabase.FindAssets("t:ScriptableObject");

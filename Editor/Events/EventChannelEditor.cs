@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Events.Editor
+namespace Eraflo.Catalyst.Events.Editor
 {
     /// <summary>
     /// Custom editor for void EventChannel ScriptableObjects.

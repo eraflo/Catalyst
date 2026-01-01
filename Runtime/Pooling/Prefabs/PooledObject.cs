@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Pooling
+namespace Eraflo.Catalyst.Pooling
 {
     /// <summary>
     /// Component attached to pooled GameObjects.

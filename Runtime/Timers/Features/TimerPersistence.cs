@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using Newtonsoft.Json;
-using Eraflo.UnityImportPackage.Utilities;
+using Eraflo.Catalyst.Utilities;
 
-namespace Eraflo.UnityImportPackage.Timers
+namespace Eraflo.Catalyst.Timers
 {
     /// <summary>
     /// Serializable data for a single timer.

@@ -3,10 +3,10 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using Eraflo.UnityImportPackage.Timers;
-using Eraflo.UnityImportPackage.EasingSystem;
+using Eraflo.Catalyst.Timers;
+using Eraflo.Catalyst.EasingSystem;
 
-namespace Eraflo.UnityImportPackage.Tests
+namespace Eraflo.Catalyst.Tests
 {
     public class TimerTests
     {

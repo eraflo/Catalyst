@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Pooling
+namespace Eraflo.Catalyst.Pooling
 {
     /// <summary>
     /// Handles network synchronization for pooled objects.

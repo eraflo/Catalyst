@@ -1,11 +1,11 @@
-# Unity Import Package
+# Catalyst
 
-A Unity Package with basic scripts and editors.
+Eraflo Catalyst is a comprehensive Unity toollset designed to accelerate development. It includes a robust Behaviour Tree system, Networking, Event Bus, Pooling, and more.
 
 ## Package Structure
 
 ```
-UnityImportPackage/
+Catalyst/
 ├── package.json              # Package manifest
 ├── CHANGELOG.md              # Version history
 ├── README.md                 # This file
@@ -25,7 +25,7 @@ UnityImportPackage/
 
 1. Open Unity Package Manager (`Window > Package Manager`)
 2. Click `+` → `Add package from git URL...`
-3. Enter: `https://github.com/eraflo/UnityImportPackage.git`
+3. Enter: `https://github.com/eraflo/Catalyst.git`
 
 ### Via manifest.json
 
@@ -34,7 +34,7 @@ Add the following line to your `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.eraflo.unityimportpackage": "https://github.com/eraflo/UnityImportPackage.git"
+    "com.eraflo.catalyst": "https://github.com/eraflo/Catalyst.git"
   }
 }
 ```

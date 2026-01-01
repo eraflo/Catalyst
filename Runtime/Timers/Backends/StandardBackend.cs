@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Timers.Backends
+namespace Eraflo.Catalyst.Timers.Backends
 {
     /// <summary>
     /// Standard backend implementation using managed objects.

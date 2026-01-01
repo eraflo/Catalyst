@@ -1,6 +1,6 @@
 using System;
 
-namespace Eraflo.UnityImportPackage.Pooling
+namespace Eraflo.Catalyst.Pooling
 {
     /// <summary>
     /// Handle to a pooled object. Use this to track and release pooled instances.

@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using Eraflo.UnityImportPackage.Networking.Backends;
+using Eraflo.Catalyst.Networking.Backends;
 
-namespace Eraflo.UnityImportPackage.Networking
+namespace Eraflo.Catalyst.Networking
 {
     /// <summary>
     /// Bootstraps the network system at startup.

@@ -1,8 +1,8 @@
 using NUnit.Framework;
-using Eraflo.UnityImportPackage.Events;
+using Eraflo.Catalyst.Events;
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage.Tests
+namespace Eraflo.Catalyst.Tests
 {
     public class EventChannelTests
     {

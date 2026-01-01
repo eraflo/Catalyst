@@ -1,10 +1,10 @@
 using NUnit.Framework;
-using Eraflo.UnityImportPackage.Networking;
-using Eraflo.UnityImportPackage.Networking.Backends;
-using Eraflo.UnityImportPackage.Timers;
-using Eraflo.UnityImportPackage.Pooling;
+using Eraflo.Catalyst.Networking;
+using Eraflo.Catalyst.Networking.Backends;
+using Eraflo.Catalyst.Timers;
+using Eraflo.Catalyst.Pooling;
 
-namespace Eraflo.UnityImportPackage.Tests
+namespace Eraflo.Catalyst.Tests
 {
     public class NetworkManagerTests
     {

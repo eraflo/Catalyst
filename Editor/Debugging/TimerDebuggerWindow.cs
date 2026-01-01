@@ -1,9 +1,9 @@
 using UnityEditor;
 using UnityEngine;
-using Eraflo.UnityImportPackage.Timers;
+using Eraflo.Catalyst.Timers;
 using System.Collections.Generic;
 
-namespace Eraflo.UnityImportPackage.Editor.Debugging
+namespace Eraflo.Catalyst.Editor.Debugging
 {
     /// <summary>
     /// Editor window to monitor and debug active timers.
@@ -17,7 +17,7 @@ namespace Eraflo.UnityImportPackage.Editor.Debugging
         private const double REFRESH_INTERVAL = 0.1; // 100ms
         private List<TimerDebugInfo> _cachedTimers = new List<TimerDebugInfo>();
 
-        [MenuItem("Tools/Unity Import Package/Timer Debugger")]
+        [MenuItem("Tools/Eraflo Catalyst/Timer Debugger")]
         public static void ShowWindow()
         {
             var window = GetWindow<TimerDebuggerWindow>("Timer Debugger");

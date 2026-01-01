@@ -1,4 +1,4 @@
-namespace Eraflo.UnityImportPackage.Networking
+namespace Eraflo.Catalyst.Networking
 {
     /// <summary>
     /// Factory interface for creating network backends.

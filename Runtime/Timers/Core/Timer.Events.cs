@@ -1,6 +1,6 @@
 using System;
 
-namespace Eraflo.UnityImportPackage.Timers
+namespace Eraflo.Catalyst.Timers
 {
     /// <summary>
     /// Timer event registration methods.

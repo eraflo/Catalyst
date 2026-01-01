@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Eraflo.UnityImportPackage.Networking
+namespace Eraflo.Catalyst.Networking
 {
     /// <summary>
     /// Network message for event channel broadcasts.

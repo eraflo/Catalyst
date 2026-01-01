@@ -1,11 +1,11 @@
 using UnityEngine;
-using Eraflo.UnityImportPackage.Networking;
-using Eraflo.UnityImportPackage.Networking.Backends;
-using Eraflo.UnityImportPackage.Timers;
-using Eraflo.UnityImportPackage.Pooling;
-using Eraflo.UnityImportPackage.Events;
+using Eraflo.Catalyst.Networking;
+using Eraflo.Catalyst.Networking.Backends;
+using Eraflo.Catalyst.Timers;
+using Eraflo.Catalyst.Pooling;
+using Eraflo.Catalyst.Events;
 
-namespace Eraflo.UnityImportPackage.Samples.Networking
+namespace Eraflo.Catalyst.Samples.Networking
 {
     /// <summary>
     /// Demonstrates the unified networking system.

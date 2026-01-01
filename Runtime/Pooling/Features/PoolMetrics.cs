@@ -1,4 +1,4 @@
-namespace Eraflo.UnityImportPackage.Pooling
+namespace Eraflo.Catalyst.Pooling
 {
     /// <summary>
     /// Tracks pool system metrics for debugging and profiling.

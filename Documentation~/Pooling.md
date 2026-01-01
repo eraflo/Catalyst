@@ -212,7 +212,7 @@ metrics.PeakActiveCount;  // Peak simultaneous active
 
 ### Pool Debugger Window
 
-**Tools > Unity Import Package > Pool Debugger**
+**Tools > Eraflo Catalyst > Pool Debugger**
 
 Shows:
 - List of all active pools

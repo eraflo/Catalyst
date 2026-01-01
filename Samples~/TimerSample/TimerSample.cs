@@ -1,8 +1,8 @@
 using UnityEngine;
-using Eraflo.UnityImportPackage.Timers;
-using Eraflo.UnityImportPackage.EasingSystem;
+using Eraflo.Catalyst.Timers;
+using Eraflo.Catalyst.EasingSystem;
 
-namespace Eraflo.UnityImportPackage.Samples.Timers
+namespace Eraflo.Catalyst.Samples.Timers
 {
     /// <summary>
     /// Sample demonstrating the Timer system.

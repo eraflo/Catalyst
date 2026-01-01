@@ -1,6 +1,6 @@
 using System;
 
-namespace Eraflo.UnityImportPackage.Timers
+namespace Eraflo.Catalyst.Timers
 {
     /// <summary>
     /// Opaque handle to a timer. Used to interact with timers without knowing

@@ -1,7 +1,7 @@
 using UnityEngine;
-using Eraflo.UnityImportPackage.EasingSystem;
+using Eraflo.Catalyst.EasingSystem;
 
-namespace Eraflo.UnityImportPackage.Timers
+namespace Eraflo.Catalyst.Timers
 {
     /// <summary>
     /// Timer easing and interpolation methods.

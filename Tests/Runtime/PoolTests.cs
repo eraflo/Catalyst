@@ -2,9 +2,9 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using Eraflo.UnityImportPackage.Pooling;
+using Eraflo.Catalyst.Pooling;
 
-namespace Eraflo.UnityImportPackage.Tests
+namespace Eraflo.Catalyst.Tests
 {
     public class PoolTests
     {

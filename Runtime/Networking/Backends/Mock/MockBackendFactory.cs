@@ -1,4 +1,4 @@
-namespace Eraflo.UnityImportPackage.Networking.Backends
+namespace Eraflo.Catalyst.Networking.Backends
 {
     /// <summary>
     /// Factory for Mock backend.

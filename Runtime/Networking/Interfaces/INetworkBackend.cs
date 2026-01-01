@@ -1,6 +1,6 @@
 using System;
 
-namespace Eraflo.UnityImportPackage.Networking
+namespace Eraflo.Catalyst.Networking
 {
     /// <summary>
     /// Interface for network backend implementations.

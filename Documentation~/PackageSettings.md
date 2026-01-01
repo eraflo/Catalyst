@@ -8,7 +8,7 @@ Central configuration for the package.
 Assets/Resources/UnityImportPackageSettings.asset
 ```
 
-**Menu**: Tools > Unity Import Package > Settings
+**Menu**: Tools > Eraflo Catalyst > Settings
 
 ## Settings
 

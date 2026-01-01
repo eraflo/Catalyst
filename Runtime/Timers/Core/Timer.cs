@@ -1,8 +1,8 @@
 using System;
 using UnityEngine;
-using Eraflo.UnityImportPackage.Timers.Backends;
+using Eraflo.Catalyst.Timers.Backends;
 
-namespace Eraflo.UnityImportPackage.Timers
+namespace Eraflo.Catalyst.Timers
 {
     /// <summary>
     /// Main static API for the Timer system.

@@ -5,7 +5,7 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 
-namespace Eraflo.UnityImportPackage.Timers.Backends
+namespace Eraflo.Catalyst.Timers.Backends
 {
     /// <summary>
     /// High-performance backend using Unity Burst and Jobs for timer updates.

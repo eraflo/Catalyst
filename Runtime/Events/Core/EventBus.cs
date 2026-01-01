@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Eraflo.UnityImportPackage.Events
+namespace Eraflo.Catalyst.Events
 {
     /// <summary>
     /// Central event bus managing all event subscriptions.

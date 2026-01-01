@@ -1,6 +1,6 @@
 using System;
 
-namespace Eraflo.UnityImportPackage.Events
+namespace Eraflo.Catalyst.Events
 {
     /// <summary>
     /// Attribute to automatically subscribe a method to an EventChannel field.

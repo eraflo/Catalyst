@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Eraflo.UnityImportPackage
+namespace Eraflo.Catalyst
 {
     /// <summary>
     /// Handler registration mode.
@@ -19,7 +19,7 @@ namespace Eraflo.UnityImportPackage
     /// </summary>
     public class PackageSettings : ScriptableObject
     {
-        private const string ResourcePath = "UnityImportPackageSettings";
+        private const string ResourcePath = "CatalystSettings";
         private static PackageSettings _instance;
 
         // Global
