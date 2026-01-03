@@ -17,7 +17,7 @@ namespace Eraflo.Catalyst.Editor.Debugging
         private const double REFRESH_INTERVAL = 0.1; // 100ms
         private List<TimerDebugInfo> _cachedTimers = new List<TimerDebugInfo>();
 
-        [MenuItem("Tools/Eraflo Catalyst/Timer Debugger")]
+        [MenuItem("Tools/Catalyst/Timer Debugger")]
         public static void ShowWindow()
         {
             var window = GetWindow<TimerDebuggerWindow>("Timer Debugger");

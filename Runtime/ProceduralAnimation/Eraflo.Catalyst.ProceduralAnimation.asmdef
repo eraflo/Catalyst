@@ -1,0 +1,20 @@
+{
+    "name": "Eraflo.Catalyst.ProceduralAnimation",
+    "rootNamespace": "Eraflo.Catalyst.ProceduralAnimation",
+    "references": [
+        "Eraflo.Catalyst.Runtime",
+        "Eraflo.Catalyst.Noise",
+        "Unity.Burst",
+        "Unity.Collections",
+        "Unity.Mathematics"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -132,7 +132,7 @@ namespace Eraflo.Catalyst.Editor
         /// <summary>
         /// Menu item to manually register all EventChannels.
         /// </summary>
-        [MenuItem("Tools/Eraflo Catalyst/Register All EventChannels to Addressables")]
+        [MenuItem("Tools/Catalyst/Register All EventChannels to Addressables")]
         public static void RegisterAllEventChannels()
         {
             string[] guids = AssetDatabase.FindAssets("t:ScriptableObject");

@@ -7,7 +7,7 @@ namespace Eraflo.Catalyst.Events
     /// Network-aware EventChannel for void events.
     /// Auto-registers with EventNetworkHandler.
     /// </summary>
-    [CreateAssetMenu(fileName = "NewNetworkEventChannel", menuName = "Events/Network/Event Channel", order = 100)]
+    [CreateAssetMenu(fileName = "NewNetworkEventChannel", menuName = "Catalyst/Events/Network/Event Channel", order = 100)]
     public class NetworkEventChannel : EventChannel
     {
         [Header("Network Settings")]

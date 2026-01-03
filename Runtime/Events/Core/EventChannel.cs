@@ -8,7 +8,7 @@ namespace Eraflo.Catalyst.Events
     /// Create via Assets > Create > Events > Event Channel.
     /// Can be used from code or via EventChannelListener in the inspector.
     /// </summary>
-    [CreateAssetMenu(fileName = "NewEventChannel", menuName = "Events/Event Channel", order = 0)]
+    [CreateAssetMenu(fileName = "NewEventChannel", menuName = "Catalyst/Events/Event Channel", order = 0)]
     public class EventChannel : ScriptableObject
     {
         [SerializeField, TextArea]

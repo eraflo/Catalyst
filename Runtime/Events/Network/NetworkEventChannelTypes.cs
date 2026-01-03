@@ -5,19 +5,19 @@ namespace Eraflo.Catalyst.Events
     /// <summary>
     /// Network-aware event channel for int values.
     /// </summary>
-    [CreateAssetMenu(fileName = "NewNetworkIntChannel", menuName = "Events/Network/Int Channel", order = 101)]
+    [CreateAssetMenu(fileName = "NewNetworkIntChannel", menuName = "Catalyst/Events/Network/Int Channel", order = 101)]
     public class NetworkIntEventChannel : NetworkEventChannel<int> { }
 
     /// <summary>
     /// Network-aware event channel for float values.
     /// </summary>
-    [CreateAssetMenu(fileName = "NewNetworkFloatChannel", menuName = "Events/Network/Float Channel", order = 102)]
+    [CreateAssetMenu(fileName = "NewNetworkFloatChannel", menuName = "Catalyst/Events/Network/Float Channel", order = 102)]
     public class NetworkFloatEventChannel : NetworkEventChannel<float> { }
 
     /// <summary>
     /// Network-aware event channel for string values.
     /// </summary>
-    [CreateAssetMenu(fileName = "NewNetworkStringChannel", menuName = "Events/Network/String Channel", order = 103)]
+    [CreateAssetMenu(fileName = "NewNetworkStringChannel", menuName = "Catalyst/Events/Network/String Channel", order = 103)]
     public class NetworkStringEventChannel : NetworkEventChannel<string>
     {
         protected override byte[] SerializeValue(string value)
@@ -34,7 +34,7 @@ namespace Eraflo.Catalyst.Events
     /// <summary>
     /// Network-aware event channel for bool values.
     /// </summary>
-    [CreateAssetMenu(fileName = "NewNetworkBoolChannel", menuName = "Events/Network/Bool Channel", order = 104)]
+    [CreateAssetMenu(fileName = "NewNetworkBoolChannel", menuName = "Catalyst/Events/Network/Bool Channel", order = 104)]
     public class NetworkBoolEventChannel : NetworkEventChannel<bool>
     {
         protected override byte[] SerializeValue(bool value)
@@ -51,7 +51,7 @@ namespace Eraflo.Catalyst.Events
     /// <summary>
     /// Network-aware event channel for Vector3 values.
     /// </summary>
-    [CreateAssetMenu(fileName = "NewNetworkVector3Channel", menuName = "Events/Network/Vector3 Channel", order = 105)]
+    [CreateAssetMenu(fileName = "NewNetworkVector3Channel", menuName = "Catalyst/Events/Network/Vector3 Channel", order = 105)]
     public class NetworkVector3EventChannel : NetworkEventChannel<Vector3>
     {
         protected override byte[] SerializeValue(Vector3 value)

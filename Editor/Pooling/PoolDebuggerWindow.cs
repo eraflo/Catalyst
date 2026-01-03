@@ -17,7 +17,7 @@ namespace Eraflo.Catalyst.Editor.Pooling
         private const double REFRESH_INTERVAL = 0.2;
         private List<PoolDebugInfo> _cachedPools = new List<PoolDebugInfo>();
 
-        [MenuItem("Tools/Eraflo Catalyst/Pool Debugger")]
+        [MenuItem("Tools/Catalyst/Pool Debugger")]
         public static void ShowWindow()
         {
             var window = GetWindow<PoolDebuggerWindow>("Pool Debugger");

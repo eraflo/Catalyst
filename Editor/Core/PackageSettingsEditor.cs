@@ -28,7 +28,7 @@ namespace Eraflo.Catalyst.Editor
             }
         }
 
-        [MenuItem("Tools/Eraflo Catalyst/Settings", priority = 0)]
+        [MenuItem("Tools/Catalyst/Settings", priority = 0)]
         public static void OpenSettings()
         {
             var settings = GetOrCreateSettings();
@@ -36,7 +36,7 @@ namespace Eraflo.Catalyst.Editor
             EditorGUIUtility.PingObject(settings);
         }
 
-        [MenuItem("Tools/Eraflo Catalyst/Create Settings", priority = 1)]
+        [MenuItem("Tools/Catalyst/Create Settings", priority = 1)]
         public static void CreateSettingsMenu()
         {
             var settings = CreateSettings();

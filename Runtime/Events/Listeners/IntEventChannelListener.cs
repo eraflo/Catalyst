@@ -5,6 +5,6 @@ namespace Eraflo.Catalyst.Events
     /// <summary>
     /// Listener for IntEventChannel.
     /// </summary>
-    [AddComponentMenu("Events/Int Channel Listener")]
+    [AddComponentMenu("Catalyst/Events/Int Channel Listener")]
     public class IntEventChannelListener : EventChannelListener<IntEventChannel, int> { }
 }

@@ -7,7 +7,7 @@ namespace Eraflo.Catalyst.Events
     /// MonoBehaviour that listens to an EventChannel and triggers a UnityEvent response.
     /// Add this component to any GameObject to react to events via the inspector.
     /// </summary>
-    [AddComponentMenu("Events/Event Channel Listener")]
+    [AddComponentMenu("Catalyst/Events/Event Channel Listener")]
     public class EventChannelListener : MonoBehaviour
     {
         [Tooltip("The EventChannel to listen to.")]

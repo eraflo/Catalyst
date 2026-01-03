@@ -6,6 +6,6 @@ namespace Eraflo.Catalyst.Events
     /// Event channel that carries a string value.
     /// Create via Assets > Create > Events > String Channel.
     /// </summary>
-    [CreateAssetMenu(fileName = "NewStringChannel", menuName = "Events/String Channel", order = 3)]
+    [CreateAssetMenu(fileName = "NewStringChannel", menuName = "Catalyst/Events/String Channel", order = 3)]
     public class StringEventChannel : EventChannel<string> { }
 }

@@ -11,7 +11,7 @@ namespace Eraflo.Catalyst.BehaviourTree
     /// A behaviour tree asset that can be assigned to agents.
     /// The tree is cloned at runtime to allow multiple agents to use the same asset.
     /// </summary>
-    [CreateAssetMenu(fileName = "BehaviourTree", menuName = "Behaviour Tree/Behaviour Tree")]
+    [CreateAssetMenu(fileName = "BehaviourTree", menuName = "Catalyst/Behaviour Tree/Behaviour Tree")]
     public class BehaviourTree : ScriptableObject
     {
         /// <summary>The root node of the tree.</summary>

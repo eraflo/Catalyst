@@ -6,7 +6,7 @@ namespace Eraflo.Catalyst.BehaviourTree
     /// Provides a target from a Blackboard key.
     /// The blackboard should contain a Transform or GameObject.
     /// </summary>
-    [CreateAssetMenu(menuName = "Behaviour Tree/Target Providers/Blackboard Target")]
+    [CreateAssetMenu(menuName = "Catalyst/Behaviour Tree/Target Providers/Blackboard Target")]
     public class BlackboardTargetProvider : TargetProvider
     {
         [Tooltip("The blackboard key containing the target (Transform or GameObject).")]

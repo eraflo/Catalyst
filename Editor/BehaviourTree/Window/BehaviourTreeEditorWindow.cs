@@ -22,7 +22,7 @@ namespace Eraflo.Catalyst.Editor.BehaviourTree.Window
         [SerializeField] private BT _tree;
         private Label _treeNameLabel;
         
-        [MenuItem("Tools/Eraflo Catalyst/Behaviour Tree Editor")]
+        [MenuItem("Tools/Catalyst/Behaviour Tree Editor")]
         public static void OpenWindow()
         {
             var window = GetWindow<BehaviourTreeEditorWindow>();

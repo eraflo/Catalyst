@@ -3,9 +3,12 @@
     "rootNamespace": "Eraflo.Catalyst.Editor",
     "references": [
         "Eraflo.Catalyst.Runtime",
+        "Eraflo.Catalyst.ProceduralAnimation",
         "Unity.Addressables",
         "Unity.Addressables.Editor",
-        "Unity.ResourceManager"
+        "Unity.ResourceManager",
+        "Unity.Burst",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [
         "Editor"
