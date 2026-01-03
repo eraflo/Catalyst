@@ -1,6 +1,6 @@
 {
   "name": "com.eraflo.catalyst",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "displayName": "Catalyst",
   "description": "Essential Unity tools to accelerate development: Behaviour Tree, Networking, Event Bus, and more.",
   "unity": "2022.3",
