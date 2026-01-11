@@ -9,7 +9,8 @@
         "Unity.Collections",
         "Unity.Netcode.Runtime",
         "Unity.Mathematics",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
