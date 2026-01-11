@@ -10,6 +10,7 @@ namespace Eraflo.Catalyst.Timers
         private bool _isRunning;
         private bool _isFinished;
         private bool _useUnscaledTime;
+        private string _channel;
 
         public float CurrentTime { get => _currentTime; set => _currentTime = value; }
         public float InitialTime => 0f;
@@ -17,6 +18,7 @@ namespace Eraflo.Catalyst.Timers
         public bool IsFinished { get => _isFinished; set => _isFinished = value; }
         public bool UseUnscaledTime => _useUnscaledTime;
         public float TimeScale { get => _timeScale; set => _timeScale = value; }
+        public string Channel { get => _channel; set => _channel = value; }
 
         public void Tick(float deltaTime)
         {

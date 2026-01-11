@@ -25,20 +25,19 @@ using Eraflo.Catalyst;
 ### Core Systems
 - [Service Locator](Core/ServiceLocator.md) - The architectural backbone.
 - [Blackboard](Core/Blackboard.md) - Hierarchical data sharing and persistence.
-- [Event Bus](Core/EventBus.md) - Decoupled messaging.
-- [Timers](Core/Timers.md) - Scalable timer and delay system.
-- [Pooling](Core/Pooling.md) - High-performance object reuse.
-- [Easing](Core/Easing.md) - Math utilities for smooth transitions.
+- [Settings Manager](Core/SettingsManager.md) - Modular game options and persistent data.
+- [Chronos Manager](Core/ChronosManager.md) - Advanced time and slowdown management.
+- [Persistence](Core/Persistence.md) - Unified JSON serialization system.
 
 ### Modules
+- [Behaviour Tree](Modules/BehaviourTree.md) - Advanced AI and logic sequencing.
+- [Networking](Modules/Networking.md) - Network abstraction and synchronization.
+- [Timers](Modules/Timers.md) - Scalable timer and delay system.
+- [Pooling](Modules/Pooling.md) - High-performance object reuse.
+- [Event Bus](Modules/EventBus.md) - Decoupled messaging.
+- [Easing](Modules/Easing.md) - Math utilities for smooth transitions.
 - [Scene Flow](Modules/SceneFlow.md) - Complex transition management.
 - [Asset Management](Modules/AssetManagement.md) - Reference-counted loading.
-- [Settings Manager](Modules/SettingsManager.md) - Modular game options and persistence.
-- [Behaviour Tree](Modules/BehaviourTree.md) - Advanced AI and logic sequencing.
-- [Networking](Modules/Networking.md) - Netcode for GameObjects integration.
-
-### Persistence & Data
-- [Serializer](Persistence/Serializer.md) - Unified JSON serialization system.
 
 ### Infrastructure
 - [CI/CD](Infrastructure/CICD.md) - Automated testing and deployment.

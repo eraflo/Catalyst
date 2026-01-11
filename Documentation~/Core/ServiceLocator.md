@@ -5,10 +5,10 @@ The Service Locator (or Service Registry) is the architectural backbone of Erafl
 ## Key Features
 
 - **Pure C# Services**: Services are POCO classes, reducing overhead and improving testability.
-- **Auto-Discovery**: Mark any class with `[Service]` to have it automatically registered at startup.
+- **Auto-Discovery**: Mark any class with `[Service]` to have it automatically registered at startup. Robustly handles various test and headless environments.
 - **Lifecycle Management**: Services can hook into Unity's update loop via `IUpdatable` and `IFixedUpdatable`.
 - **Dependency Management**: Controlled initialization order via `Priority`.
-- **Global Access**: Access any service from anywhere via the unified `App` facade.
+- **Global Access**: Access any service from anywhere via the unified `App` facade (e.g., `App.Get<ChronosManager>()`).
 
 ### Architecture & Discovery
 
@@ -26,9 +26,11 @@ flowchart TD
         Sort --> Instantiate[Instantiate C# Classes]
         Instantiate --> Register[Add to Service Map]
         Register --> Init["Init IGameService.Initialize()"]
+        Init --> PL["Inject Update/FixedUpdate into PlayerLoop"]
     end
 
-    App[App.Get] --> Get["Service Map Lookup"]
+    App[App.Get] --> Guard["Init Guard (Lazy)"]
+    Guard --> Get["Service Map Lookup"]
     Get --> S[Service Instance]
 ```
 
@@ -45,9 +47,6 @@ using Eraflo.Catalyst.Timers;
 // Get the Timer service
 var timer = App.Get<Timer>();
 timer.CreateDelay(2f, () => Debug.Log("Delayed!"));
-
-// Or use the static facade (backward compatibility)
-Timer.Delay(2f, () => Debug.Log("Delayed!"));
 ```
 
 ### Creating a New Service
@@ -164,7 +163,7 @@ public void SetUp() {
     var manager = new SettingsManager();
     
     // 2. Register manually (overwrites any auto-discovered instance)
-    App.Register(manager);
+    App.Register<ISettingsManager>(manager);
 }
 
 [TearDown]

@@ -18,6 +18,7 @@ namespace Eraflo.Catalyst.Timers
         public float Duration;
         public float CurrentTime;
         public float TimeScale;
+        public string Channel;
         public bool IsRunning;
         public bool UseUnscaledTime;
         public List<SerializableCallback> Callbacks = new List<SerializableCallback>();
@@ -92,6 +93,7 @@ namespace Eraflo.Catalyst.Timers
                     Duration = timerInfo.InitialTime,
                     CurrentTime = timerInfo.CurrentTime,
                     TimeScale = timerInfo.TimeScale,
+                    Channel = timerInfo.Channel,
                     IsRunning = timerInfo.IsRunning,
                     UseUnscaledTime = false,
                     Callbacks = GetCallbacks(timerInfo.Id)
@@ -172,7 +174,8 @@ namespace Eraflo.Catalyst.Timers
             {
                 Duration = data.Duration,
                 TimeScale = data.TimeScale,
-                UseUnscaledTime = data.UseUnscaledTime
+                UseUnscaledTime = data.UseUnscaledTime,
+                Channel = data.Channel
             };
 
             try

@@ -16,6 +16,7 @@ namespace Eraflo.Catalyst.Timers
         private bool _useUnscaledTime;
         private bool _isInfinite;
         private bool _wasFinishedLastFrame;
+        private string _channel;
 
         public float CurrentTime { get => _currentTime; set { _interval = _interval == 0 ? value : _interval; _currentTime = value; } }
         public float InitialTime => _interval;
@@ -23,6 +24,7 @@ namespace Eraflo.Catalyst.Timers
         public bool IsFinished { get => _isFinished; set => _isFinished = value; }
         public bool UseUnscaledTime => _useUnscaledTime;
         public float TimeScale { get => _timeScale; set => _timeScale = value; }
+        public string Channel { get => _channel; set => _channel = value; }
 
         /// <summary>Current repeat number (1-based).</summary>
         public int CurrentRepeat => _currentRepeat;

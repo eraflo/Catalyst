@@ -72,6 +72,7 @@ namespace Eraflo.Catalyst.Timers.Backends
         {
             timer.CurrentTime = config.Duration;
             timer.TimeScale = config.TimeScale > 0 ? config.TimeScale : 1f;
+            timer.Channel = string.IsNullOrEmpty(config.Channel) ? "World" : config.Channel;
             timer.IsRunning = true;
             timer.IsFinished = false;
         }
@@ -203,6 +204,19 @@ namespace Eraflo.Catalyst.Timers.Backends
             }
         }
 
+        public void SetChannel(TimerHandle handle, string channel)
+        {
+            lock (_lockObject)
+            {
+                if (_timers.TryGetValue(handle.Id, out var wrapper))
+                {
+                    var timer = wrapper.Timer;
+                    timer.Channel = channel;
+                    wrapper.Timer = timer;
+                }
+            }
+        }
+
         public void Update(float deltaTime, float unscaledDeltaTime)
         {
             // Process pending operations from other threads
@@ -212,6 +226,8 @@ namespace Eraflo.Catalyst.Timers.Backends
 
             lock (_lockObject)
             {
+                var chronos = App.Get<Eraflo.Catalyst.Core.Chronos.ChronosManager>();
+                
                 foreach (var kvp in _timers)
                 {
                     var wrapper = kvp.Value;
@@ -221,6 +237,11 @@ namespace Eraflo.Catalyst.Timers.Backends
 
                     float dt = timer.UseUnscaledTime ? unscaledDeltaTime : deltaTime;
                     dt *= timer.TimeScale;
+
+                    if (chronos != null)
+                    {
+                        dt *= chronos.GetChannelScale(timer.Channel);
+                    }
 
                     // Invoke OnTick for each frame (with deltaTime as float parameter)
                     TimerCallbacks.Invoke<OnTick, float>(kvp.Key, dt);
@@ -349,7 +370,8 @@ namespace Eraflo.Catalyst.Timers.Backends
                         Progress = timer.InitialTime > 0 ? timer.CurrentTime / timer.InitialTime : 0f,
                         IsRunning = timer.IsRunning,
                         IsFinished = timer.IsFinished,
-                        TimeScale = timer.TimeScale
+                        TimeScale = timer.TimeScale,
+                        Channel = timer.Channel
                     });
                 }
             }

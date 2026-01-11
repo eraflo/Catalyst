@@ -12,6 +12,7 @@ namespace Eraflo.Catalyst.Timers
         private bool _isFinished;
         private bool _useUnscaledTime;
         private int _ticksThisFrame;
+        private string _channel;
 
         public float CurrentTime { get => _accumulator; set { if (_tickInterval == 0f && value > 0f) _tickInterval = 1f / value; _accumulator = 0f; } }
         public float InitialTime => _tickInterval;
@@ -19,6 +20,7 @@ namespace Eraflo.Catalyst.Timers
         public bool IsFinished { get => _isFinished; set => _isFinished = value; }
         public bool UseUnscaledTime => _useUnscaledTime;
         public float TimeScale { get => _timeScale; set => _timeScale = value; }
+        public string Channel { get => _channel; set => _channel = value; }
 
         /// <summary>Number of ticks that occurred this frame.</summary>
         public int TicksThisFrame => _ticksThisFrame;

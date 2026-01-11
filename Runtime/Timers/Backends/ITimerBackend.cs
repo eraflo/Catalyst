@@ -63,6 +63,11 @@ namespace Eraflo.Catalyst.Timers
         /// Sets the time scale of a timer.
         /// </summary>
         void SetTimeScale(TimerHandle handle, float scale);
+        
+        /// <summary>
+        /// Sets the time channel of a timer.
+        /// </summary>
+        void SetChannel(TimerHandle handle, string channel);
 
         /// <summary>
         /// Updates all timers. Called by the system each frame.
@@ -103,5 +108,6 @@ namespace Eraflo.Catalyst.Timers
         public bool IsRunning;
         public bool IsFinished;
         public float TimeScale;
+        public string Channel;
     }
 }

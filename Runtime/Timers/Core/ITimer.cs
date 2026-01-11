@@ -24,6 +24,9 @@ namespace Eraflo.Catalyst.Timers
         /// <summary>Time scale multiplier for this timer.</summary>
         float TimeScale { get; set; }
         
+        /// <summary>Time channel this timer belongs to.</summary>
+        string Channel { get; set; }
+        
         /// <summary>Updates the timer. Called each frame by the system.</summary>
         /// <param name="deltaTime">Time elapsed since last tick.</param>
         void Tick(float deltaTime);
@@ -72,17 +75,21 @@ namespace Eraflo.Catalyst.Timers
         /// <summary>For frequency timers - ticks per second.</summary>
         public float TicksPerSecond;
 
+        /// <summary>Time channel for Chronos integration.</summary>
+        public string Channel;
+
         /// <summary>Creates a simple duration config.</summary>
-        public static TimerConfig FromDuration(float duration) => new TimerConfig { Duration = duration, TimeScale = 1f };
+        public static TimerConfig FromDuration(float duration) => new TimerConfig { Duration = duration, TimeScale = 1f, Channel = "World" };
         
         /// <summary>Creates config with all options.</summary>
-        public static TimerConfig Create(float duration, float timeScale = 1f, bool useUnscaledTime = false)
+        public static TimerConfig Create(float duration, float timeScale = 1f, bool useUnscaledTime = false, string channel = "World")
         {
             return new TimerConfig
             {
                 Duration = duration,
                 TimeScale = timeScale,
-                UseUnscaledTime = useUnscaledTime
+                UseUnscaledTime = useUnscaledTime,
+                Channel = channel
             };
         }
     }
