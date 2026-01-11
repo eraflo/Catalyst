@@ -43,7 +43,3 @@ using Eraflo.Catalyst;
 ### Infrastructure
 - [CI/CD](Infrastructure/CICD.md) - Automated testing and deployment.
 - [Package Settings](Infrastructure/PackageSettings.md) - Configuration and project setup.
-
-## Changelog
-
-See [CHANGELOG.md](../CHANGELOG.md) for version history.

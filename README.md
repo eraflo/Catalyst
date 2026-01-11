@@ -9,7 +9,6 @@ See [Documentation](Documentation~/README.md) for more information.
 ```
 Catalyst/
 ├── package.json              # Package manifest
-├── CHANGELOG.md              # Version history
 ├── README.md                 # This file
 ├── LICENSE                   # License file
 ├── Runtime/                  # Runtime scripts
