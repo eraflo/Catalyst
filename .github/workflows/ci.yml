@@ -307,6 +307,8 @@ jobs:
 
       - name: Update CHANGELOG.md
         if: steps.check_bump.outputs.skip != 'true' && steps.check_branch.outputs.is_main == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "# Changelog" > CHANGELOG.md
           echo "" >> CHANGELOG.md
