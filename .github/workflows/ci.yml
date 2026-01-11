@@ -115,10 +115,6 @@ jobs:
           restore-keys: |
             Library-Test-
       
-      # Fix potential permission issues in Docker
-      - name: Fix cache permissions
-        run: mkdir -p /root/.cache/unity3d && chmod -R 777 /root/.cache/unity3d
-      
       - uses: game-ci/unity-test-runner@v4
         id: tests
         env:
