@@ -278,7 +278,7 @@ jobs:
           
           # Update package.json
           jq ".version = \"$NEW_VERSION\"" package.json > tmp.json && mv tmp.json package.json
-      
+
       - name: Commit version bump
         if: steps.check_bump.outputs.skip != 'true'
         run: |
@@ -304,4 +304,36 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update CHANGELOG.md
+        if: steps.check_bump.outputs.skip != 'true' && steps.check_branch.outputs.is_main == 'true'
+        run: |
+          echo "# Changelog" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)," >> CHANGELOG.md
+          echo "and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)." >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          
+          # Wait a few seconds for the release to be fully processed by GitHub API
+          sleep 5
+          
+          # Fetch all releases (including the one just created) and format them
+          RELEASES_JSON=$(gh release list --limit 100 --json tagName,publishedAt,body)
+          
+          if [ "$RELEASES_JSON" != "[]" ]; then
+            echo "$RELEASES_JSON" | jq -r '.[] | "## [" + .tagName + "] - " + (.publishedAt | split("T")[0]) + "\n\n" + .body + "\n"' >> CHANGELOG.md
+          else
+            echo "## [${{ steps.bump.outputs.new_version }}] - $(date +%Y-%m-%d)" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "### Added" >> CHANGELOG.md
+            echo "- Initial automated release" >> CHANGELOG.md
+          fi
+          
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add CHANGELOG.md
+          git commit -m "docs: update CHANGELOG.md from GitHub Releases"
+          git push
 
