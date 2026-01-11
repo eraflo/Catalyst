@@ -86,7 +86,7 @@ graph TB
 
 ## Quick Start
 
-The Timer system is managed by the [Service Locator](ServiceLocator.md). Access it via `App.Get<Timer>()`.
+The Timer system is managed by the [Service Locator](../Core/ServiceLocator.md). Access it via `App.Get<Timer>()`.
 
 ```csharp
 using Eraflo.Catalyst.Timers;
@@ -199,6 +199,42 @@ group.PauseAll();
 group.ResumeAll();
 group.SetTimeScaleAll(0.5f);
 group.CancelAll();
+```
+
+---
+
+## Chronos Integration
+
+The Timer system integrates with the [Chronos Manager](../Core/ChronosManager.md) to support localized time scaling via channels.
+
+### How it works
+When a timer is assigned to a channel, its `deltaTime` is multiplied by that channel's current scale during the update.
+
+```mermaid
+sequenceDiagram
+    participant TS as TimerService
+    participant CM as ChronosManager
+    participant T as Timer instance
+    
+    TS->>TS: OnUpdate()
+    loop For each active timer
+        TS->>T: Get Channel ("SlowMo")
+        TS->>CM: GetChannelScale("SlowMo")
+        CM-->>TS: 0.5f
+        TS->>T: Tick(dt * 0.5f)
+    end
+```
+
+### Usage
+
+```csharp
+// Set channel at creation
+var config = TimerConfig.Create(5f, channel: "Enemies");
+var handle = timer.CreateTimer<CountdownTimer>(config);
+
+// Or via fluent extension
+timer.CreateDelay(3f, () => { })
+     .SetChannel("SlowMo");
 ```
 
 ---

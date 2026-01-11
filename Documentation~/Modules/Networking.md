@@ -174,6 +174,32 @@ myNetworkChannel.Raise(NetworkTarget.Others);
 myNetworkChannel.RaiseLocal();
 ```
 
+### Chronos Synchronization
+
+Time scale transitions on the server are automatically replicated to all clients via the [Chronos Manager](../Core/ChronosManager.md).
+
+```mermaid
+graph LR
+    subgraph "Server"
+        S_CM[ChronosManager] --> |OnTransitionStarted| S_NH[ChronosNetworkHandler]
+        S_NH --> |Send| S_NM[NetworkManager]
+    end
+
+    S_NM --> |"ChronosSyncMessage"| C_NM[NetworkManager Client]
+
+    subgraph "Client"
+        C_NM --> |Route| C_NH[ChronosNetworkHandler]
+        C_NH --> |SetTimeScale| C_CM[ChronosManager]
+    end
+```
+
+**Usage (Server only):**
+```csharp
+var chronos = App.Get<ChronosManager>();
+// This will smoothly slow down the "World" channel on all clients
+chronos.SetTimeScale("World", 0.1f, 2.0f, EasingType.CubicInOut);
+```
+
 ---
 
 ## Custom Backend

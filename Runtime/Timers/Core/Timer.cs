@@ -159,6 +159,9 @@ namespace Eraflo.Catalyst.Timers
         /// <summary>Sets the time scale of a timer.</summary>
         public void SetTimeScale(TimerHandle handle, float scale) => _backend?.SetTimeScale(handle, scale);
 
+        /// <summary>Sets the time channel of a timer.</summary>
+        public void SetChannel(TimerHandle handle, string channel) => _backend?.SetChannel(handle, channel);
+
         /// <summary>Gets the current time of a timer.</summary>
         public float GetCurrentTime(TimerHandle handle) => _backend?.GetCurrentTime(handle) ?? 0f;
 

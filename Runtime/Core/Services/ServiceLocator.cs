@@ -20,28 +20,30 @@ namespace Eraflo.Catalyst
         
         private static bool _initialized;
 
-        /// <summary>
-        /// Marker struct for the Service Locator update in the Player Loop.
-        /// </summary>
         private struct ServiceUpdate { }
         private struct ServiceFixedUpdate { }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
-        private static void Initialize()
+        public static void Initialize()
         {
             if (_initialized) return;
-
-            // 1. Discover and Register Services
-            DiscoverServices();
-
-            // 2. Inject into Player Loop
-            InjectIntoPlayerLoop();
-
             _initialized = true;
-            Debug.Log($"[ServiceLocator] Initialized with {_services.Count} services.");
 
-            // 3. Application Lifecycle
-            Application.quitting += Shutdown;
+            try
+            {
+                DiscoverServices();
+
+                try { InjectIntoPlayerLoop(); }
+                catch (Exception e) { Debug.LogWarning($"[ServiceLocator] PlayerLoop injection skipped: {e.Message}"); }
+
+                Debug.Log($"[ServiceLocator] Initialized with {_services.Count} services.");
+                Application.quitting += Shutdown;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[ServiceLocator] Critical error: {e.Message}");
+                _initialized = false;
+            }
         }
 
         private static void DiscoverServices()
@@ -51,15 +53,23 @@ namespace Eraflo.Catalyst
 
             foreach (var assembly in assemblies)
             {
-                // Optimization: Only scan our own assemblies or those that might have services
-                if (assembly.FullName.StartsWith("Unity") || assembly.FullName.StartsWith("System") || assembly.FullName.StartsWith("mscorlib"))
-                    continue;
-
                 try
                 {
+                    string name = assembly.GetName().Name;
+                    
+                    // Skip large system assemblies unless they contain Eraflo.Catalyst
+                    if (name.StartsWith("System") || name.StartsWith("Unity") || name.StartsWith("mscorlib") || 
+                        name.StartsWith("netstandard") || name.StartsWith("Microsoft") || name.StartsWith("Mono"))
+                    {
+                        if (!name.Contains("Eraflo.Catalyst"))
+                            continue;
+                    }
+
                     var types = assembly.GetTypes();
                     foreach (var type in types)
                     {
+                        if (type.IsAbstract || type.IsInterface) continue;
+                        
                         var attr = type.GetCustomAttribute<ServiceAttribute>();
                         if (attr != null)
                         {
@@ -67,16 +77,13 @@ namespace Eraflo.Catalyst
                         }
                     }
                 }
-                catch (ReflectionTypeLoadException)
+                catch (Exception)
                 {
-                    // Skip assemblies that can't be loaded
+                    // Swallowing scan errors for third-party/system assemblies
                 }
             }
 
-            // Sort by priority
-            var sortedServices = serviceTypes.OrderBy(s => s.attr.Priority);
-
-            foreach (var (type, attr) in sortedServices)
+            foreach (var (type, attr) in serviceTypes.OrderBy(s => s.attr.Priority))
             {
                 Register(type);
             }
@@ -100,11 +107,11 @@ namespace Eraflo.Catalyst
             }
             catch (Exception e)
             {
-                Debug.LogError($"[ServiceLocator] Failed to instantiate service {type.Name}: {e.Message}");
+                Debug.LogError($"[ServiceLocator] Could not create {type.Name}: {e.Message}");
             }
         }
 
-        internal static void Register<T>(T instance) where T : class, IGameService
+        public static void Register<T>(T instance) where T : class, IGameService
         {
             var type = typeof(T);
             if (_services.ContainsKey(type)) _services.Remove(type);
@@ -118,18 +125,20 @@ namespace Eraflo.Catalyst
 
         public static T Get<T>() where T : class
         {
+            if (!_initialized) Initialize();
+
             if (_services.TryGetValue(typeof(T), out var service))
             {
                 return service as T;
             }
 
-            // Fallback for interfaces
             return _services.Values.OfType<T>().FirstOrDefault();
         }
 
         private static void InjectIntoPlayerLoop()
         {
             var loop = PlayerLoop.GetCurrentPlayerLoop();
+            if (loop.subSystemList == null) return;
             
             InsertSystem<Update, ServiceUpdate>(ref loop, OnUpdate);
             InsertSystem<FixedUpdate, ServiceFixedUpdate>(ref loop, OnFixedUpdate);
@@ -139,6 +148,8 @@ namespace Eraflo.Catalyst
 
         private static void InsertSystem<TLocation, TMarker>(ref PlayerLoopSystem rootLoop, PlayerLoopSystem.UpdateFunction delegateFunction)
         {
+            if (rootLoop.subSystemList == null) return;
+
             for (int i = 0; i < rootLoop.subSystemList.Length; i++)
             {
                 if (rootLoop.subSystemList[i].type == typeof(TLocation))
@@ -146,7 +157,6 @@ namespace Eraflo.Catalyst
                     var system = rootLoop.subSystemList[i];
                     var subsystems = system.subSystemList ?? Array.Empty<PlayerLoopSystem>();
 
-                    // Already inserted?
                     if (subsystems.Any(s => s.type == typeof(TMarker))) return;
 
                     var newSubsystems = new PlayerLoopSystem[subsystems.Length + 1];
@@ -166,25 +176,19 @@ namespace Eraflo.Catalyst
 
         private static void OnUpdate()
         {
-            for (int i = 0; i < _updatables.Count; i++)
-            {
-                _updatables[i].OnUpdate();
-            }
+            for (int i = 0; i < _updatables.Count; i++) _updatables[i].OnUpdate();
         }
 
         private static void OnFixedUpdate()
         {
-            for (int i = 0; i < _fixedUpdatables.Count; i++)
-            {
-                _fixedUpdatables[i].OnFixedUpdate();
-            }
+            for (int i = 0; i < _fixedUpdatables.Count; i++) _fixedUpdatables[i].OnFixedUpdate();
         }
 
-        internal static void Shutdown()
+        public static void Shutdown()
         {
             foreach (var service in _services.Values)
             {
-                try { service.Shutdown(); } catch (Exception e) { Debug.LogException(e); }
+                try { service.Shutdown(); } catch (Exception) { }
             }
             
             _services.Clear();

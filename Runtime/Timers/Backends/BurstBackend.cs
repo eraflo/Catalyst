@@ -28,6 +28,11 @@ namespace Eraflo.Catalyst.Timers.Backends
         private byte _generation = 0;
         private bool _isDisposed = false;
 
+        // Channel management
+        private readonly List<string> _channelNames = new List<string>();
+        private readonly Dictionary<string, int> _channelToIndex = new Dictionary<string, int>();
+        private NativeList<float> _channelScales;
+
         private static readonly Dictionary<Type, ushort> _typeIds = new Dictionary<Type, ushort>();
         private static ushort _nextTypeId = 1;
 
@@ -36,6 +41,7 @@ namespace Eraflo.Catalyst.Timers.Backends
             _timerData = new NativeList<TimerData>(64, Allocator.Persistent);
             _activeFlags = new NativeList<bool>(64, Allocator.Persistent);
             _handleToIndex = new NativeHashMap<uint, int>(64, Allocator.Persistent);
+            _channelScales = new NativeList<float>(8, Allocator.Persistent);
         }
 
         public int Count
@@ -53,9 +59,13 @@ namespace Eraflo.Catalyst.Timers.Backends
         {
             lock (_lockObject)
             {
+                var channel = string.IsNullOrEmpty(config.Channel) ? "World" : config.Channel;
+                int channelIndex = GetOrRegisterChannel(channel);
                 var timer = new T();
+
                 timer.CurrentTime = config.Duration;
                 timer.TimeScale = config.TimeScale > 0 ? config.TimeScale : 1f;
+                timer.Channel = channel;
                 timer.IsRunning = true;
 
                 var data = new TimerData
@@ -63,6 +73,7 @@ namespace Eraflo.Catalyst.Timers.Backends
                     CurrentTime = config.Duration,
                     InitialTime = config.Duration,
                     TimeScale = config.TimeScale > 0 ? config.TimeScale : 1f,
+                    ChannelIndex = channelIndex,
                     IsRunning = true,
                     IsFinished = false,
                     UseUnscaledTime = config.UseUnscaledTime,
@@ -94,6 +105,20 @@ namespace Eraflo.Catalyst.Timers.Backends
 
                 return handle;
             }
+        }
+
+        private int GetOrRegisterChannel(string name)
+        {
+            if (string.IsNullOrEmpty(name)) name = "World";
+            
+            if (!_channelToIndex.TryGetValue(name, out var index))
+            {
+                index = _channelNames.Count;
+                _channelNames.Add(name);
+                _channelToIndex.Add(name, index);
+                _channelScales.Add(1f);
+            }
+            return index;
         }
 
         private static ushort GetOrRegisterTypeId<T>()
@@ -248,15 +273,39 @@ namespace Eraflo.Catalyst.Timers.Backends
             }
         }
 
+        public void SetChannel(TimerHandle handle, string channel)
+        {
+            lock (_lockObject)
+            {
+                if (TryGetIndex(handle.Id, out var i))
+                {
+                    var w = _wrappers[i];
+                    var t = w.Timer;
+                    t.Channel = channel;
+                    w.Timer = t;
+
+                    var d = _timerData[i];
+                    d.ChannelIndex = GetOrRegisterChannel(channel);
+                    _timerData[i] = d;
+                }
+            }
+        }
+
         public void Update(float deltaTime, float unscaledDeltaTime)
         {
-            if (_isDisposed || _timerData.Length == 0) return;
+            // Sync channel scales
+            var chronos = App.Get<Eraflo.Catalyst.Core.Chronos.ChronosManager>();
+            for (int i = 0; i < _channelNames.Count; i++)
+            {
+                _channelScales[i] = chronos != null ? chronos.GetChannelScale(_channelNames[i]) : 1f;
+            }
 
             // Schedule Burst job for timer updates
             var job = new TimerUpdateJob
             {
                 TimerData = _timerData.AsArray(),
                 ActiveFlags = _activeFlags.AsArray(),
+                ChannelScales = _channelScales.AsArray(),
                 DeltaTime = deltaTime,
                 UnscaledDeltaTime = unscaledDeltaTime
             };
@@ -273,6 +322,7 @@ namespace Eraflo.Catalyst.Timers.Backends
         {
             public NativeArray<TimerData> TimerData;
             [ReadOnly] public NativeArray<bool> ActiveFlags;
+            [ReadOnly] public NativeArray<float> ChannelScales;
             public float DeltaTime;
             public float UnscaledDeltaTime;
 
@@ -287,6 +337,11 @@ namespace Eraflo.Catalyst.Timers.Backends
 
                 float dt = data.UseUnscaledTime ? UnscaledDeltaTime : DeltaTime;
                 dt *= data.TimeScale;
+
+                if (data.ChannelIndex >= 0 && data.ChannelIndex < ChannelScales.Length)
+                {
+                    dt *= ChannelScales[data.ChannelIndex];
+                }
 
                 data.CurrentTime -= dt;
                 if (data.CurrentTime <= 0f)
@@ -382,6 +437,7 @@ namespace Eraflo.Catalyst.Timers.Backends
             if (_timerData.IsCreated) _timerData.Dispose();
             if (_activeFlags.IsCreated) _activeFlags.Dispose();
             if (_handleToIndex.IsCreated) _handleToIndex.Dispose();
+            if (_channelScales.IsCreated) _channelScales.Dispose();
         }
 
         /// <summary>Timer data for Burst-compatible updates.</summary>
@@ -390,6 +446,7 @@ namespace Eraflo.Catalyst.Timers.Backends
             public float CurrentTime;
             public float InitialTime;
             public float TimeScale;
+            public int ChannelIndex;
             public bool IsRunning;
             public bool IsFinished;
             public bool UseUnscaledTime;
@@ -426,7 +483,8 @@ namespace Eraflo.Catalyst.Timers.Backends
                         Progress = data.InitialTime > 0 ? data.CurrentTime / data.InitialTime : 0f,
                         IsRunning = data.IsRunning,
                         IsFinished = data.IsFinished,
-                        TimeScale = data.TimeScale
+                        TimeScale = data.TimeScale,
+                        Channel = wrapper.Timer.Channel
                     });
                 }
                 keys.Dispose();

@@ -19,6 +19,13 @@ namespace Eraflo.Catalyst.Networking.Backends
         public bool IsClient => _isClient;
         public bool IsConnected => _isConnected;
 
+        private readonly List<(ushort Type, byte[] Data, NetworkTarget Target)> _sentMessages = new List<(ushort, byte[], NetworkTarget)>();
+
+        /// <summary>
+        /// List of all messages sent through this backend.
+        /// </summary>
+        public IReadOnlyList<(ushort Type, byte[] Data, NetworkTarget Target)> SentMessages => _sentMessages;
+
         /// <summary>
         /// If true, messages sent are immediately delivered locally (loopback).
         /// </summary>
@@ -53,6 +60,7 @@ namespace Eraflo.Catalyst.Networking.Backends
         public void Send(ushort msgType, byte[] data, NetworkTarget target)
         {
             Debug.Log($"[MockNetworkBackend] Send msgType={msgType}, {data.Length} bytes, target={target}");
+            _sentMessages.Add((msgType, data, target));
 
             // Loopback for testing
             if (EnableLoopback && _handlers.TryGetValue(msgType, out var handler))
@@ -107,6 +115,11 @@ namespace Eraflo.Catalyst.Networking.Backends
                 handler.Invoke(data, senderId);
             }
         }
+
+        /// <summary>
+        /// Alias for SimulateReceive to match test expectations.
+        /// </summary>
+        public void TriggerReceive(ushort msgType, byte[] data, ulong senderId = 0) => SimulateReceive(msgType, data, senderId);
 
         /// <summary>
         /// Sets the server state.

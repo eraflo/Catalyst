@@ -12,6 +12,7 @@ namespace Eraflo.Catalyst.Timers
         private bool _isFinished;
         private bool _useUnscaledTime;
         private bool _wasFinishedLastFrame;
+        private string _channel;
 
         public float CurrentTime { get => _currentTime; set { _initialTime = _initialTime == 0 ? value : _initialTime; _currentTime = value; } }
         public float InitialTime => _initialTime;
@@ -19,6 +20,7 @@ namespace Eraflo.Catalyst.Timers
         public bool IsFinished { get => _isFinished; set => _isFinished = value; }
         public bool UseUnscaledTime => _useUnscaledTime;
         public float TimeScale { get => _timeScale; set => _timeScale = value; }
+        public string Channel { get => _channel; set => _channel = value; }
 
         /// <summary>Progress from 1 (start) to 0 (finished).</summary>
         public float Progress => _initialTime > 0 ? _currentTime / _initialTime : 0f;
