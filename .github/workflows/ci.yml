@@ -115,12 +115,17 @@ jobs:
           restore-keys: |
             Library-Test-
       
+      # Fix potential permission issues in Docker
+      - name: Fix cache permissions
+        run: mkdir -p /root/.cache/unity3d && chmod -R 777 /root/.cache/unity3d
+      
       - uses: game-ci/unity-test-runner@v4
         id: tests
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_DISABLE_BURST: "1"
         with:
           unityVersion: 2022.3.62f1
           projectPath: TestProject
@@ -129,6 +134,7 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Test Results
           useHostNetwork: true
+          customParameters: -logFile -
       
       - uses: actions/upload-artifact@v4
         if: always()
