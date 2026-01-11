@@ -321,11 +321,11 @@ jobs:
           # Wait a few seconds for the release to be fully processed by GitHub API
           sleep 5
           
-          # Fetch all releases (including the one just created) and format them
-          RELEASES_JSON=$(gh release list --limit 100 --json tagName,publishedAt,body)
+          # Fetch all releases using the raw API (more robust for getting the 'body' field)
+          RELEASES_MD=$(gh api repos/${{ github.repository }}/releases --jq '.[] | "## [" + .tag_name + "] - " + (.published_at | split("T")[0]) + "\n\n" + .body + "\n"')
           
-          if [ "$RELEASES_JSON" != "[]" ]; then
-            echo "$RELEASES_JSON" | jq -r '.[] | "## [" + .tagName + "] - " + (.publishedAt | split("T")[0]) + "\n\n" + .body + "\n"' >> CHANGELOG.md
+          if [ ! -z "$RELEASES_MD" ]; then
+            echo "$RELEASES_MD" >> CHANGELOG.md
           else
             echo "## [${{ steps.bump.outputs.new_version }}] - $(date +%Y-%m-%d)" >> CHANGELOG.md
             echo "" >> CHANGELOG.md
