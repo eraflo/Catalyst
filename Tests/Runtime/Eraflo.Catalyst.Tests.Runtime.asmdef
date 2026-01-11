@@ -9,7 +9,8 @@
         "Unity.Mathematics",
         "Unity.Collections",
         "Unity.Addressables",
-        "Unity.ResourceManager"
+        "Unity.ResourceManager",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

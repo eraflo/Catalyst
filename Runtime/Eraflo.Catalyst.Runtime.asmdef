@@ -8,7 +8,8 @@
         "Unity.Burst",
         "Unity.Collections",
         "Unity.Netcode.Runtime",
-        "Unity.Mathematics"
+        "Unity.Mathematics",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

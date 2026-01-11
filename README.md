@@ -1,6 +1,6 @@
 # Catalyst
 
-Eraflo Catalyst is a comprehensive Unity toollset designed to accelerate development. It features a robust **Service Locator** architecture supporting pure C# services, alongside modules for Behaviour Trees, Networking, Event Bus, Pooling, and more.
+Eraflo Catalyst is a comprehensive Unity toollset designed to accelerate development. It features a robust **Service Locator** architecture supporting pure C# services, alongside modules for **Behaviour Trees**, **Settings Management**, **Networking**, **Event Bus**, **Pooling**, and more.
 
 See [Documentation](Documentation~/README.md) for more information.
 

@@ -82,7 +82,7 @@ namespace Eraflo.Catalyst
             }
         }
 
-        private static void Register(Type type)
+        internal static void Register(Type type)
         {
             if (_services.ContainsKey(type)) return;
 
@@ -102,6 +102,18 @@ namespace Eraflo.Catalyst
             {
                 Debug.LogError($"[ServiceLocator] Failed to instantiate service {type.Name}: {e.Message}");
             }
+        }
+
+        internal static void Register<T>(T instance) where T : class, IGameService
+        {
+            var type = typeof(T);
+            if (_services.ContainsKey(type)) _services.Remove(type);
+
+            _services[type] = instance;
+            if (instance is IUpdatable updatable) _updatables.Add(updatable);
+            if (instance is IFixedUpdatable fixedUpdatable) _fixedUpdatables.Add(fixedUpdatable);
+            
+            instance.Initialize();
         }
 
         public static T Get<T>() where T : class
@@ -168,7 +180,7 @@ namespace Eraflo.Catalyst
             }
         }
 
-        private static void Shutdown()
+        internal static void Shutdown()
         {
             foreach (var service in _services.Values)
             {

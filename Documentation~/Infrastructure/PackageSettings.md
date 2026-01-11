@@ -56,6 +56,12 @@ Custom backends: Register via `NetworkBackendRegistry.Register()`.
 | **On Transition Started** | `SceneTransitionChannel` | `null` | Global channel for transition start events |
 | **On Transition Completed** | `SceneTransitionChannel` | `null` | Global channel for transition completion events |
  
+### Settings Manager
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| **Settings Filename** | `string` | `"settings.json"` | Name of the file used for settings persistence |
+ 
 ## Runtime Initialization
 
 At startup, `NetworkBootstrapper`:

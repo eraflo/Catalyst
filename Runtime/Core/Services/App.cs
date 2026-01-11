@@ -14,5 +14,15 @@ namespace Eraflo.Catalyst
         {
             return ServiceLocator.Get<T>();
         }
+
+        public static void Register<T>(T instance) where T : class, IGameService
+        {
+            ServiceLocator.Register<T>(instance);
+        }
+
+        public static void Shutdown()
+        {
+            ServiceLocator.Shutdown();
+        }
     }
 }

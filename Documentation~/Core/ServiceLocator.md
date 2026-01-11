@@ -110,6 +110,7 @@ To maintain consistency, follow these priority brackets when adding new services
 | `SceneLoaderService` | 10 | Infrastructure |
 | `AssetManager` | 20 | Infrastructure |
 | `NetworkManager` | 20 | Infrastructure |
+| `SettingsManager` | 30 | Gameplay |
 | `LogExporter` | 100 | Auxiliary |
 
 ## PlayerLoop Integration
@@ -152,41 +153,44 @@ Pool.Get<MyObject>();
 App.Get<Pool>().Get<MyObject>();
 ```
 
-## Testing & Mocks
+### Pattern: Mock Registration (Preferred for Unit Tests)
 
-Since the `ServiceLocator` uses private discovery and doesn't allow manual registration of instances at runtime (to maintain a strict lifecycle), the recommended pattern for unit testing is **Dependency Injection (Setter Injection)**.
+Since version 1.1.0, the `App` facade allows manual registration of service instances. This is the cleanest way to set up a test environment with mocks, as it bypasses auto-discovery.
+
+```csharp
+[SetUp]
+public void SetUp() {
+    // 1. Create your mock or instance
+    var manager = new SettingsManager();
+    
+    // 2. Register manually (overwrites any auto-discovered instance)
+    App.Register(manager);
+}
+
+[TearDown]
+public void TearDown() {
+    // 3. Always shutdown to clear the registry for the next test
+    App.Shutdown();
+}
+```
+
+> [!IMPORTANT]
+> Always call `App.Shutdown()` in your `TearDown` to avoid state pollution between tests.
 
 ### Pattern: Setter Injection
 
-Design your service to accept its dependencies via setter methods. This allows your unit tests to inject mock implementations directly into the service instance without touching the `ServiceLocator`.
+If you prefer to avoid the global state during testing, design your service to accept its dependencies via setter methods.
 
 ```csharp
 public class MyService : IGameService {
     private IOtherService _dependency;
 
-    // Standard constructor or field
     public void Initialize() {
         if (_dependency == null) _dependency = App.Get<IOtherService>();
     }
 
-    // Injection point for tests
     public void SetDependency(IOtherService dependency) {
         _dependency = dependency;
     }
-}
-```
-
-### In Your Tests
-
-```csharp
-[SetUp]
-public void SetUp() {
-    var service = new MyService();
-    var mock = new MockDependency();
-    
-    // Inject mock directly
-    service.SetDependency(mock);
-    
-    ((IGameService)service).Initialize();
 }
 ```

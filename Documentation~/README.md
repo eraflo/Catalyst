@@ -33,6 +33,7 @@ using Eraflo.Catalyst;
 ### Modules
 - [Scene Flow](Modules/SceneFlow.md) - Complex transition management.
 - [Asset Management](Modules/AssetManagement.md) - Reference-counted loading.
+- [Settings Manager](Modules/SettingsManager.md) - Modular game options and persistence.
 - [Behaviour Tree](Modules/BehaviourTree.md) - Advanced AI and logic sequencing.
 - [Networking](Modules/Networking.md) - Netcode for GameObjects integration.
 

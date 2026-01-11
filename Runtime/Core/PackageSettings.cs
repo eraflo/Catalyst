@@ -52,6 +52,9 @@ namespace Eraflo.Catalyst
         // Scene Flow
         [SerializeField] private SceneTransitionChannel _onTransitionStarted;
         [SerializeField] private SceneTransitionChannel _onTransitionCompleted;
+        
+        // Settings
+        [SerializeField] private string _settingsFilename = "settings.json";
 
         public static PackageSettings Instance
         {
@@ -82,6 +85,7 @@ namespace Eraflo.Catalyst
         public AssetProviderType AssetProviderType => _assetProviderType;
         public SceneTransitionChannel OnTransitionStarted => _onTransitionStarted;
         public SceneTransitionChannel OnTransitionCompleted => _onTransitionCompleted;
+        public string SettingsFilename => _settingsFilename;
 
         public static void Reload() { _instance = null; _ = Instance; }
     }
