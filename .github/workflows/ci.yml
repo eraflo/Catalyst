@@ -285,7 +285,7 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add package.json
-          git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }}"
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
           git push
       
       # Only create tags and releases on main branch
@@ -321,8 +321,16 @@ jobs:
           # Wait a few seconds for the release to be fully processed by GitHub API
           sleep 5
           
-          # Fetch all releases using the raw API (more robust for getting the 'body' field)
-          RELEASES_MD=$(gh api repos/${{ github.repository }}/releases --jq '.[] | "## [" + .tag_name + "] - " + (.published_at | split("T")[0]) + "\n\n" + .body + "\n"')
+          # Fetch all releases and clean up headers/metadata for Keep a Changelog format
+          RELEASES_MD=$(gh api repos/${{ github.repository }}/releases --jq '
+            .[] | 
+            "## [" + .tag_name + "] - " + (.published_at | split("T")[0]) + "\n\n" + 
+            (.body | 
+              sub("## What.s Changed\\r?\\n"; "") | 
+              sub("\\* .*[Bb]y @.* in http.*\\r?\\n"; ""; "g") | 
+              sub("\\*\\*[Ff]ull [Cc]hangelog\\*\\*: http.*\\r?\\n"; ""; "g")
+            ) + "\n"
+          ')
           
           if [ ! -z "$RELEASES_MD" ]; then
             echo "$RELEASES_MD" >> CHANGELOG.md
@@ -336,6 +344,6 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add CHANGELOG.md
-          git commit -m "docs: update CHANGELOG.md from GitHub Releases"
+          git commit -m "docs: update CHANGELOG.md from GitHub Releases [skip ci]"
           git push
 
