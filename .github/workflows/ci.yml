@@ -141,209 +141,25 @@ jobs:
           name: Test Results
           path: TestResults
 
-  # Version bump only on main branch (other branches bump when merged)
-  version:
-    name: Version Bump
+  # Semantic Release
+  release:
+    name: Release
     runs-on: ubuntu-latest
     needs: [validate, test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    outputs:
-      new_version: ${{ steps.bump.outputs.new_version }}
-      is_main: ${{ steps.check_branch.outputs.is_main }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT_TOKEN }}
       
-      - name: Check branch
-        id: check_branch
-        run: |
-          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "is_main=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_main=false" >> $GITHUB_OUTPUT
-          fi
-          echo "Current branch: ${{ github.ref }}"
-      
-      - name: Get current version
-        id: current
-        run: |
-          VERSION=$(jq -r '.version' package.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Current version: $VERSION"
-      
-      - name: Check if version bump needed
-        id: check_bump
-        run: |
-          # Skip if the last commit is already a version bump
-          LAST_COMMIT=$(git log -1 --pretty=format:"%s")
-          if echo "$LAST_COMMIT" | grep -qE "^chore: bump version to"; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "Skipping - last commit was already a version bump"
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Determine version bump type
-        id: bump_type
-        if: steps.check_bump.outputs.skip != 'true'
-        run: |
-          # Get last tag or first commit
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
-          
-          # Get commit messages since last tag (excluding version bump commits)
-          COMMITS=$(git log --pretty=format:"%s" $LAST_TAG..HEAD | grep -v "^chore: bump version to" || true)
-          
-          echo "=== Commits to analyze ==="
-          echo "$COMMITS"
-          echo "=========================="
-          
-          # Count by type for logging
-          MAJOR_COUNT=0
-          MINOR_COUNT=0
-          PATCH_COUNT=0
-          
-          # Initialize bump type (priority: major > minor > patch)
-          BUMP_TYPE="none"
-          
-          # Check each commit message for Conventional Commits format
-          while IFS= read -r commit; do
-            # Skip empty lines
-            [ -z "$commit" ] && continue
-            
-            # BREAKING CHANGE in body or footer, or ! after type = MAJOR
-            if echo "$commit" | grep -qE "^[a-z]+(\(.+\))?!:|BREAKING CHANGE"; then
-              BUMP_TYPE="major"
-              MAJOR_COUNT=$((MAJOR_COUNT + 1))
-              # Major takes priority, can break early
-              break
-            fi
-            
-            # feat: = new feature = MINOR
-            if echo "$commit" | grep -qE "^feat(\(.+\))?:"; then
-              MINOR_COUNT=$((MINOR_COUNT + 1))
-              if [ "$BUMP_TYPE" != "major" ]; then
-                BUMP_TYPE="minor"
-              fi
-            fi
-            
-            # fix/perf/refactor/docs/style/test/chore/build/ci = PATCH
-            if echo "$commit" | grep -qE "^(fix|perf|refactor|docs|style|test|chore|build|ci)(\(.+\))?:"; then
-              PATCH_COUNT=$((PATCH_COUNT + 1))
-              if [ "$BUMP_TYPE" = "none" ]; then
-                BUMP_TYPE="patch"
-              fi
-            fi
-          done <<< "$COMMITS"
-          
-          echo "Found: $MAJOR_COUNT major, $MINOR_COUNT minor, $PATCH_COUNT patch commits"
-          
-          # Default to patch if no conventional commits found
-          if [ "$BUMP_TYPE" = "none" ]; then
-            BUMP_TYPE="patch"
-            echo "No conventional commits found, defaulting to patch"
-          fi
-          
-          echo "type=$BUMP_TYPE" >> $GITHUB_OUTPUT
-          echo "Final bump type: $BUMP_TYPE"
-      
-      - name: Bump version
-        id: bump
-        if: steps.check_bump.outputs.skip != 'true'
-        run: |
-          CURRENT="${{ steps.current.outputs.version }}"
-          TYPE="${{ steps.bump_type.outputs.type }}"
-          
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-          
-          case $TYPE in
-            major)
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              ;;
-            minor)
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              ;;
-            patch)
-              PATCH=$((PATCH + 1))
-              ;;
-          esac
-          
-          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "New version: $NEW_VERSION"
-          
-          # Update package.json
-          jq ".version = \"$NEW_VERSION\"" package.json > tmp.json && mv tmp.json package.json
-
-      - name: Commit version bump
-        if: steps.check_bump.outputs.skip != 'true'
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add package.json
-          git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
-          git push
-      
-      # Only create tags and releases on main branch
-      - name: Create Release Tag
-        if: steps.check_bump.outputs.skip != 'true' && steps.check_branch.outputs.is_main == 'true'
-        run: |
-          git tag v${{ steps.bump.outputs.new_version }}
-          git push origin v${{ steps.bump.outputs.new_version }}
-      
-      - name: Create GitHub Release
-        if: steps.check_bump.outputs.skip != 'true' && steps.check_branch.outputs.is_main == 'true'
-        uses: softprops/action-gh-release@v1
+      - name: Semantic Release
+        uses: cycjimmy/semantic-release-action@v4
         with:
-          tag_name: v${{ steps.bump.outputs.new_version }}
-          name: Release ${{ steps.bump.outputs.new_version }}
-          generate_release_notes: true
+          semantic_version: 19
+          extra_plugins: |
+            @semantic-release/changelog
+            @semantic-release/git
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update CHANGELOG.md
-        if: steps.check_bump.outputs.skip != 'true' && steps.check_branch.outputs.is_main == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "# Changelog" > CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)," >> CHANGELOG.md
-          echo "and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)." >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          
-          # Wait a few seconds for the release to be fully processed by GitHub API
-          sleep 5
-          
-          # Fetch all releases and clean up headers/metadata for Keep a Changelog format
-          RELEASES_MD=$(gh api repos/${{ github.repository }}/releases --jq '
-            .[] | 
-            "## [" + .tag_name + "] - " + (.published_at | split("T")[0]) + "\n\n" + 
-            (.body | 
-              sub("## What.s Changed\\r?\\n"; "") | 
-              sub("\\* .*[Bb]y @.* in http.*\\r?\\n"; ""; "g") | 
-              sub("\\*\\*[Ff]ull [Cc]hangelog\\*\\*: http.*\\r?\\n"; ""; "g")
-            ) + "\n"
-          ')
-          
-          if [ ! -z "$RELEASES_MD" ]; then
-            echo "$RELEASES_MD" >> CHANGELOG.md
-          else
-            echo "## [${{ steps.bump.outputs.new_version }}] - $(date +%Y-%m-%d)" >> CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "### Added" >> CHANGELOG.md
-            echo "- Initial automated release" >> CHANGELOG.md
-          fi
-          
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add CHANGELOG.md
-          git commit -m "docs: update CHANGELOG.md from GitHub Releases [skip ci]"
-          git push
 
