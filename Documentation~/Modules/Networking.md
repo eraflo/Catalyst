@@ -31,6 +31,7 @@ graph TB
         HR --> TH[TimerNetworkHandler]
         HR --> PH[PoolNetworkHandler]
         HR --> EH[EventNetworkHandler]
+        HR --> CH[CommandNetworkHandler]
     end
 
     subgraph "Usage"
@@ -338,6 +339,15 @@ myNetworkChannel.Raise(NetworkTarget.Others);
 
 // Local only
 myNetworkChannel.RaiseLocal();
+```
+
+### Commands
+
+Synchronize complex actions using the [Command System](CommandSystem.md).
+
+```csharp
+// Execute locally and broadcast to all clients
+await myCommand.ExecuteNetworked();
 ```
 
 ### Chronos Synchronization

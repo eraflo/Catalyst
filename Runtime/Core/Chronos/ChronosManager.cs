@@ -32,6 +32,9 @@ namespace Eraflo.Catalyst.Core.Chronos
         public const string UIChannel = "UI";
 
         private float _globalScale = 1f;
+        private float _appTime;
+
+        public float AppTime => _appTime;
 
         public float GlobalScale
         {
@@ -140,6 +143,8 @@ namespace Eraflo.Catalyst.Core.Chronos
                     channel.IsTransitioning = false;
                 }
             }
+
+            _appTime += dt * _globalScale;
         }
 
         public void PauseGame() => GlobalScale = 0f;

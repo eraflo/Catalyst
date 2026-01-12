@@ -64,6 +64,11 @@
       "path": "Samples~/BehaviourTreeSample"
     },
     {
+      "displayName": "Command Sample",
+      "description": "Demonstrates the Command system",
+      "path": "Samples~/CommandSample"
+    },
+    {
       "displayName": "VR Example Sample",
       "description": "A basic example demonstrating VR usage",
       "path": "Samples~/VRExampleSample"

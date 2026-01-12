@@ -39,6 +39,7 @@ using Eraflo.Catalyst;
 - [Scene Flow](Modules/SceneFlow.md) - Complex transition management.
 - [Asset Management](Modules/AssetManagement.md) - Reference-counted loading.
 - [Input System](Modules/InputSystem.md) - Input buffering and combo detection.
+- [Command System](Modules/CommandSystem.md) - Undo/Redo, Replay, and Networked actions.
 
 ### Infrastructure
 - [CI/CD](Infrastructure/CICD.md) - Automated testing and deployment.

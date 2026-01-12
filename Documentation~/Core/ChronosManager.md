@@ -101,3 +101,8 @@ Transitions are automatically synchronized from Server to Clients.
 
 > [!TIP]
 > This synchronization is "fire-and-forget". Late-joining clients will receive the current state if they request a full state sync upon connection.
+
+### 3. Command System & Replays
+The [Command System](../Modules/CommandSystem.md) uses the Chronos Manager to ensure that recorded actions are played back with perfect timing accuracy, regardless of the current time-scale or localized slow-motion effects.
+- **ReplayPlayer**: Automatically accounts for `ChronosManager.AppTime` when scheduling re-execution.
+- **Timed Actions**: Commands can use `AppTime` or `DeltaTime` from the manager to synchronize with the game's timeline.

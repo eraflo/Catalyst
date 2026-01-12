@@ -139,6 +139,39 @@ graph TB
 | bool | `NetworkBoolEventChannel` | Events/Network/Bool Channel |
 | Vector3 | `NetworkVector3EventChannel` | Events/Network/Vector3 Channel |
 
+---
+
+| `CommandRedoneEvent` | Fired when an undone command is reapplied. |
+
+---
+
+## Type-Based Events (C# Events)
+
+In addition to ScriptableObject channels, the `EventBus` supports standard C# type-based events. This is ideal for internal system events that don't need to be visible in the inspector.
+
+### Usage
+```csharp
+// Define a simple struct for your event
+public struct PlayerLevelUpEvent 
+{ 
+    public int NewLevel; 
+}
+
+// Subscribe
+App.Get<EventBus>().Subscribe<PlayerLevelUpEvent>(OnLevelUp);
+
+// Publish
+App.Get<EventBus>().Publish(new PlayerLevelUpEvent { NewLevel = 10 });
+```
+
+### Generic API
+| Method | Description |
+|--------|-------------|
+| `Subscribe<T>(Action<T>)` | Subscribe to an event of type T. |
+| `Unsubscribe<T>(Action<T>)` | Unsubscribe from type T. |
+| `Publish<T>(T event)` | Broadcast an event instance to all T-subscribers. |
+
+---
 ### Addressables Integration
 
 EventChannels are **automatically registered** to Addressables when created.

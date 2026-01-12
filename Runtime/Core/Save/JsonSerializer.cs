@@ -86,7 +86,8 @@ namespace Eraflo.Catalyst.Core.Save
                 return objectType == typeof(Vector3) || 
                        objectType == typeof(Vector2) || 
                        objectType == typeof(Quaternion) ||
-                       objectType == typeof(Color);
+                       objectType == typeof(Color) ||
+                       objectType == typeof(GameObject);
             }
 
             public override void WriteJson(JsonWriter writer, object value, Newtonsoft.Json.JsonSerializer serializer)
@@ -124,10 +125,35 @@ namespace Eraflo.Catalyst.Core.Save
                     writer.WritePropertyName("a"); writer.WriteValue(c.a);
                     writer.WriteEndObject();
                 }
+                else if (value is GameObject go)
+                {
+                    writer.WriteStartObject();
+                    var entity = go.GetComponent<SaveableEntity>();
+                    if (entity != null)
+                    {
+                        writer.WritePropertyName("guid");
+                        writer.WriteValue(entity.Guid);
+                    }
+                    writer.WritePropertyName("path");
+                    writer.WriteValue(GetGameObjectPath(go));
+                    writer.WriteEndObject();
+                }
+            }
+
+            private string GetGameObjectPath(GameObject go)
+            {
+                string path = "/" + go.name;
+                while (go.transform.parent != null)
+                {
+                    go = go.transform.parent.gameObject;
+                    path = "/" + go.name + path;
+                }
+                return path;
             }
 
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer)
             {
+                if (reader.TokenType == JsonToken.Null) return null;
                 JObject jo = JObject.Load(reader);
                 if (objectType == typeof(Vector3))
                     return new Vector3((float)jo["x"], (float)jo["y"], (float)jo["z"]);
@@ -138,6 +164,22 @@ namespace Eraflo.Catalyst.Core.Save
                 if (objectType == typeof(Color))
                     return new Color((float)jo["r"], (float)jo["g"], (float)jo["b"], (float)jo["a"]);
                 
+                if (objectType == typeof(GameObject))
+                {
+                    string guid = (string)jo["guid"];
+                    if (!string.IsNullOrEmpty(guid))
+                    {
+                        var entity = App.Get<SaveManager>()?.GetEntity(guid);
+                        if (entity != null) return entity.gameObject;
+                    }
+
+                    string path = (string)jo["path"];
+                    if (!string.IsNullOrEmpty(path))
+                    {
+                        return GameObject.Find(path);
+                    }
+                }
+
                 return null;
             }
         }

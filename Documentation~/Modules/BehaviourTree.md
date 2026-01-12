@@ -118,6 +118,7 @@ graph TD
 | `RaiseEvent` | Raises EventChannel |
 | `WaitForEvent` | Waits for EventChannel to fire |
 | `RunUnityEvent` | Invokes a UnityEvent |
+| `ExecuteCommand` | Executes a Command via the Command System. Supports Undo/Replay and parameter injection via Blackboard. |
 
 **Navigation:** (requires NavMeshAgent)
 | Node | Description |
@@ -408,6 +409,7 @@ graph TB
 | **Blackboard** | Core blackboard system handles variable storage, scoping, and persistence. |
 | **Timer** | `Wait`, `Cooldown` use `App.Get<Timer>()` internally. |
 | **EventBus** | `RaiseEvent`, `WaitForEvent` nodes use `App.Get<EventBus>()`. |
+| **Command System** | `ExecuteCommand` node uses `App.Get<CommandManager>()` to perform recordable/syncable actions. |
 | **AI Navigation** | `MoveTo` uses `NavMeshAgent`. |
 | **Networking** | `NetworkBehaviourTreeSync` for multiplayer, uses `App.Get<NetworkManager>()`. |
 

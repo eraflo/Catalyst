@@ -39,6 +39,9 @@ namespace Eraflo.Catalyst.Core.Save
         /// <summary>Unregisters an entity.</summary>
         public void Unregister(SaveableEntity entity) => _entities.Remove(entity);
 
+        /// <summary>Finds an entity by its unique GUID.</summary>
+        public SaveableEntity GetEntity(string guid) => _entities.FirstOrDefault(e => e.Guid == guid);
+
         /// <summary>
         /// Saves the current game state.
         /// Only allowed on the server/host.

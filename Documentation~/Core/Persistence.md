@@ -37,6 +37,7 @@ Standard JSON serializers often struggle with Unity types like `Vector3`, `Quate
 - `Vector2` / `Vector3` / `Vector4`
 - `Quaternion`
 - `Color` / `Color32`
+- `GameObject` (via GUID or Path)
 
 ### Optimized Header Reading (`TryReadHeader`)
 For performance-critical operations (like reading save metadata without loading the entire state), the `JsonSerializer` supports **Partial Deserialization**.
