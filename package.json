@@ -29,7 +29,8 @@
     "com.unity.transport": "2.6.0",
     "com.unity.ai.navigation": "1.1.5",
     "com.unity.textmeshpro": "3.0.6",
-    "com.unity.ugui": "1.0.0"
+    "com.unity.ugui": "1.0.0",
+    "com.unity.inputsystem": "1.7.0"
   },
   "samples": [
     {
