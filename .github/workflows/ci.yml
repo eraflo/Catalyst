@@ -2,9 +2,9 @@ name: CI/CD
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 permissions:
   contents: write
@@ -18,21 +18,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Validate package.json
         run: |
           if [ ! -f "package.json" ]; then
             echo "Error: package.json not found"
             exit 1
           fi
-          
+
           # Check required fields
           jq -e '.name' package.json > /dev/null || (echo "Missing 'name' field" && exit 1)
           jq -e '.version' package.json > /dev/null || (echo "Missing 'version' field" && exit 1)
           jq -e '.displayName' package.json > /dev/null || (echo "Missing 'displayName' field" && exit 1)
-          
+
           echo "✅ package.json is valid"
-      
+
       - name: Check documentation exists
         run: |
           if [ ! -d "Documentation~" ]; then
@@ -41,7 +41,7 @@ jobs:
             echo "✅ Documentation folder exists"
             ls -la Documentation~/
           fi
-      
+
       - name: Check assembly definitions
         run: |
           if [ -f "Runtime/*.asmdef" ] || [ -f "Runtime/**/*.asmdef" ]; then
@@ -59,7 +59,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: package
-      
+
       # Cache Unity Library folder (speeds up compilation)
       - name: Cache Library
         uses: actions/cache@v3
@@ -68,14 +68,14 @@ jobs:
           key: Library-${{ hashFiles('package/**/*.cs', 'package/**/*.asmdef') }}
           restore-keys: |
             Library-
-      
+
       # Create a temporary Unity project
       - name: Create test project
         run: |
           mkdir -p TestProject/Assets
           mkdir -p TestProject/Packages
           mkdir -p TestProject/ProjectSettings
-          
+
           # Create manifest.json with package reference and required dependencies
           cat > TestProject/Packages/manifest.json << 'EOF'
           {
@@ -86,21 +86,21 @@ jobs:
               "com.unity.modules.ai": "1.0.0",
               "com.unity.modules.physics": "1.0.0",
               "com.unity.modules.ui": "1.0.0",
-              "com.unity.modules.unitywebrequest": "1.0.0",
-              "com.unity.modules.video": "1.0.0"
+              "com.unity.modules.unitywebrequest": "1.0.0"
+
             },
             "testables": [
               "com.eraflo.catalyst"
             ]
           }
           EOF
-          
+
           # Create minimal ProjectSettings
           cat > TestProject/ProjectSettings/ProjectVersion.txt << EOF
           m_EditorVersion: 2022.3.62f1
           m_EditorVersionWithRevision: 2022.3.62f1 (0000000000000)
           EOF
-          
+
           # Create ProjectSettings.asset with Animation enabled
           cat > TestProject/ProjectSettings/ProjectSettings.asset << 'EOF'
           %YAML 1.1
@@ -110,14 +110,14 @@ jobs:
             productName: TestProject
             companyName: Test
           EOF
-      
+
       - uses: actions/cache@v3
         with:
           path: TestProject/Library
           key: Library-Test-${{ hashFiles('package/**') }}
           restore-keys: |
             Library-Test-
-      
+
       - uses: game-ci/unity-test-runner@v4
         id: tests
         env:
@@ -134,7 +134,7 @@ jobs:
           checkName: Test Results
           useHostNetwork: true
           customParameters: -logFile - -nographics -silent-crashes -batchmode
-      
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -152,7 +152,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT_TOKEN }}
-      
+
       - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v4
         with:
@@ -162,4 +162,3 @@ jobs:
             @semantic-release/git
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
