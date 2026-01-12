@@ -16,6 +16,7 @@ namespace Eraflo.Catalyst.Pooling
     {
         private readonly Dictionary<Type, object> _genericPools = new Dictionary<Type, object>();
         private readonly Dictionary<int, PrefabPool> _prefabPools = new Dictionary<int, PrefabPool>();
+        private readonly Dictionary<object, object> _instanceToHandle = new Dictionary<object, object>(); // Real tracking
         private readonly ConcurrentQueue<Action> _pendingOperations = new ConcurrentQueue<Action>();
         private readonly object _lock = new object();
         
@@ -75,6 +76,7 @@ namespace Eraflo.Catalyst.Pooling
         {
             var pool = GetOrCreateGenericPool<T>();
             var handle = pool.Get();
+            _instanceToHandle[handle.Instance] = handle;
             Metrics.RecordSpawn();
             return handle;
         }
@@ -135,6 +137,48 @@ namespace Eraflo.Catalyst.Pooling
             }
         }
 
+        public object GetFromPoolDynamic(Type type)
+        {
+            var method = GetType().GetMethod("GetOrCreateGenericPool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var generic = method.MakeGenericMethod(type);
+            var pool = generic.Invoke(this, null);
+            
+            var getMethod = pool.GetType().GetMethod("Get");
+            var handle = getMethod.Invoke(pool, null);
+            var instance = handle.GetType().GetProperty("Instance").GetValue(handle);
+            
+            _instanceToHandle[instance] = handle;
+            return instance;
+        }
+
+        public void DespawnDynamic(object instance)
+        {
+            if (instance == null) return;
+            
+            if (_instanceToHandle.TryGetValue(instance, out var handle))
+            {
+                if (instance is GameObject go)
+                {
+                    DespawnObject((PoolHandle<GameObject>)handle);
+                }
+                else
+                {
+                    var type = instance.GetType();
+                    var pool = GetOrCreateGenericPoolDynamic(type);
+                    var releaseMethod = pool.GetType().GetMethod("Release", new[] { handle.GetType() });
+                    releaseMethod?.Invoke(pool, new[] { handle });
+                    _instanceToHandle.Remove(instance);
+                }
+            }
+        }
+
+        private object GetOrCreateGenericPoolDynamic(Type type)
+        {
+            var method = GetType().GetMethod("GetOrCreateGenericPool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var generic = method.MakeGenericMethod(type);
+            return generic.Invoke(this, null);
+        }
+
         private GenericPool<T> GetOrCreateGenericPool<T>() where T : class, new()
         {
             var type = typeof(T);
@@ -174,6 +218,7 @@ namespace Eraflo.Catalyst.Pooling
 
             var pool = GetOrCreatePrefabPool(prefab);
             var handle = pool.Spawn(position, rotation ?? Quaternion.identity, parent);
+            _instanceToHandle[handle.Instance] = handle;
             Metrics.RecordSpawn();
             return handle;
         }
@@ -212,6 +257,7 @@ namespace Eraflo.Catalyst.Pooling
                 return;
             }
 
+            _instanceToHandle.Remove(handle.Instance);
             pool.Despawn(handle);
             Metrics.RecordDespawn();
         }
@@ -247,6 +293,17 @@ namespace Eraflo.Catalyst.Pooling
                     _prefabPools.Remove(poolId);
                 }
             }
+        }
+
+        public GameObject ResolvePrefab(string prefabName)
+        {
+            foreach (var pool in _prefabPools.Values)
+            {
+                if (pool.PrefabName == prefabName) return pool.Prefab;
+            }
+            
+            // Fallback: try loading from Resources if matching name
+            return Resources.Load<GameObject>(prefabName);
         }
 
         private PrefabPool GetOrCreatePrefabPool(GameObject prefab)

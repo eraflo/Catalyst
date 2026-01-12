@@ -6,153 +6,196 @@ using Eraflo.Catalyst.Networking;
 namespace Eraflo.Catalyst.Pooling
 {
     /// <summary>
-    /// Handles network synchronization for pooled objects.
+    /// Unified handler for network synchronization of pooled objects (GameObjects and C# classes).
     /// </summary>
-    public class PoolNetworkHandler : Networking.INetworkMessageHandler
+    public class PoolNetworkHandler : INetworkMessageHandler
     {
-        private readonly Dictionary<uint, NetworkPoolData> _pools = new Dictionary<uint, NetworkPoolData>();
-        private readonly Dictionary<uint, PoolHandle<GameObject>> _idToHandle = new Dictionary<uint, PoolHandle<GameObject>>();
+        private readonly Dictionary<uint, object> _networkObjects = new Dictionary<uint, object>();
+        private readonly Dictionary<object, uint> _objectToId = new Dictionary<object, uint>();
         private uint _nextId = 1;
-        private bool _connected;
-
-        /// <summary>Fired when a spawn message is received.</summary>
-        public event Action<Networking.PoolSpawnMessage> OnSpawnReceived;
-
-        /// <summary>Fired when a despawn is received.</summary>
-        public event Action<uint> OnDespawnReceived;
+        private NetworkManager _network;
 
         public void OnRegistered()
         {
-            var network = App.Get<NetworkManager>();
-            network.On<Networking.PoolSpawnMessage>(HandleSpawn);
-            network.On<Networking.PoolDespawnMessage>(HandleDespawn);
+            _network = App.Get<NetworkManager>();
+            _network.On<PoolNetworkMessage>(HandlePoolMessage);
+            _network.On<NetworkStateUpdateMessage>(HandleStateUpdate);
         }
 
         public void OnUnregistered()
         {
-            var network = App.Get<NetworkManager>();
-            network.Off<Networking.PoolSpawnMessage>(HandleSpawn);
-            network.Off<Networking.PoolDespawnMessage>(HandleDespawn);
+            _network.Off<PoolNetworkMessage>(HandlePoolMessage);
+            _network.Off<NetworkStateUpdateMessage>(HandleStateUpdate);
             Clear();
         }
 
-        public void OnNetworkConnected() => _connected = true;
-        public void OnNetworkDisconnected() => _connected = false;
+        public void OnNetworkConnected() { }
+        public void OnNetworkDisconnected() => Clear();
 
         /// <summary>
         /// Registers a pooled object for networking.
         /// </summary>
-        public uint Register(PoolHandle<GameObject> handle, bool serverAuth = true, uint id = 0)
+        public void SpawnNetworked<T>(T instance, string poolId, Vector3 pos = default, Quaternion rot = default, byte[] data = null, NetworkTarget target = NetworkTarget.Clients) where T : class
         {
-            if (!handle.IsValid) return 0;
+            if (!_network.IsConnected || !_network.IsServer) return;
 
-            if (id == 0) id = _nextId++;
+            uint id = _nextId++;
+            RegisterLocal(id, instance);
 
-            _pools[handle.Id] = new NetworkPoolData { Id = id, Handle = handle, ServerAuth = serverAuth };
-            _idToHandle[id] = handle;
-
-            return id;
-        }
-
-        /// <summary>
-        /// Unregisters a pooled object.
-        /// </summary>
-        public void Unregister(PoolHandle<GameObject> handle)
-        {
-            if (_pools.TryGetValue(handle.Id, out var data))
+            // Notify backend if GO
+            if (instance is GameObject go)
             {
-                _idToHandle.Remove(data.Id);
-                _pools.Remove(handle.Id);
+                _network.Backend.SynchronizeInstance(go, id);
             }
-        }
 
-        /// <summary>
-        /// Gets the network ID for a handle.
-        /// </summary>
-        public uint GetId(PoolHandle<GameObject> handle)
-            => _pools.TryGetValue(handle.Id, out var d) ? d.Id : 0;
+            // Call hooks
+            if (instance is INetworkPoolable poolable)
+            {
+                poolable.OnNetworkSpawn(data);
+            }
 
-        /// <summary>
-        /// Gets the handle for a network ID.
-        /// </summary>
-        public PoolHandle<GameObject> GetHandle(uint id)
-            => _idToHandle.TryGetValue(id, out var h) ? h : PoolHandle<GameObject>.None;
+            // Broadcast (Only if NOT a GameObject or if backend is not authoritative on GO spawning)
+            // NGO handles its own replication for GameObjects via NetworkObject.Spawn()
+            if (instance is GameObject && _network.Backend.SupportsNativeGameObjectReplication)
+            {
+                // Native backend will replicate via its own internal system
+                return;
+            }
 
-        /// <summary>
-        /// Broadcasts a spawn to specified targets.
-        /// </summary>
-        public void BroadcastSpawn(PoolHandle<GameObject> handle, GameObject prefab, Vector3 pos, Quaternion rot, Networking.NetworkTarget target = Networking.NetworkTarget.Clients)
-        {
-            var id = GetId(handle);
-            if (id == 0 || !App.Get<NetworkManager>().IsConnected) return;
-
-            var msg = new Networking.PoolSpawnMessage
+            var msg = new PoolNetworkMessage
             {
                 NetworkId = id,
-                PrefabHash = prefab.GetInstanceID(),
+                PoolId = poolId,
+                IsSpawn = true,
+                SpawnData = data,
                 Position = pos,
                 Rotation = rot
             };
-            var network = App.Get<NetworkManager>();
-            network.SendToClients(msg); // Default to Clients for spawn
-            network.Send(msg, target);
+            _network.Send(msg, target);
         }
 
         /// <summary>
-        /// Broadcasts a despawn to specified targets.
+        /// Despawns a networked object across the network.
         /// </summary>
-        public void BroadcastDespawn(PoolHandle<GameObject> handle, Networking.NetworkTarget target = Networking.NetworkTarget.Clients)
+        public void DespawnNetworked<T>(T instance, NetworkTarget target = NetworkTarget.Clients) where T : class
         {
-            var id = GetId(handle);
-            if (id == 0) return;
+            if (!_network.IsConnected || !_objectToId.TryGetValue(instance, out uint id)) return;
 
-            var network = App.Get<NetworkManager>();
-            if (network.IsConnected)
+            // Authority check
+            var ownership = App.Get<NetworkOwnershipManager>();
+            if (ownership != null && !ownership.HasAuthority(id, AuthorityMode.ServerAuthoritative))
             {
-                network.Send(new Networking.PoolDespawnMessage { NetworkId = id }, target);
+                Debug.LogWarning($"[PoolNetworkHandler] Client tried to despawn object {id} without authority.");
+                return;
             }
 
-            Unregister(handle);
+            if (instance is INetworkPoolable poolable)
+            {
+                poolable.OnNetworkDespawn();
+            }
+
+            if (_network.IsServer)
+            {
+                var msg = new PoolNetworkMessage
+                {
+                    NetworkId = id,
+                    IsSpawn = false
+                };
+                _network.Send(msg, target);
+            }
+
+            UnregisterLocal(id, instance);
         }
 
-        private void HandleSpawn(Networking.PoolSpawnMessage msg)
+        private void HandleStateUpdate(NetworkStateUpdateMessage msg)
         {
-            OnSpawnReceived?.Invoke(msg);
+            // Clients handle state updates from server
+            if (_network.IsServer) return;
+
+            if (_networkObjects.TryGetValue(msg.NetworkId, out object instance))
+            {
+                if (instance is INetworkStateSyncable syncable)
+                {
+                    syncable.OnNetworkStateUpdate(msg.PropertyName, msg.Data);
+                }
+            }
         }
 
-        private void HandleDespawn(Networking.PoolDespawnMessage msg)
+        private void HandlePoolMessage(PoolNetworkMessage msg)
         {
-            var handle = GetHandle(msg.NetworkId);
-            if (handle.IsValid) App.Get<Pool>().DespawnObject(handle);
-            OnDespawnReceived?.Invoke(msg.NetworkId);
+            if (_network.IsServer) return;
+
+            var pool = App.Get<Pool>();
+            if (msg.IsSpawn)
+            {
+                object instance = null;
+                
+                // 1. Try resolving as Prefab
+                GameObject prefab = pool.ResolvePrefab(msg.PoolId);
+                if (prefab != null)
+                {
+                    var handle = pool.SpawnObject(prefab, msg.Position, msg.Rotation);
+                    instance = handle.Instance;
+                    
+                    // Client side sync
+                    _network.Backend.SynchronizeInstance((GameObject)instance, msg.NetworkId);
+                }
+                else
+                {
+                    // 2. Try resolving as C# Type
+                    Type type = Type.GetType(msg.PoolId);
+                    if (type != null)
+                    {
+                        instance = pool.GetFromPoolDynamic(type);
+                    }
+                }
+
+                if (instance != null)
+                {
+                    RegisterLocal(msg.NetworkId, instance);
+                    if (instance is INetworkPoolable poolable)
+                    {
+                        poolable.OnNetworkSpawn(msg.SpawnData);
+                    }
+                }
+            }
+            else
+            {
+                if (_networkObjects.TryGetValue(msg.NetworkId, out object instance))
+                {
+                    if (instance is INetworkPoolable poolable)
+                    {
+                        poolable.OnNetworkDespawn();
+                    }
+                    
+                    pool.DespawnDynamic(instance);
+                    UnregisterLocal(msg.NetworkId, instance);
+                }
+            }
         }
 
-        /// <summary>
-        /// Clears all data.
-        /// </summary>
+        private void RegisterLocal(uint id, object instance)
+        {
+            _networkObjects[id] = instance;
+            _objectToId[instance] = id;
+        }
+
+        private void UnregisterLocal(uint id, object instance)
+        {
+            _networkObjects.Remove(id);
+            _objectToId.Remove(instance);
+        }
+
+        public uint GetId(object instance)
+        {
+            return _objectToId.TryGetValue(instance, out uint id) ? id : 0;
+        }
+
         public void Clear()
         {
-            _pools.Clear();
-            _idToHandle.Clear();
+            _networkObjects.Clear();
+            _objectToId.Clear();
+            _nextId = 1;
         }
-
-        private struct NetworkPoolData
-        {
-            public uint Id;
-            public PoolHandle<GameObject> Handle;
-            public bool ServerAuth;
-        }
-    }
-
-    /// <summary>
-    /// Network spawn data.
-    /// </summary>
-    [Serializable]
-    public struct NetworkSpawnData
-    {
-        public uint NetworkId;
-        public int PrefabId;
-        public Vector3 Position;
-        public Quaternion Rotation;
     }
 }

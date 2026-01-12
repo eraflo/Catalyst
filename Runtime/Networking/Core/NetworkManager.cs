@@ -49,6 +49,9 @@ namespace Eraflo.Catalyst.Networking
             remove => _onDisconnected -= value;
         }
 
+        public event Action<ulong> OnClientConnected;
+        public event Action<ulong> OnClientDisconnected;
+
         #region IGameService
 
         void IGameService.Initialize()
@@ -125,53 +128,56 @@ namespace Eraflo.Catalyst.Networking
             }
         }
 
-        public void Send<T>(T message, NetworkTarget target = NetworkTarget.All) where T : struct, INetworkMessage
+        public void Send<T>(T message, NetworkTarget target = NetworkTarget.All, NetworkDelivery delivery = NetworkDelivery.Reliable) where T : struct, INetworkMessage
         {
             if (_backend == null || !_backend.IsConnected) return;
 
             var msgId = _router.GetId<T>();
             var data = NetworkSerializer.Serialize(message);
-            _backend.Send(msgId, data, target);
+            _backend.Send(msgId, data, target, delivery);
 
             if (PackageSettings.Instance.NetworkDebugMode)
             {
-                Debug.Log($"[NetworkManager] Sent {typeof(T).Name}");
+                Debug.Log($"[NetworkManager] Sent {typeof(T).Name} ({delivery})");
             }
         }
 
-        public void SendToClient<T>(T message, ulong clientId) where T : struct, INetworkMessage
+        public void SendToClient<T>(T message, ulong clientId, NetworkDelivery delivery = NetworkDelivery.Reliable) where T : struct, INetworkMessage
         {
             if (_backend == null || !_backend.IsConnected || !_backend.IsServer) return;
 
             var msgId = _router.GetId<T>();
             var data = NetworkSerializer.Serialize(message);
-            _backend.SendToClient(msgId, data, clientId);
+            _backend.SendToClient(msgId, data, clientId, delivery);
 
             if (PackageSettings.Instance.NetworkDebugMode)
             {
-                Debug.Log($"[NetworkManager] Sent {typeof(T).Name} to client {clientId}");
+                Debug.Log($"[NetworkManager] Sent {typeof(T).Name} to client {clientId} ({delivery})");
+            }
+        }
+
+        public void SendToClients<T>(T message, NetworkDelivery delivery, params ulong[] clientIds) where T : struct, INetworkMessage
+        {
+            if (_backend == null || !_backend.IsConnected || !_backend.IsServer) return;
+
+            var msgId = _router.GetId<T>();
+            var data = NetworkSerializer.Serialize(message);
+            _backend.SendToClients(msgId, data, clientIds, delivery);
+
+            if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.Log($"[NetworkManager] Sent {typeof(T).Name} to {clientIds.Length} clients ({delivery})");
             }
         }
 
         public void SendToClients<T>(T message, params ulong[] clientIds) where T : struct, INetworkMessage
-        {
-            if (_backend == null || !_backend.IsConnected || !_backend.IsServer) return;
+            => SendToClients(message, NetworkDelivery.Reliable, clientIds);
 
-            var msgId = _router.GetId<T>();
-            var data = NetworkSerializer.Serialize(message);
-            _backend.SendToClients(msgId, data, clientIds);
+        public void SendToServer<T>(T message, NetworkDelivery delivery = NetworkDelivery.Reliable) where T : struct, INetworkMessage
+            => Send(message, NetworkTarget.Server, delivery);
 
-            if (PackageSettings.Instance.NetworkDebugMode)
-            {
-                Debug.Log($"[NetworkManager] Sent {typeof(T).Name} to {clientIds.Length} clients");
-            }
-        }
-
-        public void SendToServer<T>(T message) where T : struct, INetworkMessage
-            => Send(message, NetworkTarget.Server);
-
-        public void SendToClients<T>(T message) where T : struct, INetworkMessage
-            => Send(message, NetworkTarget.Clients);
+        public void SendToClients<T>(T message, NetworkDelivery delivery = NetworkDelivery.Reliable) where T : struct, INetworkMessage
+            => Send(message, NetworkTarget.Clients, delivery);
 
         public void On<T>(Action<T> handler) where T : struct, INetworkMessage
             => _router.On(handler);
@@ -198,6 +204,43 @@ namespace Eraflo.Catalyst.Networking
             SetBackend(null);
             _backends.Clear();
         }
+
+        #region Lifecycle Proxies
+
+        public bool StartServer(ushort port = 7777, NetworkTransportType transport = NetworkTransportType.UDP)
+        {
+            if (_backend is INetworkLifecycle lifecycle) return lifecycle.StartServer(port, transport);
+            Debug.LogWarning("[NetworkManager] Current backend does not support manual server starting.");
+            return false;
+        }
+
+        public bool StartClient(string address = "127.0.0.1", ushort port = 7777, NetworkTransportType transport = NetworkTransportType.UDP)
+        {
+            if (_backend is INetworkLifecycle lifecycle) return lifecycle.StartClient(address, port, transport);
+            Debug.LogWarning("[NetworkManager] Current backend does not support manual client starting.");
+            return false;
+        }
+
+        public bool StartHost(ushort port = 7777, NetworkTransportType transport = NetworkTransportType.UDP)
+        {
+            if (_backend is INetworkLifecycle lifecycle) return lifecycle.StartHost(port, transport);
+            Debug.LogWarning("[NetworkManager] Current backend does not support manual host starting.");
+            return false;
+        }
+
+        public void Stop()
+        {
+            if (_backend is INetworkLifecycle lifecycle) lifecycle.Stop();
+            else _backend?.Shutdown();
+        }
+
+        /// <summary>Internal use only: notifies the manager of a client connection.</summary>
+        internal void NotifyClientConnected(ulong clientId) => OnClientConnected?.Invoke(clientId);
+        
+        /// <summary>Internal use only: notifies the manager of a client disconnection.</summary>
+        internal void NotifyClientDisconnected(ulong clientId) => OnClientDisconnected?.Invoke(clientId);
+
+        #endregion
 
         #endregion
     }

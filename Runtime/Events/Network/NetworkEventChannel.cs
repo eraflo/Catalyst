@@ -13,11 +13,13 @@ namespace Eraflo.Catalyst.Events
         [Header("Network Settings")]
         [SerializeField] private bool _enableNetwork = false;
         [SerializeField] private NetworkTarget _networkTarget = NetworkTarget.All;
+        [SerializeField] private AuthorityMode _authority = AuthorityMode.ServerAuthoritative;
         [SerializeField] private bool _raiseLocally = true;
         [SerializeField] private string _channelId = "";
 
         public bool EnableNetwork { get => _enableNetwork; set => _enableNetwork = value; }
         public NetworkTarget NetworkTarget { get => _networkTarget; set => _networkTarget = value; }
+        public AuthorityMode Authority { get => _authority; set => _authority = value; }
         public bool RaiseLocally { get => _raiseLocally; set => _raiseLocally = value; }
         public string ChannelId => string.IsNullOrEmpty(_channelId) ? name : _channelId;
 
@@ -62,6 +64,14 @@ namespace Eraflo.Catalyst.Events
                 return;
             }
 
+            // Check authority
+            var network = App.Get<NetworkManager>();
+            if (_authority == AuthorityMode.ServerAuthoritative && !network.IsServer)
+            {
+                Debug.LogWarning($"[NetworkEventChannel] Blocked Raise on {ChannelId}: Server authority required.");
+                return;
+            }
+
             if (_raiseLocally) base.Raise();
             _handler.Send(ChannelId, target);
         }
@@ -77,11 +87,13 @@ namespace Eraflo.Catalyst.Events
         [Header("Network Settings")]
         [SerializeField] private bool _enableNetwork = false;
         [SerializeField] private NetworkTarget _networkTarget = NetworkTarget.All;
+        [SerializeField] private AuthorityMode _authority = AuthorityMode.ServerAuthoritative;
         [SerializeField] private bool _raiseLocally = true;
         [SerializeField] private string _channelId = "";
 
         public bool EnableNetwork { get => _enableNetwork; set => _enableNetwork = value; }
         public NetworkTarget NetworkTarget { get => _networkTarget; set => _networkTarget = value; }
+        public AuthorityMode Authority { get => _authority; set => _authority = value; }
         public bool RaiseLocally { get => _raiseLocally; set => _raiseLocally = value; }
         public string ChannelId => string.IsNullOrEmpty(_channelId) ? name : _channelId;
 
@@ -108,6 +120,14 @@ namespace Eraflo.Catalyst.Events
             if (!_enableNetwork || _handler == null || !_handler.IsNetworkAvailable)
             {
                 base.Raise(value);
+                return;
+            }
+
+            // Check authority
+            var network = App.Get<NetworkManager>();
+            if (_authority == AuthorityMode.ServerAuthoritative && !network.IsServer)
+            {
+                Debug.LogWarning($"[NetworkEventChannel] Blocked Raise on {ChannelId}: Server authority required.");
                 return;
             }
 

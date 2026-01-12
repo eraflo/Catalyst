@@ -1,74 +1,81 @@
 using UnityEngine;
 using Eraflo.Catalyst.Networking;
+using Eraflo.Catalyst.Networking.Backends;
 
 namespace Eraflo.Catalyst.Pooling
 {
     /// <summary>
-    /// Extension methods for networked pooling.
+    /// Extension methods for unified networked pooling.
     /// </summary>
     public static class PoolNetworkExtensions
     {
         /// <summary>
-        /// Spawns and registers for networking.
+        /// Spawns a GameObject networked.
         /// </summary>
-        public static (PoolHandle<GameObject> handle, uint networkId) SpawnNetworked(
-            GameObject prefab, Vector3 position, Quaternion rotation = default, 
-            bool serverAuth = true, NetworkTarget target = NetworkTarget.Clients)
+        public static PoolHandle<GameObject> SpawnNetworked(
+            this Pool pool, GameObject prefab, Vector3 position, Quaternion rotation = default,
+            byte[] data = null, NetworkTarget target = NetworkTarget.Clients)
         {
-            var handle = App.Get<Pool>()?.SpawnObject(prefab, position, rotation) ?? PoolHandle<GameObject>.None;
+            var handle = pool.SpawnObject(prefab, position, rotation);
             var handler = App.Get<NetworkManager>()?.Handlers.Get<PoolNetworkHandler>();
             
-            if (handler == null) return (handle, 0);
+            if (handler != null && handle.IsValid)
+            {
+                handler.SpawnNetworked(handle.Instance, prefab.name, position, rotation, data, target);
+            }
             
-            var networkId = handler.Register(handle, serverAuth);
-            handler.BroadcastSpawn(handle, prefab, position, rotation, target);
+            return handle;
+        }
+
+        /// <summary>
+        /// Spawns a C# object networked.
+        /// </summary>
+        public static PoolHandle<T> GetFromPoolNetworked<T>(this Pool pool, byte[] data = null, NetworkTarget target = NetworkTarget.Clients) where T : class, new()
+        {
+            var handle = pool.GetFromPool<T>();
+            var handler = App.Get<NetworkManager>()?.Handlers.Get<PoolNetworkHandler>();
             
-            return (handle, networkId);
+            if (handler != null && handle.IsValid)
+            {
+                handler.SpawnNetworked(handle.Instance, typeof(T).FullName, default, default, data, target);
+            }
+            
+            return handle;
         }
 
         /// <summary>
-        /// Spawns locally without network broadcast.
+        /// Despawns an object across the network.
         /// </summary>
-        public static PoolHandle<GameObject> SpawnLocal(GameObject prefab, Vector3 position, Quaternion rotation = default)
+        public static void DespawnNetworked<T>(this PoolHandle<T> handle, NetworkTarget target = NetworkTarget.Clients) where T : class
         {
-            return App.Get<Pool>()?.SpawnObject(prefab, position, rotation) ?? PoolHandle<GameObject>.None;
-        }
+            if (!handle.IsValid) return;
 
+            var handler = App.Get<NetworkManager>()?.Handlers.Get<PoolNetworkHandler>();
+            handler?.DespawnNetworked(handle.Instance, target);
+
+            // Local cleanup
+            var pool = App.Get<Pool>();
+            if (handle.Instance is GameObject go)
+                pool.DespawnObject(new PoolHandle<GameObject>(handle.Id, go, handle.PoolId, handle.SpawnTime));
+            else if (handle.Instance is T classInstance)
+                pool.DespawnDynamic(classInstance);
+        }
         /// <summary>
-        /// Despawns with network broadcast.
+        /// Gets the network ID for a pooled object instance.
         /// </summary>
-        public static void DespawnNetworked(this PoolHandle<GameObject> handle, NetworkTarget target = NetworkTarget.Clients)
+        public static uint GetNetworkId(this object instance)
         {
             var handler = App.Get<NetworkManager>()?.Handlers.Get<PoolNetworkHandler>();
-            handler?.BroadcastDespawn(handle, target);
-            App.Get<Pool>()?.DespawnObject(handle);
+            return handler?.GetId(instance) ?? 0;
         }
 
         /// <summary>
-        /// Registers an existing handle for networking.
+        /// Deconstructs a PoolHandle into (handle, networkId).
         /// </summary>
-        public static uint RegisterNetworked(this PoolHandle<GameObject> handle, bool serverAuth = true)
+        public static void Deconstruct<T>(this PoolHandle<T> handle, out PoolHandle<T> h, out uint networkId) where T : class
         {
-            var handler = App.Get<NetworkManager>()?.Handlers.Get<PoolNetworkHandler>();
-            return handler?.Register(handle, serverAuth) ?? 0;
-        }
-
-        /// <summary>
-        /// Unregisters from networking.
-        /// </summary>
-        public static void UnregisterNetworked(this PoolHandle<GameObject> handle)
-        {
-            var handler = App.Get<NetworkManager>()?.Handlers.Get<PoolNetworkHandler>();
-            handler?.Unregister(handle);
-        }
-
-        /// <summary>
-        /// Gets the network ID.
-        /// </summary>
-        public static uint GetNetworkId(this PoolHandle<GameObject> handle)
-        {
-            var handler = App.Get<NetworkManager>()?.Handlers.Get<PoolNetworkHandler>();
-            return handler?.GetId(handle) ?? 0;
+            h = handle;
+            networkId = handle.Instance.GetNetworkId();
         }
     }
 }

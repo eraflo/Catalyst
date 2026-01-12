@@ -8,7 +8,7 @@ namespace Eraflo.Catalyst.Networking.Backends
     /// Mock network backend for testing without actual network.
     /// Logs all operations and can simulate local message delivery.
     /// </summary>
-    public class MockNetworkBackend : INetworkBackend
+    public class MockNetworkBackend : INetworkBackend, INetworkLifecycle
     {
         private readonly Dictionary<ushort, Action<byte[], ulong>> _handlers = new Dictionary<ushort, Action<byte[], ulong>>();
         private bool _isServer;
@@ -18,6 +18,12 @@ namespace Eraflo.Catalyst.Networking.Backends
         public bool IsServer => _isServer;
         public bool IsClient => _isClient;
         public bool IsConnected => _isConnected;
+        public bool SupportsNativeGameObjectReplication => false;
+
+        /// <summary>
+        /// Simulated local client ID.
+        /// </summary>
+        public ulong LocalClientId { get; set; } = 0;
 
         private readonly List<(ushort Type, byte[] Data, NetworkTarget Target)> _sentMessages = new List<(ushort, byte[], NetworkTarget)>();
 
@@ -26,15 +32,7 @@ namespace Eraflo.Catalyst.Networking.Backends
         /// </summary>
         public IReadOnlyList<(ushort Type, byte[] Data, NetworkTarget Target)> SentMessages => _sentMessages;
 
-        /// <summary>
-        /// If true, messages sent are immediately delivered locally (loopback).
-        /// </summary>
         public bool EnableLoopback { get; set; } = true;
-
-        /// <summary>
-        /// Simulated local client ID.
-        /// </summary>
-        public ulong LocalClientId { get; set; } = 0;
 
         /// <summary>
         /// Creates a mock backend with specified state.
@@ -57,10 +55,18 @@ namespace Eraflo.Catalyst.Networking.Backends
             Debug.Log("[MockNetworkBackend] Shutdown");
         }
 
-        public void Send(ushort msgType, byte[] data, NetworkTarget target)
+        public void Send(ushort msgType, byte[] data, NetworkTarget target, NetworkDelivery delivery = NetworkDelivery.Reliable)
         {
-            Debug.Log($"[MockNetworkBackend] Send msgType={msgType}, {data.Length} bytes, target={target}");
             _sentMessages.Add((msgType, data, target));
+            
+            if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.Log($"[MockNetworkBackend] Sent {msgType} to {target} ({delivery})");
+            }
+            else
+            {
+                Debug.Log($"[MockNetworkBackend] Send msgType={msgType}, {data.Length} bytes, target={target} ({delivery})");
+            }
 
             // Loopback for testing
             if (EnableLoopback && _handlers.TryGetValue(msgType, out var handler))
@@ -81,9 +87,18 @@ namespace Eraflo.Catalyst.Networking.Backends
             Debug.Log($"[MockNetworkBackend] Unregistered handler for msgType={msgType}");
         }
 
-        public void SendToClient(ushort msgType, byte[] data, ulong clientId)
+        public void SendToClient(ushort msgType, byte[] data, ulong clientId, NetworkDelivery delivery = NetworkDelivery.Reliable)
         {
-            Debug.Log($"[MockNetworkBackend] SendToClient msgType={msgType}, {data.Length} bytes, clientId={clientId}");
+            _sentMessages.Add((msgType, data, NetworkTarget.Clients));
+
+            if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.Log($"[MockNetworkBackend] Sent {msgType} to Client {clientId} ({delivery})");
+            }
+            else
+            {
+                Debug.Log($"[MockNetworkBackend] SendToClient msgType={msgType}, {data.Length} bytes, clientId={clientId} ({delivery})");
+            }
 
             // Loopback if targeting self
             if (EnableLoopback && clientId == LocalClientId && _handlers.TryGetValue(msgType, out var handler))
@@ -92,9 +107,18 @@ namespace Eraflo.Catalyst.Networking.Backends
             }
         }
 
-        public void SendToClients(ushort msgType, byte[] data, ulong[] clientIds)
+        public void SendToClients(ushort msgType, byte[] data, ulong[] clientIds, NetworkDelivery delivery = NetworkDelivery.Reliable)
         {
-            Debug.Log($"[MockNetworkBackend] SendToClients msgType={msgType}, {data.Length} bytes, clients={clientIds.Length}");
+            _sentMessages.Add((msgType, data, NetworkTarget.Clients)); 
+
+            if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.Log($"[MockNetworkBackend] Sent {msgType} to {clientIds.Length} Clients ({delivery})");
+            }
+            else
+            {
+                Debug.Log($"[MockNetworkBackend] SendToClients msgType={msgType}, {data.Length} bytes, clients={clientIds.Length} ({delivery})");
+            }
 
             foreach (var clientId in clientIds)
             {
@@ -144,5 +168,53 @@ namespace Eraflo.Catalyst.Networking.Backends
         {
             _isConnected = isConnected;
         }
+
+        #region INetworkLifecycle
+
+        public bool StartServer(ushort port, NetworkTransportType transport = NetworkTransportType.UDP)
+        {
+            _isServer = true;
+            _isClient = false;
+            _isConnected = true;
+            Debug.Log($"[MockNetworkBackend] Started Server on port {port} ({transport})");
+            App.Get<NetworkManager>().NotifyConnected();
+            return true;
+        }
+
+        public bool StartClient(string address, ushort port, NetworkTransportType transport = NetworkTransportType.UDP)
+        {
+            _isServer = false;
+            _isClient = true;
+            _isConnected = true;
+            Debug.Log($"[MockNetworkBackend] Connected to {address}:{port} ({transport})");
+            App.Get<NetworkManager>().NotifyConnected();
+            return true;
+        }
+
+        public bool StartHost(ushort port, NetworkTransportType transport = NetworkTransportType.UDP)
+        {
+            _isServer = true;
+            _isClient = true;
+            _isConnected = true;
+            Debug.Log($"[MockNetworkBackend] Started Host on port {port} ({transport})");
+            App.Get<NetworkManager>().NotifyConnected();
+            return true;
+        }
+
+        public void Stop()
+        {
+            _isServer = false;
+            _isClient = false;
+            _isConnected = false;
+            Debug.Log("[MockNetworkBackend] Stopped");
+            App.Get<NetworkManager>().NotifyDisconnected();
+        }
+
+        public void SynchronizeInstance(GameObject instance, uint networkId)
+        {
+            Debug.Log($"[MockNetworkBackend] Synchronized instance {instance.name} with NetworkId {networkId}");
+        }
+
+        #endregion
     }
 }

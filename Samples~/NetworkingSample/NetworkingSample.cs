@@ -64,8 +64,8 @@ namespace Eraflo.Catalyst.Samples.Networking
             
             if (_spawnPrefab && GUILayout.Button("Spawn Networked Object"))
             {
-                var pos = Random.insideUnitSphere * 3f;
-                var (handle, networkId) = PoolNetworkExtensions.SpawnNetworked(_spawnPrefab, pos);
+                Vector3 pos = Random.insideUnitSphere * 3f;
+                var (handle, networkId) = App.Get<Pool>().SpawnNetworked(_spawnPrefab, pos);
                 Debug.Log($"Spawned networked object: {networkId}");
             }
 

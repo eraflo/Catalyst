@@ -41,13 +41,13 @@ namespace Eraflo.Catalyst.Timers
         /// <summary>
         /// Makes a timer networked.
         /// </summary>
-        public uint MakeNetworked(TimerHandle handle, bool serverAuthoritative = true, uint id = 0)
+        public uint MakeNetworked(TimerHandle handle, Networking.AuthorityMode authority = Networking.AuthorityMode.ServerAuthoritative, uint id = 0)
         {
             if (!handle.IsValid) return 0;
 
             if (id == 0) id = _nextId++;
-
-            _timers[handle] = new NetworkTimerData { Id = id, ServerAuth = serverAuthoritative };
+            
+            _timers[handle] = new NetworkTimerData { Id = id, Authority = authority };
             _idToHandle[id] = handle;
 
             var timer = App.Get<Timer>();
@@ -90,9 +90,13 @@ namespace Eraflo.Catalyst.Timers
             if (network == null || !network.IsConnected || !network.IsServer) return;
 
             var timer = App.Get<Timer>();
+            var ownership = App.Get<Networking.NetworkOwnershipManager>();
+            
             foreach (var kvp in _timers)
             {
-                if (!kvp.Value.ServerAuth) continue;
+                // Only broadcast if we have authority
+                if (ownership != null && !ownership.HasAuthority(kvp.Value.Id, kvp.Value.Authority))
+                    continue;
 
                 var msg = new Networking.TimerSyncMessage
                 {
@@ -115,7 +119,12 @@ namespace Eraflo.Catalyst.Timers
         private void HandleSync(Networking.TimerSyncMessage msg)
         {
             if (!_idToHandle.TryGetValue(msg.NetworkId, out var handle)) return;
-            if (!_timers.TryGetValue(handle, out var data) || !data.ServerAuth) return;
+            if (!_timers.TryGetValue(handle, out var data)) return;
+
+            // Don't apply sync if we have authority (we are the source)
+            var ownership = App.Get<Networking.NetworkOwnershipManager>();
+            if (ownership != null && ownership.HasAuthority(msg.NetworkId, data.Authority))
+                return;
 
             var timer = App.Get<Timer>();
             if (msg.IsFinished)
@@ -150,7 +159,7 @@ namespace Eraflo.Catalyst.Timers
         private struct NetworkTimerData
         {
             public uint Id;
-            public bool ServerAuth;
+            public Networking.AuthorityMode Authority;
         }
     }
 

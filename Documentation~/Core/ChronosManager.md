@@ -54,10 +54,10 @@ Access the `ChronosManager` via the Service Locator to trigger effects:
 var chronos = App.Get<ChronosManager>();
 
 // Slow down the World channel over 0.5s for a stylistic effect
-chronos.SetTimeScale("World", 0.1f, 0.5f, EaseType.QuadOut);
+chronos.SetTimeScale("World", 0.1f, 0.5f, EasingType.QuadOut);
 
 // Put it back to normal
-chronos.SetTimeScale("World", 1.0f, 0.2f, EaseType.SineIn);
+chronos.SetTimeScale("World", 1.0f, 0.2f, EasingType.SineIn);
 ```
 
 ### 3. Pause & Resume

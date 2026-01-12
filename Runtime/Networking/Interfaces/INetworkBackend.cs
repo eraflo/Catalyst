@@ -23,7 +23,8 @@ namespace Eraflo.Catalyst.Networking
         /// <param name="msgType">Message type identifier.</param>
         /// <param name="data">Serialized message data.</param>
         /// <param name="target">Target recipients.</param>
-        void Send(ushort msgType, byte[] data, NetworkTarget target);
+        /// <param name="delivery">Delivery guarantee.</param>
+        void Send(ushort msgType, byte[] data, NetworkTarget target, NetworkDelivery delivery = NetworkDelivery.Reliable);
         
         /// <summary>
         /// Registers a handler for incoming messages.
@@ -38,26 +39,23 @@ namespace Eraflo.Catalyst.Networking
         void UnregisterHandler(ushort msgType);
 
         /// <summary>
-        /// Sends a message to a specific client by ID.
+        /// Sends a message to a specific client (Server only).
         /// </summary>
-        /// <param name="msgType">Message type identifier.</param>
-        /// <param name="data">Serialized message data.</param>
-        /// <param name="clientId">Target client ID.</param>
-        void SendToClient(ushort msgType, byte[] data, ulong clientId);
+        void SendToClient(ushort msgType, byte[] data, ulong clientId, NetworkDelivery delivery = NetworkDelivery.Reliable);
 
         /// <summary>
-        /// Sends a message to multiple specific clients by ID.
+        /// Sends a message to multiple specific clients (Server only).
         /// </summary>
-        /// <param name="msgType">Message type identifier.</param>
-        /// <param name="data">Serialized message data.</param>
-        /// <param name="clientIds">Target client IDs.</param>
-        void SendToClients(ushort msgType, byte[] data, ulong[] clientIds);
+        void SendToClients(ushort msgType, byte[] data, ulong[] clientIds, NetworkDelivery delivery = NetworkDelivery.Reliable);
 
         /// <summary>
         /// Gets the local client ID.
         /// </summary>
         ulong LocalClientId { get; }
         
+        /// <summary>True if the backend handles its own GameObject replication (e.g. NGO).</summary>
+        bool SupportsNativeGameObjectReplication { get; }
+
         /// <summary>
         /// Called when the backend is set as active.
         /// </summary>
@@ -67,5 +65,11 @@ namespace Eraflo.Catalyst.Networking
         /// Called when the backend is being replaced or shutdown.
         /// </summary>
         void Shutdown();
+
+        /// <summary>
+        /// Finalizes networking for a spawned instance.
+        /// Backend implementation should handle its specific requirements (e.g. NGO Spawn).
+        /// </summary>
+        void SynchronizeInstance(UnityEngine.GameObject instance, uint networkId);
     }
 }

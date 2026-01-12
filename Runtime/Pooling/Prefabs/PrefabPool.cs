@@ -15,6 +15,8 @@ namespace Eraflo.Catalyst.Pooling
         private readonly Dictionary<uint, GameObject> _active = new Dictionary<uint, GameObject>();
         private readonly object _lock = new object();
         
+        public GameObject Prefab => _prefab;
+        
         private Transform _poolRoot;
         private uint _nextId = 1;
         private int _peakActiveCount;

@@ -149,6 +149,35 @@ namespace Eraflo.Catalyst.Pooling
             _available.Push(instance);
         }
 
+        internal void ReleaseInstance(T instance)
+        {
+            if (instance == null) return;
+            
+            uint handleId = 0;
+            if (IsThreadSafe)
+            {
+                lock (_lock) handleId = FindActiveId(instance);
+            }
+            else
+            {
+                handleId = FindActiveId(instance);
+            }
+
+            if (handleId != 0)
+            {
+                Release(new PoolHandle<T>(handleId, instance, 0, 0));
+            }
+        }
+
+        private uint FindActiveId(T instance)
+        {
+            foreach (var kvp in _active)
+            {
+                if (ReferenceEquals(kvp.Value, instance)) return kvp.Key;
+            }
+            return 0;
+        }
+
         /// <summary>
         /// Pre-allocates objects in the pool.
         /// </summary>

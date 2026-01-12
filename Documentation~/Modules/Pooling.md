@@ -162,17 +162,14 @@ Handlers are auto-registered via `PackageSettings`.
 
 ```csharp
 // SERVER: Spawn and broadcast to all clients (default)
-var (handle, networkId) = PoolNetworkExtensions.SpawnNetworked(prefab, pos);
+var (handle, networkId) = pool.SpawnNetworked(prefab, pos);
 
 // SERVER: Spawn and broadcast to specific target
-var (h, id) = PoolNetworkExtensions.SpawnNetworked(
+var (h, id) = pool.SpawnNetworked(
     prefab, pos, Quaternion.identity,
-    serverAuth: true,
-    target: NetworkTarget.All  // or Others, Server, Clients
+    data: null,
+    target: NetworkTarget.All
 );
-
-// LOCAL ONLY: Spawn without network broadcast (UI elements, etc.)
-var localHandle = PoolNetworkExtensions.SpawnLocal(prefab, pos);
 ```
 
 ### Despawning (Server → Target)

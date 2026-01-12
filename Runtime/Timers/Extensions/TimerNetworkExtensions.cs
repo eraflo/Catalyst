@@ -10,12 +10,12 @@ namespace Eraflo.Catalyst.Timers
         /// <summary>
         /// Makes a timer networked. Auto-registers with the handler.
         /// </summary>
-        public static uint MakeNetworked(this TimerHandle handle, bool serverAuthoritative = true)
+        public static uint MakeNetworked(this TimerHandle handle, AuthorityMode authority = AuthorityMode.ServerAuthoritative)
         {
             var network = App.Get<NetworkManager>();
             var handler = network?.Handlers.Get<TimerNetworkHandler>();
             if (handler == null) return 0;
-            return handler.MakeNetworked(handle, serverAuthoritative);
+            return handler.MakeNetworked(handle, authority);
         }
 
         /// <summary>
