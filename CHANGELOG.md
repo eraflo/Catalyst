@@ -1,3 +1,16 @@
+# [1.5.0](https://github.com/eraflo/Catalyst/compare/v1.4.6...v1.5.0) (2026-01-12)
+
+
+### Bug Fixes
+
+* error in ci/cd pipeline imported package ([b95b350](https://github.com/eraflo/Catalyst/commit/b95b35087b1307d0bc2674209863db83cdd4c891))
+* missing dependency in ci/cd ([2493129](https://github.com/eraflo/Catalyst/commit/24931290d82c0886eea02bb8834cbd756f2eb4ea))
+
+
+### Features
+
+* expand network module ([48ea431](https://github.com/eraflo/Catalyst/commit/48ea4315bf42eb9b5c03a31d54aa8a31c7795929))
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
