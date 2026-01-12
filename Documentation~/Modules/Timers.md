@@ -338,7 +338,16 @@ void Update()
 handle.RemoveNetworking();  // Extension method
 ```
 
-See [Networking.md](Networking.md) for details.
+### Network ID
+You can retrieve the network ID of any networked timer using the universal `GetNetworkId()` extension:
+
+```csharp
+using Eraflo.Catalyst.Networking;
+
+uint id = handle.GetNetworkId();
+```
+
+See [Networking.md](Networking.md) for details on the centralized ID system.
 
 ---
 

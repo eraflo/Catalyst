@@ -3,10 +3,10 @@ using System.Collections.Generic;
 namespace Eraflo.Catalyst.Networking
 {
     /// <summary>
-    /// Manages ownership of networked objects and provides authority checks.
+    /// Synchronizes object ownership and authority.
     /// </summary>
-    [Service(Priority = 25)]
-    public class NetworkOwnershipManager : IGameService
+    [Service(Priority = 3)]
+    public class NetworkOwnershipManager : IGameService, INetworkMessageHandler
     {
         private readonly Dictionary<uint, ulong> _ownershipMap = new Dictionary<uint, ulong>();
         private NetworkManager _network;

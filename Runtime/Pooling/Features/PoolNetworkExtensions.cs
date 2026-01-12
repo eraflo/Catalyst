@@ -60,22 +60,5 @@ namespace Eraflo.Catalyst.Pooling
             else if (handle.Instance is T classInstance)
                 pool.DespawnDynamic(classInstance);
         }
-        /// <summary>
-        /// Gets the network ID for a pooled object instance.
-        /// </summary>
-        public static uint GetNetworkId(this object instance)
-        {
-            var handler = App.Get<NetworkManager>()?.Handlers.Get<PoolNetworkHandler>();
-            return handler?.GetId(instance) ?? 0;
-        }
-
-        /// <summary>
-        /// Deconstructs a PoolHandle into (handle, networkId).
-        /// </summary>
-        public static void Deconstruct<T>(this PoolHandle<T> handle, out PoolHandle<T> h, out uint networkId) where T : class
-        {
-            h = handle;
-            networkId = handle.Instance.GetNetworkId();
-        }
     }
 }

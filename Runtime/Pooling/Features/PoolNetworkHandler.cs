@@ -10,13 +10,13 @@ namespace Eraflo.Catalyst.Pooling
     /// </summary>
     public class PoolNetworkHandler : INetworkMessageHandler
     {
-        private readonly Dictionary<uint, object> _networkObjects = new Dictionary<uint, object>();
-        private readonly Dictionary<object, uint> _objectToId = new Dictionary<object, uint>();
+        private NetworkIdManager _idManager;
         private uint _nextId = 1;
         private NetworkManager _network;
 
         public void OnRegistered()
         {
+            _idManager = App.Get<NetworkIdManager>();
             _network = App.Get<NetworkManager>();
             _network.On<PoolNetworkMessage>(HandlePoolMessage);
             _network.On<NetworkStateUpdateMessage>(HandleStateUpdate);
@@ -112,8 +112,9 @@ namespace Eraflo.Catalyst.Pooling
             // Clients handle state updates from server
             if (_network.IsServer) return;
 
-            if (_networkObjects.TryGetValue(msg.NetworkId, out object instance))
+            if (_idManager != null)
             {
+                var instance = _idManager.GetObject<object>(msg.NetworkId);
                 if (instance is INetworkStateSyncable syncable)
                 {
                     syncable.OnNetworkStateUpdate(msg.PropertyName, msg.Data);
@@ -161,40 +162,41 @@ namespace Eraflo.Catalyst.Pooling
             }
             else
             {
-                if (_networkObjects.TryGetValue(msg.NetworkId, out object instance))
+                if (_idManager != null)
                 {
-                    if (instance is INetworkPoolable poolable)
+                    var instance = _idManager.GetObject<object>(msg.NetworkId);
+                    if (instance != null)
                     {
-                        poolable.OnNetworkDespawn();
+                        if (instance is INetworkPoolable poolable)
+                        {
+                            poolable.OnNetworkDespawn();
+                        }
+                        
+                        pool.DespawnDynamic(instance);
+                        UnregisterLocal(msg.NetworkId, instance);
                     }
-                    
-                    pool.DespawnDynamic(instance);
-                    UnregisterLocal(msg.NetworkId, instance);
                 }
             }
         }
 
         private void RegisterLocal(uint id, object instance)
         {
-            _networkObjects[id] = instance;
-            _objectToId[instance] = id;
+            _idManager?.Register(id, instance);
         }
 
         private void UnregisterLocal(uint id, object instance)
         {
-            _networkObjects.Remove(id);
-            _objectToId.Remove(instance);
+            _idManager?.Unregister(instance);
         }
 
         public uint GetId(object instance)
         {
-            return _objectToId.TryGetValue(instance, out uint id) ? id : 0;
+            return _idManager?.GetId(instance) ?? 0;
         }
 
         public void Clear()
         {
-            _networkObjects.Clear();
-            _objectToId.Clear();
+            _idManager?.Clear();
             _nextId = 1;
         }
     }

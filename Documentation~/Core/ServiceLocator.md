@@ -99,18 +99,26 @@ To maintain consistency, follow these priority brackets when adding new services
 
 #### Current Package Priorities
 
-| Service | Priority | Layer |
-| :--- | :--- | :--- |
-| `EventBus` | -10 | Core |
-| `Timer` | 0 | Core |
-| `BlackboardManager` | 5 | Core |
-| `Pool` | 10 | Infrastructure |
-| `SaveManager` | 10 | Infrastructure |
-| `SceneLoaderService` | 10 | Infrastructure |
-| `AssetManager` | 20 | Infrastructure |
-| `NetworkManager` | 20 | Infrastructure |
-| `SettingsManager` | 30 | Gameplay |
-| `LogExporter` | 100 | Auxiliary |
+| Service | Priority | Layer | Description |
+| :--- | :--- | :--- | :--- |
+| `EventBus` | -10 | Core | Central communication hub. |
+| `Timer` | 0 | Core | Basic timing and delay system. |
+| `NetworkIdManager` | 1 | Infrastructure | Centralized registry for network identification. |
+| `NetworkManager` | 2 | Infrastructure | Central networking facade. |
+| `NetworkOwnershipManager`| 3 | Infrastructure | Synchronized ownership and authority. |
+| `NetworkDiscovery` | 4 | Infrastructure | LAN server/client discovery. |
+| `BlackboardManager` | 5 | Core | Global and scoped data sharing. |
+| `SettingsManager` | 8 | Infrastructure | Global configuration (now loads early). |
+| `Pool` | 10 | Infrastructure | Memory management and object pooling. |
+| `SaveManager` | 11 | Infrastructure | Persistence and state serialization. |
+| `SceneLoaderService` | 12 | Infrastructure | Additive and standard scene loading. |
+| `AssetManager` | 20 | Infrastructure | Decoupled asset loading system. |
+| `HfsmNetworkHandler` | 21 | Gameplay | HFSM state path synchronization. |
+| `InputRemapper` | 40 | Gameplay | Runtime action-to-key binding. |
+| `ChronosManager` | 41 | Gameplay | Time-scaling and local clock management. |
+| `InputManager` | 50 | Gameplay | Action-based input processing. |
+| `CommandManager` | 55 | Gameplay | History, Undo/Redo, and Replay system. |
+| `LogExporter` | 100 | Auxiliary | Console and file logging utility. |
 
 ## PlayerLoop Integration
 

@@ -421,3 +421,12 @@ Add `NetworkBehaviourTreeSync` for server-authoritative AI:
 - Server evaluates tree, clients receive state
 - Blackboard values can be synchronized
 - Works with Netcode for GameObjects
+
+### Network Identification
+Like all networked components in Catalyst, the AI agent can be identified using the universal extension:
+
+```csharp
+using Eraflo.Catalyst.Networking;
+
+uint id = runner.GetNetworkId();
+```

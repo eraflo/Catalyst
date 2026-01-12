@@ -5,7 +5,7 @@ using Eraflo.Catalyst.EasingSystem;
 
 namespace Eraflo.Catalyst.Core.Chronos
 {
-    [Service(Priority = 40)]
+    [Service(Priority = 41)]
     public class ChronosManager : IGameService, IUpdatable
     {
         private class TimeChannel

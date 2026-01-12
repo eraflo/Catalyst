@@ -17,9 +17,12 @@ graph TB
     end
 
     subgraph "Catalyst Networking"
+        IM[NetworkIdManager]
         NM[NetworkManager]
         OM[NetworkOwnershipManager]
         ND[NetworkDiscovery]
+        IM --> NM
+        NM --> OM
     end
 
     subgraph "Backends"
@@ -146,6 +149,19 @@ The system uses `AuthorityMode` to determine who is allowed to trigger or modify
 | **ServerAuthoritative** | Only the server can broadcast changes. Client requests are ignored or validated. |
 | **ClientAuthoritative** | The owner of the object (or any client for global events) can broadcast changes. |
 
+### Network Identification
+Every networked object (GameObjects or C# classes) is identified by a unique `uint` ID managed by the `NetworkIdManager`.
+
+```csharp
+using Eraflo.Catalyst.Networking;
+
+// Get ID of any networked instance
+uint id = instance.GetNetworkId();
+
+// Resolve instance from ID
+var obj = App.Get<NetworkIdManager>().GetObject<MyClass>(id);
+```
+
 ### Ownership Tracking
 The `NetworkOwnershipManager` tracks which client owns specific networked objects.
 
@@ -201,7 +217,7 @@ public class MyRemoteData : INetworkPoolable, INetworkStateSyncable
 
     public void OnNetworkSpawn(byte[] data)
     {
-        uint id = this.GetNetworkId(); // Extension method
+        uint id = this.GetNetworkId(); // Universal extension method
         _score = new NetworkProperty<int>("Score", id, 0);
     }
 

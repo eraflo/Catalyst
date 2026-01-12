@@ -11,7 +11,7 @@ namespace Eraflo.Catalyst.Core.Save
     /// Central service for managing game saves.
     /// Handles serialization, storage, and state restoration.
     /// </summary>
-    [Service(Priority = 10)]
+    [Service(Priority = 11)]
     public class SaveManager : IGameService
     {
         private ISerializer _serializer;

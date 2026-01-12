@@ -11,7 +11,7 @@ namespace Eraflo.Catalyst.Networking
     /// Central network manager API.
     /// Can be used as a static facade or as a service via Service Locator.
     /// </summary>
-    [Service(Priority = 20)]
+    [Service(Priority = 2)]
     public class NetworkManager : IGameService, INetworkService
     {
         private INetworkBackend _backend;

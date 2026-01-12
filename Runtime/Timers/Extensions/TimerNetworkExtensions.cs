@@ -33,9 +33,7 @@ namespace Eraflo.Catalyst.Timers
         /// </summary>
         public static uint GetNetworkId(this TimerHandle handle)
         {
-            var network = App.Get<NetworkManager>();
-            var handler = network?.Handlers.Get<TimerNetworkHandler>();
-            return handler?.GetId(handle) ?? 0;
+            return Eraflo.Catalyst.Networking.NetworkExtensions.GetNetworkId(handle);
         }
 
         /// <summary>

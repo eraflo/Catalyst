@@ -57,7 +57,7 @@ graph TB
     PF --> PP
     PP --> PO
     PF --> PM
-    PF --> NPS
+    PF --> PHL["Network Handlers"]
 ```
 
 ---
@@ -162,10 +162,15 @@ Handlers are auto-registered via `PackageSettings`.
 
 ```csharp
 // SERVER: Spawn and broadcast to all clients (default)
-var (handle, networkId) = pool.SpawnNetworked(prefab, pos);
+var handle = pool.SpawnNetworked(prefab, pos, rot);  // Local spawn + network sync
+uint id = handle.GetNetworkId();                    // Universal ID access
+handle.DespawnNetworked();                          // Local despawn + network sync
+
+var dataHandle = pool.GetFromPoolNetworked<MyData>(); // C# class sync
+dataHandle.DespawnNetworked();
 
 // SERVER: Spawn and broadcast to specific target
-var (h, id) = pool.SpawnNetworked(
+var h = pool.SpawnNetworked(
     prefab, pos, Quaternion.identity,
     data: null,
     target: NetworkTarget.All
@@ -188,19 +193,17 @@ handle.DespawnNetworked(NetworkTarget.All);
 // SERVER: Register existing object for networking
 var pool = App.Get<Pool>();
 var handle = pool.SpawnObject(prefab, pos);
-handle.RegisterNetworked();
+App.Get<NetworkIdManager>().Register(123, handle); // Manual registration
 
 // SERVER: Unregister when done
-handle.UnregisterNetworked();
+App.Get<NetworkIdManager>().Unregister(handle);
 ```
 
 ### Client Handling
 
 ```csharp
-// CLIENT: React to spawn/despawn messages
-var handler = App.Get<NetworkManager>().Handlers.Get<PoolNetworkHandler>();
-handler.OnSpawnReceived += msg => { /* spawn locally */ };
-handler.OnDespawnReceived += id => { /* despawn locally */ };
+// CLIENT: IDs and instances are automatically synced in NetworkIdManager
+var obj = App.Get<NetworkIdManager>().GetObject<GameObject>(id);
 ```
 
 See [Networking.md](Networking.md) for details.
@@ -296,7 +299,8 @@ Runtime/Pooling/
 │   └── PooledObject.cs
 └── Features/
     ├── PoolMetrics.cs
-    └── NetworkPoolSync.cs
+    ├── PoolNetworkHandler.cs
+    └── PoolNetworkExtensions.cs
 
 Editor/Pooling/
 ├── PoolDebuggerWindow.cs
