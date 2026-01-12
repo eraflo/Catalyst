@@ -38,6 +38,7 @@ using Eraflo.Catalyst;
 - [Easing](Modules/Easing.md) - Math utilities for smooth transitions.
 - [Scene Flow](Modules/SceneFlow.md) - Complex transition management.
 - [Asset Management](Modules/AssetManagement.md) - Reference-counted loading.
+- [Input System](Modules/InputSystem.md) - Input buffering and combo detection.
 
 ### Infrastructure
 - [CI/CD](Infrastructure/CICD.md) - Automated testing and deployment.

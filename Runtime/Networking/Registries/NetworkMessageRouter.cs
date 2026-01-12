@@ -13,6 +13,9 @@ namespace Eraflo.Catalyst.Networking
         private readonly Dictionary<ushort, Type> _idToType = new Dictionary<ushort, Type>();
         private readonly Dictionary<ushort, List<Delegate>> _handlers = new Dictionary<ushort, List<Delegate>>();
         private ushort _nextId = 1;
+        
+        /// <summary>The ID of the client that sent the last routed message.</summary>
+        public ulong LastMessageSenderId { get; private set; }
 
         public event Action<ushort> OnTypeRegistered;
         public event Action<ushort> OnTypeUnregistered;
@@ -49,6 +52,7 @@ namespace Eraflo.Catalyst.Networking
 
         public void Route(ushort msgId, byte[] data, ulong senderId)
         {
+            LastMessageSenderId = senderId;
             if (!_idToType.TryGetValue(msgId, out var type)) return;
             if (!_handlers.TryGetValue(msgId, out var handlers)) return;
 

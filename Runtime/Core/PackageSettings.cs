@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Eraflo.Catalyst.Events;
+using Eraflo.Catalyst.Networking;
 using UnityEngine;
 
 namespace Eraflo.Catalyst
@@ -25,6 +26,15 @@ namespace Eraflo.Catalyst
     }
 
     /// <summary>
+    /// Input provider types.
+    /// </summary>
+    public enum InputProviderType
+    {
+        Legacy,
+        InputSystem
+    }
+
+    /// <summary>
     /// Global settings for the package.
     /// </summary>
     public class PackageSettings : ScriptableObject
@@ -40,6 +50,7 @@ namespace Eraflo.Catalyst
         [SerializeField] private bool _networkDebugMode = false;
         [SerializeField] private NetworkHandlerMode _handlerMode = NetworkHandlerMode.Auto;
         [SerializeField] private List<string> _enabledHandlers = new List<string>();
+        [SerializeField] private AuthorityMode _defaultAuthorityMode = AuthorityMode.ServerAuthoritative;
 
         // Timers
         [SerializeField] private bool _useBurstTimers = false;
@@ -55,6 +66,11 @@ namespace Eraflo.Catalyst
         
         // Settings
         [SerializeField] private string _settingsFilename = "settings.json";
+
+        // Input
+        [SerializeField] private InputProviderType _inputProvider = InputProviderType.Legacy;
+        [SerializeField] private UnityEngine.InputSystem.InputActionAsset _inputActionAsset;
+        [SerializeField] private bool _enableInputDebugger = false;
 
         public static PackageSettings Instance
         {
@@ -78,6 +94,7 @@ namespace Eraflo.Catalyst
         public bool NetworkDebugMode => _networkDebugMode;
         public NetworkHandlerMode HandlerMode => _handlerMode;
         public IReadOnlyList<string> EnabledHandlers => _enabledHandlers;
+        public AuthorityMode DefaultAuthorityMode => _defaultAuthorityMode;
         public PackageThreadMode ThreadMode => _threadMode;
         public bool UseBurstTimers => _useBurstTimers;
         public bool EnableTimerDebugLogs => _enableTimerDebugLogs;
@@ -86,6 +103,9 @@ namespace Eraflo.Catalyst
         public SceneTransitionChannel OnTransitionStarted => _onTransitionStarted;
         public SceneTransitionChannel OnTransitionCompleted => _onTransitionCompleted;
         public string SettingsFilename => _settingsFilename;
+        public InputProviderType InputProvider => _inputProvider;
+        public UnityEngine.InputSystem.InputActionAsset InputActionAsset => _inputActionAsset;
+        public bool EnableInputDebugger => _enableInputDebugger;
 
         public static void Reload() { _instance = null; _ = Instance; }
     }

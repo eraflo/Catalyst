@@ -24,6 +24,10 @@ namespace Eraflo.Catalyst.Editor
         private SerializedProperty _useBurstTimers;
         private SerializedProperty _enableTimerDebugLogs;
         private SerializedProperty _enableDebugOverlay;
+        private SerializedProperty _defaultAuthorityMode;
+        private SerializedProperty _inputProvider;
+        private SerializedProperty _inputActionAsset;
+        private SerializedProperty _enableInputDebugger;
 
         private void OnEnable()
         {
@@ -35,6 +39,10 @@ namespace Eraflo.Catalyst.Editor
             _useBurstTimers = serializedObject.FindProperty("_useBurstTimers");
             _enableTimerDebugLogs = serializedObject.FindProperty("_enableTimerDebugLogs");
             _enableDebugOverlay = serializedObject.FindProperty("_enableDebugOverlay");
+            _defaultAuthorityMode = serializedObject.FindProperty("_defaultAuthorityMode");
+            _inputProvider = serializedObject.FindProperty("_inputProvider");
+            _inputActionAsset = serializedObject.FindProperty("_inputActionAsset");
+            _enableInputDebugger = serializedObject.FindProperty("_enableInputDebugger");
             
             RefreshHandlerList();
         }
@@ -56,6 +64,7 @@ namespace Eraflo.Catalyst.Editor
             DrawHeader("🌐 Networking");
             EditorGUILayout.PropertyField(_networkBackendId, new GUIContent("Backend ID", "mock, netcode, or custom"));
             EditorGUILayout.PropertyField(_networkDebugMode, new GUIContent("Debug Mode"));
+            EditorGUILayout.PropertyField(_defaultAuthorityMode, new GUIContent("Default Authority", "Global authority model for messages and handlers"));
             EditorGUILayout.PropertyField(_handlerMode, new GUIContent("Handler Mode"));
 
             if ((NetworkHandlerMode)_handlerMode.enumValueIndex == NetworkHandlerMode.Manual)
@@ -73,6 +82,16 @@ namespace Eraflo.Catalyst.Editor
             EditorGUILayout.PropertyField(_useBurstTimers, new GUIContent("Use Burst"));
             EditorGUILayout.PropertyField(_enableTimerDebugLogs, new GUIContent("Debug Logs"));
             EditorGUILayout.PropertyField(_enableDebugOverlay, new GUIContent("Debug Overlay"));
+
+            EditorGUILayout.Space(10);
+
+            DrawHeader("⌨ Input System");
+            EditorGUILayout.PropertyField(_inputProvider, new GUIContent("Provider", "Input backend (Legacy or New Input System)"));
+            if ((InputProviderType)_inputProvider.enumValueIndex == InputProviderType.InputSystem)
+            {
+                EditorGUILayout.PropertyField(_inputActionAsset, new GUIContent("Action Asset", "Required for New Input System"));
+            }
+            EditorGUILayout.PropertyField(_enableInputDebugger, new GUIContent("Enable Debugger", "Show real-time input buffer in-game"));
 
             serializedObject.ApplyModifiedProperties();
         }
