@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/eraflo/Catalyst/compare/v1.5.0...v1.6.0) (2026-01-12)
+
+
+### Features
+
+* added command system module ([ba7c623](https://github.com/eraflo/Catalyst/commit/ba7c6238089c3954e35d01058e068b4abcc54081))
+
 # [1.5.0](https://github.com/eraflo/Catalyst/compare/v1.4.6...v1.5.0) (2026-01-12)
 
 
