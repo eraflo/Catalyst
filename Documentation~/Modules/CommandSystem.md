@@ -4,52 +4,96 @@ The Catalyst **Command System** provides a powerful, asynchronous, and serializa
 
 ---
 
-## Features
+## Table of Contents
 
-- ⚡ **Asynchronous Execution**: Commands are `Task`-based, allowing them to wait for animations or external events.
-- 🕒 **Undo/Redo History**: Automatic management of action stacks with configurable size.
-- 📽️ **Replay System**: Record action sequences and play them back on different subjects (Ghosts).
-- 🌐 **Network Ready**: One-line synchronization of actions across clients.
-- 🤖 **AI Integration**: Treat AI actions exactly like player inputs for unified logic.
-- 🛠️ **Macro Support**: Group multiple commands into atomic `CompositeCommand` units.
-- 📦 **Robust Serialization**: Automatic support for `GameObject` references (via GUID or Path).
+1. [Features](#1-features)
+2. [Quick Start](#2-quick-start)
+3. [Architecture](#3-architecture)
+4. [ICommand Interface](#4-icommand-interface)
+5. [Undo/Redo](#5-undoredo)
+6. [Replay System](#6-replay-system)
+7. [Networking](#7-networking)
+8. [Utilities](#8-utilities)
+9. [API Reference](#9-api-reference)
 
 ---
 
-## Quick Start
+## 1. Features
 
-### 1. Define a Command
-Implement `ICommand` or `IRebindableCommand` (if you need Ghost redirection).
+- **Asynchronous Execution**: Commands are `Task`-based for async operations
+- **Undo/Redo History**: Automatic management with configurable size
+- **Replay System**: Record and playback on different subjects (Ghosts)
+- **Network Ready**: One-line synchronization across clients
+- **AI Integration**: Same commands for Player, AI, and Replay
+- **Macro Support**: Group commands into `CompositeCommand` units
+- **Serialization**: Automatic support for Unity types and GameObjects
+
+---
+
+## 2. Quick Start
+
+### 2.1 Define a Command
 
 ```csharp
+using System.Threading.Tasks;
+using UnityEngine;
+using Eraflo.Catalyst.Command;
+
 public class JumpCommand : ICommand
 {
     public float Force = 5f;
+    
     private Rigidbody _rb;
-
+    private Vector3 _previousVelocity;
+    
+    public bool CanExecute()
+    {
+        _rb = Object.FindObjectOfType<Player>()?.GetComponent<Rigidbody>();
+        return _rb != null;
+    }
+    
     public async Task Execute()
     {
-        _rb = App.Get<Player>().Rigidbody;
+        _previousVelocity = _rb.velocity;
         _rb.AddForce(Vector3.up * Force, ForceMode.Impulse);
         await Task.Yield();
     }
-
-    public async Task Undo() => _rb.velocity = Vector3.zero;
-    public bool CanExecute() => _rb != null;
+    
+    public async Task Undo()
+    {
+        _rb.velocity = _previousVelocity;
+        await Task.CompletedTask;
+    }
 }
 ```
 
-### 2. Execute it via the Manager
+### 2.2 Execute via CommandManager
+
 ```csharp
-var command = new JumpCommand { Force = 10f };
-await App.Get<CommandManager>().Execute(command);
+using UnityEngine;
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Command;
+
+public class PlayerController : MonoBehaviour
+{
+    async void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            CommandManager cmdManager = App.Get<CommandManager>();
+            
+            var jumpCmd = new JumpCommand { Force = 10f };
+            await cmdManager.Execute(jumpCmd);
+        }
+    }
+}
 ```
 
 ---
 
-## Architecture
+## 3. Architecture
 
-### Core Execution Flow
+### 3.1 Execution Flow
 
 ```mermaid
 graph TD
@@ -61,7 +105,7 @@ graph TD
     Event --> Subscribers[ReplayRecorder / UI / Other]
 ```
 
-### Replay Recording & Storage
+### 3.2 Replay Flow
 
 ```mermaid
 sequenceDiagram
@@ -75,161 +119,386 @@ sequenceDiagram
     RR->>RR: Serialize & Add Frame
     Note over RR: Recording Stops
     RR->>ST: SaveTrack(track, filename)
-    ST->>Disk: Async Write (Catalyst Save)
+    ST->>Disk: Async Write
 ```
 
 ---
 
-## Core Architecture
+## 4. ICommand Interface
 
-### CommandManager
-The central hub for all actions. It handles:
-- **Execution**: Validates `CanExecute()` and runs the command.
-- **History**: Stores commands in an `Undo` stack (FIFO removal if `MaxHistorySize` is exceeded).
-- **Events**: Publishes `CommandExecutedEvent`, `CommandUndoneEvent`, and `CommandRedoneEvent` to the `EventBus`.
-
-### Interfaces
-
-#### `ICommand`
-The base interface for all actions.
-- `Task Execute()`: The logic to perform.
-- `Task Undo()`: The logic to revert (if applicable).
-- `bool CanExecute()`: Validation before execution.
-
-#### `IRebindableCommand`
-Inherits `ICommand`. Adds the ability to redirect the command to a different target during replay.
-- `void Rebind(GameObject newTarget)`: Maps the command's internal target to a new one.
-
----
-
-## Replay System
-
-The Replay system is decoupled and non-intrusive.
-
-### Recording
-`ReplayRecorder` listens to the global `EventBus`. It captures every command executed through the `CommandManager`.
+### 4.1 Basic Command
 
 ```csharp
-var recorder = new ReplayRecorder("Race_01");
-recorder.Start();
-// ...
-recorder.Stop();
-var track = recorder.Track; // Data is ready for save/playback
-```
+using System.Threading.Tasks;
+using UnityEngine;
+using Eraflo.Catalyst.Command;
 
-### Playback & Ghosts
-
-```mermaid
-sequenceDiagram
-    participant RP as ReplayPlayer
-    participant CH as ChronosManager
-    participant G as Ghost (ReplaySubject)
-    participant CM as CommandManager
+public class MoveCommand : ICommand
+{
+    public Vector3 Direction;
+    public float Distance = 1f;
     
-    RP->>CH: Check AppTime
-    RP->>RP: Instantiate & Populate Command
-    Note right of RP: If command is IRebindableCommand
-    RP->>G: Rebind(ghost)
-    RP->>CM: ExecuteDirect(command)
-    CM->>G: Apply Action
+    private Transform _target;
+    private Vector3 _previousPosition;
+    
+    public bool CanExecute()
+    {
+        _target = Object.FindObjectOfType<Player>()?.transform;
+        return _target != null;
+    }
+    
+    public async Task Execute()
+    {
+        _previousPosition = _target.position;
+        _target.position += Direction.normalized * Distance;
+        await Task.CompletedTask;
+    }
+    
+    public async Task Undo()
+    {
+        _target.position = _previousPosition;
+        await Task.CompletedTask;
+    }
+}
 ```
 
-`ReplayPlayer` uses `ChronosManager` to ensure playback timing matches the recording, even under time-scaling.
+### 4.2 Rebindable Command (for Replay/Ghosts)
 
 ```csharp
-// Play back on a Ghost object
-var player = new ReplayPlayer(track, this, ghostPrefab);
-player.Play();
+using System.Threading.Tasks;
+using UnityEngine;
+using Eraflo.Catalyst.Command;
+
+public class MoveRebindable : IRebindableCommand
+{
+    public Vector3 Direction;
+    public float Distance = 1f;
+    
+    private GameObject _target;
+    private Vector3 _previousPosition;
+    
+    public void Rebind(GameObject newTarget)
+    {
+        _target = newTarget;
+    }
+    
+    public bool CanExecute() => _target != null;
+    
+    public async Task Execute()
+    {
+        _previousPosition = _target.transform.position;
+        _target.transform.position += Direction.normalized * Distance;
+        await Task.CompletedTask;
+    }
+    
+    public async Task Undo()
+    {
+        _target.transform.position = _previousPosition;
+        await Task.CompletedTask;
+    }
+}
+```
+
+---
+
+## 5. Undo/Redo
+
+### 5.1 Basic Usage
+
+```csharp
+using UnityEngine;
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Command;
+
+public class UndoRedoController : MonoBehaviour
+{
+    private CommandManager _cmdManager;
+    
+    void Start()
+    {
+        _cmdManager = App.Get<CommandManager>();
+        
+        // Configure max history size
+        _cmdManager.MaxHistorySize = 100;
+    }
+    
+    async void Update()
+    {
+        // Ctrl+Z for Undo
+        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Z))
+        {
+            if (_cmdManager.UndoCount > 0)
+            {
+                await _cmdManager.Undo();
+                Debug.Log($"Undone. {_cmdManager.UndoCount} actions remaining.");
+            }
+        }
+        
+        // Ctrl+Y for Redo
+        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Y))
+        {
+            if (_cmdManager.RedoCount > 0)
+            {
+                await _cmdManager.Redo();
+                Debug.Log($"Redone. {_cmdManager.RedoCount} redo actions remaining.");
+            }
+        }
+    }
+    
+    public void ClearAllHistory()
+    {
+        _cmdManager.ClearHistory();
+    }
+}
+```
+
+### 5.2 Events
+
+```csharp
+using UnityEngine;
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Command;
+using Eraflo.Catalyst.Events;
+
+public class CommandEventListener : MonoBehaviour
+{
+    private EventBus _eventBus;
+    
+    void Start()
+    {
+        _eventBus = App.Get<EventBus>();
+        
+        _eventBus.Subscribe<CommandExecutedEvent>(OnCommandExecuted);
+        _eventBus.Subscribe<CommandUndoneEvent>(OnCommandUndone);
+        _eventBus.Subscribe<CommandRedoneEvent>(OnCommandRedone);
+    }
+    
+    void OnDestroy()
+    {
+        _eventBus?.Unsubscribe<CommandExecutedEvent>(OnCommandExecuted);
+        _eventBus?.Unsubscribe<CommandUndoneEvent>(OnCommandUndone);
+        _eventBus?.Unsubscribe<CommandRedoneEvent>(OnCommandRedone);
+    }
+    
+    void OnCommandExecuted(CommandExecutedEvent e)
+    {
+        Debug.Log($"Executed: {e.Command.GetType().Name} at {e.Timestamp}");
+    }
+    
+    void OnCommandUndone(CommandUndoneEvent e)
+    {
+        Debug.Log($"Undone: {e.Command.GetType().Name}");
+    }
+    
+    void OnCommandRedone(CommandRedoneEvent e)
+    {
+        Debug.Log($"Redone: {e.Command.GetType().Name}");
+    }
+}
+```
+
+---
+
+## 6. Replay System
+
+### 6.1 Recording
+
+```csharp
+using UnityEngine;
+using Eraflo.Catalyst.Command;
+
+public class ReplayRecorderExample : MonoBehaviour
+{
+    private ReplayRecorder _recorder;
+    
+    public void StartRecording()
+    {
+        _recorder = new ReplayRecorder("Race_01");
+        _recorder.Start();
+        Debug.Log("Recording started");
+    }
+    
+    public void StopRecording()
+    {
+        _recorder.Stop();
+        ReplayTrack track = _recorder.Track;
+        Debug.Log($"Recording stopped. {track.Frames.Count} frames captured.");
+    }
+    
+    public async void SaveRecording()
+    {
+        await ReplayStorageHelper.SaveTrack(_recorder.Track, "myReplay.json");
+        Debug.Log("Recording saved");
+    }
+}
+```
+
+### 6.2 Playback with Ghost
+
+```csharp
+using UnityEngine;
+using Eraflo.Catalyst.Command;
+
+public class ReplayPlayerExample : MonoBehaviour
+{
+    [SerializeField] private GameObject _ghostPrefab;
+    
+    private ReplayPlayer _player;
+    
+    public async void LoadAndPlay()
+    {
+        // Load saved track
+        ReplayTrack track = await ReplayStorageHelper.LoadTrack("myReplay.json");
+        
+        // Play on ghost prefab
+        _player = new ReplayPlayer(track, this, _ghostPrefab);
+        _player.Play();
+    }
+    
+    public void StopPlayback()
+    {
+        _player?.Stop();
+    }
+}
 ```
 
 > [!TIP]
-> **Ghost Redirection**: If your command implements `IRebindableCommand`, the `ReplayPlayer` will automatically inject the "Ghost" instance into your command before execution.
+> Commands implementing `IRebindableCommand` will automatically have their target replaced with the Ghost instance during playback.
 
 ---
 
-## Serialization & Unity Types
+## 7. Networking
 
-The system uses a custom `JsonSerializer` that understands Unity-specific types:
-- **Vectors & Quaternions**: Normalized JSON objects.
-- **GameObjects**: 
-    - **GUID**: Uses `SaveableEntity` GUID for persistent session-to-session references.
-    - **Path**: Uses Hierarchy Paths (e.g., `/Env/Doors/Door_01`) for scene-local references.
+### 7.1 Synchronized Execution
 
-This allows commands like `MoveCommand` to be saved to disk and correctly "find" their targets upon loading.
+```csharp
+using UnityEngine;
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Command;
 
----
+public class NetworkedActions : MonoBehaviour
+{
+    async void PerformNetworkedAction()
+    {
+        var moveCmd = new MoveCommand 
+        { 
+            Direction = Vector3.forward, 
+            Distance = 2f 
+        };
+        
+        // Executes locally AND sends to all other clients
+        await moveCmd.ExecuteNetworked();
+    }
+}
+```
 
-## Networking
-
-Synchronizing actions is trivial. Use the `CommandExtensions` to broadcast actions.
+### 7.2 Network Flow
 
 ```mermaid
 graph LR
-    Sub_A[Client A] -->|ExecuteNetworked| CM_A[CommandManager A]
+    A[Client A] -->|ExecuteNetworked| CM_A[CommandManager A]
     CM_A -->|Execute| Local_A[Local Action]
     CM_A -->|Send| NM[NetworkManager]
-    NM -.->|BroadCast| NM_B[NetworkManager B]
+    NM -.->|Broadcast| NM_B[NetworkManager B]
     NM_B -->|Route| CH_B[CommandNetworkHandler B]
     CH_B -->|ExecuteDirect| CM_B[CommandManager B]
     CM_B --> Local_B[Remote Action]
 ```
 
-```csharp
-// Executes locally AND sends to all other clients
-await myCommand.ExecuteNetworked();
-```
-
 > [!NOTE]
-> Networked commands are executed via `ExecuteDirect` on remote clients to avoid polluting their local undo history or causing recording loops.
+> Remote clients use `ExecuteDirect` to avoid polluting their local undo history.
 
 ---
 
-## AI Integration
+## 8. Utilities
 
-AI agents can use the same commands as players via the **ExecuteCommandAction** node in the **Behaviour Tree**.
+### 8.1 CommandQueue (Sequential Execution)
 
-- **Blackboard Integration**: Pass command parameters or the command instance itself through the Blackboard.
-- **Unified Logic**: One command logic for Player, AI, and Replay.
-
----
-
-## Premium Utilities
-
-### `CommandQueue`
-Sequential execution with timed delays. Perfect for cutscenes or scripted sequences.
 ```csharp
-var queue = new CommandQueue();
-queue.Enqueue(new MoveCommand(p, p1), delayBefore: 0.5f);
-queue.Enqueue(new MoveCommand(p, p2), delayBefore: 1.0f);
+using Eraflo.Catalyst.Command;
+
+public class CutsceneController
+{
+    async void PlayCutscene()
+    {
+        var queue = new CommandQueue();
+        
+        queue.Enqueue(new MoveCommand { Direction = Vector3.forward }, delayBefore: 0f);
+        queue.Enqueue(new JumpCommand { Force = 5f }, delayBefore: 0.5f);
+        queue.Enqueue(new MoveCommand { Direction = Vector3.right }, delayBefore: 1f);
+        
+        await queue.ExecuteAll();
+    }
+}
 ```
 
-### `ReplayStorageHelper`
-Automates the boilerplate of saving tracks to disk using the **Catalyst Save System**.
+### 8.2 CompositeCommand (Atomic Groups)
+
 ```csharp
-await ReplayStorageHelper.SaveTrack(track, "myReplay.json");
+using Eraflo.Catalyst.Command;
+
+public class CompositeExample
+{
+    void CreateMacro()
+    {
+        var composite = new CompositeCommand();
+        composite.Add(new MoveCommand { Direction = Vector3.forward });
+        composite.Add(new JumpCommand { Force = 3f });
+        
+        // Executes as one atomic action (single undo)
+        App.Get<CommandManager>().Execute(composite);
+    }
+}
 ```
 
-### `UndoRedoUI`
-A ready-made MonoBehaviour to bind UI Buttons to the `CommandManager` without writing code.
+### 8.3 UndoRedoUI (Ready-Made Component)
+
+Add `UndoRedoUI` MonoBehaviour to bind UI Buttons without code.
 
 ---
 
-## Samples
+## 9. API Reference
 
-A comprehensive sample is included in the package. 
-**Location**: `Samples~/CommandSample`
+### CommandManager (Service)
 
-It demonstrates:
-- Asynchronous move commands.
-- Undo/Redo UI buttons.
-- Recording a track.
-- Replaying the track on a "Ghost" cube.
+| Member | Type | Description |
+|--------|------|-------------|
+| `UndoCount` | `int` | Number of undoable commands |
+| `RedoCount` | `int` | Number of redoable commands |
+| `MaxHistorySize` | `int` | Max undo history (default: 50) |
+| `Execute(cmd)` | `Task` | Run and add to history |
+| `ExecuteDirect(cmd)` | `Task` | Run without history/events |
+| `Undo()` | `Task` | Undo last command |
+| `Redo()` | `Task` | Redo last undone |
+| `ClearHistory()` | `void` | Clear undo/redo stacks |
+
+### ICommand (Interface)
+
+| Method | Description |
+|--------|-------------|
+| `Task Execute()` | Command logic |
+| `Task Undo()` | Revert logic |
+| `bool CanExecute()` | Pre-validation (default: true) |
+
+### IRebindableCommand (Interface)
+
+| Method | Description |
+|--------|-------------|
+| `void Rebind(GameObject)` | Redirect target for replay |
+
+### Events
+
+| Event | Description |
+|-------|-------------|
+| `CommandExecutedEvent` | Fired after Execute |
+| `CommandUndoneEvent` | Fired after Undo |
+| `CommandRedoneEvent` | Fired after Redo |
 
 ---
 
-## Best Practices
+## See Also
 
-1. **Keep it Pure**: Commands should contain data and the logic to apply that data.
-2. **Serialization**: Use `[JsonProperty]` for private fields that need to be recorded.
-3. **Idempotence**: Ensure `Undo` perfectly reverts the state changed in `Execute`.
-4. **Targeting**: Use `IRebindableCommand` if your command acts on a GameObject that might be a "Ghost" later.
+- [EventBus](Events.md): Used for command events
+- [Chronos Manager](../Core/ChronosManager.md): Timing for replay
+- [Behaviour Tree](BehaviourTree.md): ExecuteCommand node
+- [Networking](Networking.md): Network sync
