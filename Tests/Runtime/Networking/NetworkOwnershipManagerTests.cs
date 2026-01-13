@@ -1,6 +1,6 @@
 using NUnit.Framework;
 using Eraflo.Catalyst.Networking;
-using Eraflo.Catalyst.Networking.Backends;
+using Eraflo.Catalyst.Networking.Backends.Mock;
 
 namespace Eraflo.Catalyst.Tests
 {
@@ -16,7 +16,6 @@ namespace Eraflo.Catalyst.Tests
             App.Register(_network);
             
             _ownership = new NetworkOwnershipManager();
-            ((IGameService)_ownership).Initialize();
             App.Register(_ownership);
             
             _network.Backends.Register(new MockBackendFactory());
@@ -56,6 +55,43 @@ namespace Eraflo.Catalyst.Tests
             
             var retrieved = idManager.GetObject<Eraflo.Catalyst.Timers.TimerHandle>(10);
             Assert.AreEqual(handle, retrieved);
+        }
+
+        [Test]
+        public void HasAuthority_UsesServerClientId_NotHardcodedZero()
+        {
+            // Arrange: Set up mock backend with custom server ID
+            var customBackend = new MockNetworkBackend(isServer: true, isClient: false, isConnected: true);
+            _network.SetBackend(customBackend);
+
+            // Server should have authority over its own objects
+            _ownership.SetOwner(100, customBackend.ServerClientId);
+            
+            // Assert: Server has authority (using dynamic ServerClientId)
+            Assert.IsTrue(_ownership.HasAuthority(100, AuthorityMode.ServerAuthoritative));
+        }
+
+        [Test]
+        public void HasAuthority_ValidatesSenderId_ForClientAuthoritative()
+        {
+            // Arrange: Client 42 owns object 100
+            _ownership.SetOwner(100, 42);
+            
+            // Assert: Client 42 has authority in ClientAuthoritative mode
+            Assert.IsTrue(_ownership.HasAuthority(42, 100, AuthorityMode.ClientAuthoritative));
+            
+            // Assert: Client 99 does NOT have authority
+            Assert.IsFalse(_ownership.HasAuthority(99, 100, AuthorityMode.ClientAuthoritative));
+        }
+
+        [Test]
+        public void HasAuthority_RejectsUnauthorizedClient()
+        {
+            // Arrange: Client 10 owns object 50
+            _ownership.SetOwner(50, 10);
+            
+            // Assert: Client 20 cannot modify in ClientAuthoritative
+            Assert.IsFalse(_ownership.HasAuthority(20, 50, AuthorityMode.ClientAuthoritative));
         }
     }
 }

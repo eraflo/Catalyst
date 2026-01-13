@@ -1,18 +1,27 @@
 #if UNITY_NETCODE
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using NetcodeMgr = Unity.Netcode.NetworkManager;
 using Eraflo.Catalyst.Pooling;
+using Eraflo.Catalyst.Networking.Features.Connection;
 
-namespace Eraflo.Catalyst.Networking.Backends
+using Eraflo.Catalyst.Scenes.Networking;
+
+namespace Eraflo.Catalyst.Networking.Backends.Netcode
 {
     /// <summary>
     /// Network backend implementation for Unity Netcode for GameObjects.
     /// </summary>
-    public class NetcodeBackend : INetworkBackend, INetworkLifecycle
+    public class NetcodeBackend : INetworkBackend, INetworkLifecycle, 
+        IConnectionBackend, ISceneNetworkBackend, IPoolNetworkBackend
     {
         private readonly Dictionary<ushort, Action<byte[], ulong>> _handlers = new Dictionary<ushort, Action<byte[], ulong>>();
+        
+        private NetcodeConnectionHandler _connectionHandler;
+        private NetcodeSceneHandler _sceneHandler;
+        private NetcodePrefabHandler _prefabHandler;
 
         public bool IsServer => NetcodeMgr.Singleton != null && NetcodeMgr.Singleton.IsServer;
         public bool IsClient => NetcodeMgr.Singleton != null && NetcodeMgr.Singleton.IsClient;
@@ -27,15 +36,21 @@ namespace Eraflo.Catalyst.Networking.Backends
                 return;
             }
 
+            // Initialize specialized handlers
+            _connectionHandler = new NetcodeConnectionHandler(NetcodeMgr.Singleton);
+            _sceneHandler = new NetcodeSceneHandler(NetcodeMgr.Singleton);
+            _prefabHandler = new NetcodePrefabHandler(NetcodeMgr.Singleton);
+
+            _connectionHandler.Initialize();
+
             NetcodeMgr.Singleton.CustomMessagingManager.OnUnnamedMessage += HandleUnnamedMessage;
-            
+            NetcodeMgr.Singleton.OnClientConnectedCallback += HandleClientConnected;
+            NetcodeMgr.Singleton.OnClientDisconnectCallback += HandleClientDisconnected;
+
             if (PackageSettings.Instance.NetworkDebugMode)
             {
                 Debug.Log("[NetcodeBackend] Initialized");
             }
-
-            NetcodeMgr.Singleton.OnClientConnectedCallback += HandleClientConnected;
-            NetcodeMgr.Singleton.OnClientDisconnectCallback += HandleClientDisconnected;
         }
 
         private void HandleClientConnected(ulong id)
@@ -66,17 +81,11 @@ namespace Eraflo.Catalyst.Networking.Backends
         {
             if (NetcodeMgr.Singleton == null || !IsConnected) return;
 
-            var fullData = new byte[2 + data.Length];
-            fullData[0] = (byte)(msgType >> 8);
-            fullData[1] = (byte)(msgType & 0xFF);
-            Buffer.BlockCopy(data, 0, fullData, 2, data.Length);
-
             var ngoDelivery = MapDelivery(delivery);
-
-            using (var writer = new Unity.Netcode.FastBufferWriter(fullData.Length, Unity.Collections.Allocator.Temp))
+            var writer = CreateWriter(msgType, data);
+            
+            try
             {
-                writer.WriteBytesSafe(fullData);
-
                 switch (target)
                 {
                     case NetworkTarget.All:
@@ -93,6 +102,22 @@ namespace Eraflo.Catalyst.Networking.Backends
                         break;
                 }
             }
+            finally
+            {
+                writer.Dispose();
+            }
+        }
+
+        private Unity.Netcode.FastBufferWriter CreateWriter(ushort msgType, byte[] data)
+        {
+            var fullData = new byte[2 + data.Length];
+            fullData[0] = (byte)(msgType >> 8);
+            fullData[1] = (byte)(msgType & 0xFF);
+            Buffer.BlockCopy(data, 0, fullData, 2, data.Length);
+            
+            var writer = new Unity.Netcode.FastBufferWriter(fullData.Length, Unity.Collections.Allocator.Temp);
+            writer.WriteBytesSafe(fullData);
+            return writer;
         }
 
         private Unity.Netcode.NetworkDelivery MapDelivery(Eraflo.Catalyst.Networking.NetworkDelivery delivery)
@@ -112,10 +137,14 @@ namespace Eraflo.Catalyst.Networking.Backends
         {
             if (IsServer)
             {
+                var localClientId = NetcodeMgr.Singleton.LocalClientId;
                 foreach (var clientId in NetcodeMgr.Singleton.ConnectedClientsIds)
                 {
-                    NetcodeMgr.Singleton.CustomMessagingManager.SendUnnamedMessage(
-                        clientId, writer, delivery);
+                    if (clientId != localClientId)
+                    {
+                        NetcodeMgr.Singleton.CustomMessagingManager.SendUnnamedMessage(
+                            clientId, writer, delivery);
+                    }
                 }
             }
             else
@@ -124,6 +153,7 @@ namespace Eraflo.Catalyst.Networking.Backends
                     Unity.Netcode.NetworkManager.ServerClientId, writer, delivery);
             }
         }
+
 
         private void SendToOthers(Unity.Netcode.FastBufferWriter writer, Unity.Netcode.NetworkDelivery delivery)
         {
@@ -174,7 +204,7 @@ namespace Eraflo.Catalyst.Networking.Backends
         {
             var length = reader.Length - reader.Position;
             var fullData = new byte[length];
-            reader.ReadBytesSafe(ref fullData, length);
+            reader.ReadBytesSafe(ref fullData, (int)length);
 
             if (fullData.Length < 2) return;
 
@@ -200,11 +230,29 @@ namespace Eraflo.Catalyst.Networking.Backends
             _handlers.Remove(msgType);
         }
 
+        #region Module Backend Implementations
+
+        void IConnectionBackend.Initialize() => _connectionHandler?.Initialize();
+
+        async Task ISceneNetworkBackend.LoadSceneAsync(string sceneName, UnityEngine.SceneManagement.LoadSceneMode mode)
+        {
+            if (_sceneHandler != null) await _sceneHandler.LoadSceneAsync(sceneName, mode);
+        }
+
+        void IPoolNetworkBackend.SynchronizeInstance(GameObject instance, uint networkId)
+        {
+            _prefabHandler?.SynchronizeInstance(instance, networkId);
+        }
+
+        #endregion
+
         public ulong LocalClientId => NetcodeMgr.Singleton?.LocalClientId ?? 0;
+        public ulong ServerClientId => NetcodeMgr.Singleton != null ? Unity.Netcode.NetworkManager.ServerClientId : 0;
 
         public void SendToClient(ushort msgType, byte[] data, ulong clientId, NetworkDelivery delivery = NetworkDelivery.Reliable)
         {
             if (NetcodeMgr.Singleton == null || !IsConnected || !IsServer) return;
+            if (clientId == LocalClientId) return; // Handled by NetworkManager loopback
 
             var fullData = new byte[2 + data.Length];
             fullData[0] = (byte)(msgType >> 8);
@@ -231,9 +279,12 @@ namespace Eraflo.Catalyst.Networking.Backends
             Buffer.BlockCopy(data, 0, fullData, 2, data.Length);
 
             var ngoDelivery = MapDelivery(delivery);
+            var localClientId = LocalClientId;
 
             foreach (var clientId in clientIds)
             {
+                if (clientId == localClientId) continue; // Handled by NetworkManager loopback
+
                 using (var writer = new Unity.Netcode.FastBufferWriter(fullData.Length, Unity.Collections.Allocator.Temp))
                 {
                     writer.WriteBytesSafe(fullData);
@@ -278,14 +329,11 @@ namespace Eraflo.Catalyst.Networking.Backends
             {
                 case NetworkTransportType.UDP:
                     ut.ConnectionData.ServerListenAddress = "0.0.0.0";
-                    // NGO's UnityTransport usually defaults to UDP/Relay
                     break;
                 case NetworkTransportType.TCP:
-                    // UnityTransport doesn't support raw TCP easily, usually uses UDP/WSS
                     Debug.LogWarning("[NetcodeBackend] UnityTransport has limited TCP support. Using default.");
                     break;
                 case NetworkTransportType.WebSocket:
-                    // Typical setup for WebGL or specialized WS transports
                     Debug.LogWarning("[NetcodeBackend] WebSocket requested. Ensure UnityTransport is configured for WSS.");
                     break;
             }
@@ -295,55 +343,6 @@ namespace Eraflo.Catalyst.Networking.Backends
         {
             if (NetcodeMgr.Singleton != null)
                 NetcodeMgr.Singleton.Shutdown();
-        }
-
-        public void SynchronizeInstance(GameObject instance, uint networkId)
-        {
-            if (instance == null) return;
-            
-            var no = instance.GetComponent<Unity.Netcode.NetworkObject>();
-            if (no != null && !no.IsSpawned)
-            {
-                // Register our prefab handler for this prefab if not already done
-                // This ensures NGO uses Catalyst's Pool on clients during replication
-                RegisterPrefabHandler(no);
-
-                no.Spawn(true); 
-            }
-        }
-
-        private readonly HashSet<uint> _registeredPrefabs = new HashSet<uint>();
-        
-        private void RegisterPrefabHandler(Unity.Netcode.NetworkObject no)
-        {
-            uint prefabId = no.PrefabIdHash;
-            
-            if (_registeredPrefabs.Contains(prefabId)) return;
-
-            var networkMgr = Unity.Netcode.NetworkManager.Singleton;
-            if (networkMgr != null && networkMgr.PrefabHandler != null)
-            {
-                networkMgr.PrefabHandler.AddHandler(no, new CatalystPrefabHandler(no.gameObject));
-                _registeredPrefabs.Add(prefabId);
-            }
-        }
-
-        private class CatalystPrefabHandler : Unity.Netcode.INetworkPrefabInstanceHandler
-        {
-            private readonly GameObject _prefab;
-            public CatalystPrefabHandler(GameObject prefab) => _prefab = prefab;
-
-            public Unity.Netcode.NetworkObject Instantiate(ulong ownerClientId, Vector3 position, Quaternion rotation)
-            {
-                var handle = App.Get<Pool>().SpawnObject(_prefab, position, rotation);
-                return handle.Instance.GetComponent<Unity.Netcode.NetworkObject>();
-            }
-
-            public void Destroy(Unity.Netcode.NetworkObject networkObject)
-            {
-                var pool = App.Get<Pool>();
-                pool.DespawnDynamic(networkObject.gameObject);
-            }
         }
 
         #endregion

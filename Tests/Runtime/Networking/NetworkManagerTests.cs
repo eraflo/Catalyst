@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using Eraflo.Catalyst.Networking;
 using Eraflo.Catalyst.Networking.Backends;
+using Eraflo.Catalyst.Networking.Backends.Mock;
 using Eraflo.Catalyst.Timers;
 using Eraflo.Catalyst.Pooling;
 
@@ -49,6 +50,13 @@ namespace Eraflo.Catalyst.Tests
         public void IsHost_True_WhenServerAndClient()
         {
             Assert.IsTrue(App.Get<NetworkManager>().IsHost);
+        }
+
+        [Test]
+        public void ServerClientId_ReturnsDynamicId_FromBackend()
+        {
+            // MockBackend returns 0 as ServerClientId by default
+            Assert.AreEqual(0ul, App.Get<NetworkManager>().ServerClientId);
         }
 
         #endregion

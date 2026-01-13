@@ -1,7 +1,7 @@
 #if UNITY_NETCODE
 using UnityEngine;
 
-namespace Eraflo.Catalyst.Networking.Backends
+namespace Eraflo.Catalyst.Networking.Backends.Netcode
 {
     using Eraflo.Catalyst.Networking;
 

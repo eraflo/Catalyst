@@ -52,7 +52,12 @@ namespace Eraflo.Catalyst.Networking
         /// Gets the local client ID.
         /// </summary>
         ulong LocalClientId { get; }
-        
+
+        /// <summary>
+        /// Gets the server's client ID.
+        /// </summary>
+        ulong ServerClientId { get; }
+
         /// <summary>True if the backend handles its own GameObject replication (e.g. NGO).</summary>
         bool SupportsNativeGameObjectReplication { get; }
 
@@ -65,11 +70,5 @@ namespace Eraflo.Catalyst.Networking
         /// Called when the backend is being replaced or shutdown.
         /// </summary>
         void Shutdown();
-
-        /// <summary>
-        /// Finalizes networking for a spawned instance.
-        /// Backend implementation should handle its specific requirements (e.g. NGO Spawn).
-        /// </summary>
-        void SynchronizeInstance(UnityEngine.GameObject instance, uint networkId);
     }
 }

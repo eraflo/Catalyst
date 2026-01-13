@@ -24,18 +24,15 @@ namespace Eraflo.Catalyst.Tests.Runtime.Command
             _testObject = new GameObject("TestObject");
             _coroutineHost = new GameObject("CoroutineHost");
             
-            // Setup services manually since App.Get might fail in unit tests if not initialized
+            // Setup services manually
             _eventBus = new EventBus();
             _saveManager = new SaveManager { Serializer = new JsonSerializer(), Storage = new LocalDiskStorage() };
             _commandManager = new CommandManager();
             
-            // Manual registration for this test instance context
-            // In a real Catalyst environment, App.Initialize handles this.
+            // Manual registration
             App.Register<EventBus>(_eventBus);
             App.Register<SaveManager>(_saveManager);
             App.Register<CommandManager>(_commandManager);
-            
-            _commandManager.Initialize();
         }
 
         [TearDown]

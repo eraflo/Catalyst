@@ -102,16 +102,19 @@ To maintain consistency, follow these priority brackets when adding new services
 | Service | Priority | Layer | Description |
 | :--- | :--- | :--- | :--- |
 | `EventBus` | -10 | Core | Central communication hub. |
+| `BlackboardManager` | -5 | Core | Global and scoped data sharing. |
 | `Timer` | 0 | Core | Basic timing and delay system. |
 | `NetworkIdManager` | 1 | Infrastructure | Centralized registry for network identification. |
 | `NetworkManager` | 2 | Infrastructure | Central networking facade. |
 | `NetworkOwnershipManager`| 3 | Infrastructure | Synchronized ownership and authority. |
-| `NetworkDiscovery` | 4 | Infrastructure | LAN server/client discovery. |
-| `BlackboardManager` | 5 | Core | Global and scoped data sharing. |
+| `ConnectionManager` | 4 | Infrastructure | Backend lifecycle management. |
+| `LobbyManager` | 5 | Infrastructure | LAN and Online Lobby management. |
+| `NetworkActionManager` | 6 | Infrastructure | Networked command relay. |
+| `NetworkDiscovery` | 7 | Infrastructure | LAN server/client discovery. |
 | `SettingsManager` | 8 | Infrastructure | Global configuration (now loads early). |
-| `Pool` | 10 | Infrastructure | Memory management and object pooling. |
-| `SaveManager` | 11 | Infrastructure | Persistence and state serialization. |
-| `SceneLoaderService` | 12 | Infrastructure | Additive and standard scene loading. |
+| `Pool` | 9 | Infrastructure | Memory management and object pooling. |
+| `SaveManager` | 10 | Infrastructure | Persistence and state serialization. |
+| `SceneLoaderService` | 11 | Infrastructure | Additive and standard scene loading. |
 | `AssetManager` | 20 | Infrastructure | Decoupled asset loading system. |
 | `HfsmNetworkHandler` | 21 | Gameplay | HFSM state path synchronization. |
 | `InputRemapper` | 40 | Gameplay | Runtime action-to-key binding. |
@@ -150,14 +153,15 @@ sequenceDiagram
     SL->>S: Shutdown()
 ```
 
-## Static Facades
+## Accessing Services
 
-For convenience, core modules like `Timer`, `Pool`, and `EventBus` provide static facades that internally call `App.Get<T>()`. This maintains a clean and familiar API while leveraging the robust service architecture.
+The standard and preferred way to access any service is via the unified `App` facade. This ensures that you are always working with the correctly registered instance, whether it was auto-discovered or manually registered for testing.
 
 ```csharp
-// Both are equivalent
-Pool.Get<MyObject>();
-App.Get<Pool>().Get<MyObject>();
+// Accessing services via the App facade
+var pool = App.Get<Pool>();
+var timer = App.Get<Timer>();
+var events = App.Get<EventBus>();
 ```
 
 ### Pattern: Mock Registration (Preferred for Unit Tests)

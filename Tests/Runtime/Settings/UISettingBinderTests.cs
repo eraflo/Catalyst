@@ -22,7 +22,6 @@ namespace Eraflo.Catalyst.Tests
         {
             _manager = new SettingsManager();
             App.Register(_manager);
-            ((IGameService)_manager).Initialize();
         }
 
         [TearDown]

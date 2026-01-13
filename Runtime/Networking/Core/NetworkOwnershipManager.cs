@@ -42,28 +42,48 @@ namespace Eraflo.Catalyst.Networking
         /// </summary>
         public bool HasAuthority(uint networkId, AuthorityMode mode)
         {
+            return HasAuthority(_network.LocalClientId, networkId, mode);
+        }
+
+        /// <summary>
+        /// Checks if a specific client has authority over the object.
+        /// </summary>
+        public bool HasAuthority(ulong clientId, uint networkId, AuthorityMode mode)
+        {
+            if (!_network.IsConnected) return true;
+
             if (mode == AuthorityMode.ServerAuthoritative)
             {
-                return _network.IsServer;
+                if (clientId == _network.LocalClientId)
+                {
+                    return _network.IsServer;
+                }
+
+                return clientId == _network.ServerClientId; 
             }
             
-            return IsOwner(networkId);
+            return IsOwner(clientId, networkId);
         }
 
         /// <summary>
         /// Checks if the local client is the owner of the object.
         /// </summary>
-        public bool IsOwner(uint networkId)
+        public bool IsOwner(uint networkId) => IsOwner(_network.LocalClientId, networkId);
+
+        /// <summary>
+        /// Checks if a specific client is the owner of the object.
+        /// </summary>
+        public bool IsOwner(ulong clientId, uint networkId)
         {
-            if (!_network.IsConnected) return true; // Local fallback
+            if (!_network.IsConnected) return true;
             
             if (_ownershipMap.TryGetValue(networkId, out ulong ownerId))
             {
-                return ownerId == _network.LocalClientId;
+                return ownerId == clientId;
             }
             
             // Default to server if no owner registered
-            return _network.IsServer;
+            return clientId == _network.ServerClientId;
         }
 
         /// <summary>
@@ -71,7 +91,7 @@ namespace Eraflo.Catalyst.Networking
         /// </summary>
         public ulong GetOwner(uint networkId)
         {
-            return _ownershipMap.TryGetValue(networkId, out ulong ownerId) ? ownerId : 0;
+            return _ownershipMap.TryGetValue(networkId, out ulong ownerId) ? ownerId : _network.ServerClientId;
         }
 
         #region INetworkMessageHandler

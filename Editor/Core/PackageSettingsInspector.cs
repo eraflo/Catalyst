@@ -28,6 +28,10 @@ namespace Eraflo.Catalyst.Editor
         private SerializedProperty _inputProvider;
         private SerializedProperty _inputActionAsset;
         private SerializedProperty _enableInputDebugger;
+        private SerializedProperty _assetProviderType;
+        private SerializedProperty _onTransitionStarted;
+        private SerializedProperty _onTransitionCompleted;
+        private SerializedProperty _settingsFilename;
 
         private void OnEnable()
         {
@@ -43,6 +47,10 @@ namespace Eraflo.Catalyst.Editor
             _inputProvider = serializedObject.FindProperty("_inputProvider");
             _inputActionAsset = serializedObject.FindProperty("_inputActionAsset");
             _enableInputDebugger = serializedObject.FindProperty("_enableInputDebugger");
+            _assetProviderType = serializedObject.FindProperty("_assetProviderType");
+            _onTransitionStarted = serializedObject.FindProperty("_onTransitionStarted");
+            _onTransitionCompleted = serializedObject.FindProperty("_onTransitionCompleted");
+            _settingsFilename = serializedObject.FindProperty("_settingsFilename");
             
             RefreshHandlerList();
         }
@@ -92,6 +100,22 @@ namespace Eraflo.Catalyst.Editor
                 EditorGUILayout.PropertyField(_inputActionAsset, new GUIContent("Action Asset", "Required for New Input System"));
             }
             EditorGUILayout.PropertyField(_enableInputDebugger, new GUIContent("Enable Debugger", "Show real-time input buffer in-game"));
+
+            EditorGUILayout.Space(10);
+
+            DrawHeader("📦 Assets");
+            EditorGUILayout.PropertyField(_assetProviderType, new GUIContent("Provider Type", "Resources or Addressables"));
+
+            EditorGUILayout.Space(10);
+
+            DrawHeader("🎬 Scene Flow");
+            EditorGUILayout.PropertyField(_onTransitionStarted, new GUIContent("On Transition Started"));
+            EditorGUILayout.PropertyField(_onTransitionCompleted, new GUIContent("On Transition Completed"));
+
+            EditorGUILayout.Space(10);
+
+            DrawHeader("💾 Settings Manager");
+            EditorGUILayout.PropertyField(_settingsFilename, new GUIContent("Settings Filename", "Name of the file used for settings persistence"));
 
             serializedObject.ApplyModifiedProperties();
         }

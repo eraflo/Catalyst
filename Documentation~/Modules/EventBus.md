@@ -10,11 +10,11 @@ A unified, thread-safe event system for Unity. Works via **code**, **inspector**
 2. [Quick Start](#quick-start)
 3. [Architecture](#architecture)
 4. [Built-in Channels](#built-in-channels)
-5. [Auto-Subscribe Attribute](#auto-subscribe-attribute)
-6. [Creating Custom Channels](#creating-custom-channels)
-7. [Network Events](#network-events)
-8. [Netcode for GameObjects Integration](#netcode-for-gameobjects-integration)
-9. [API Reference](#api-reference)
+5. [Type-Based Events (C# Events)](#type-based-events-c-events)
+6. [Addressables Integration](#addressables-integration)
+7. [Auto-Subscribe Attribute](#auto-subscribe-attribute)
+8. [Creating Custom Channels](#creating-custom-channels)
+9. [Network Events](#network-events)
 10. [Best Practices](#best-practices)
 
 ---
@@ -141,7 +141,14 @@ graph TB
 
 ---
 
+### System Events
+
+The `EventBus` also broadcasts built-in system events for other modules.
+
+| Event | Description |
+| :--- | :--- |
 | `CommandRedoneEvent` | Fired when an undone command is reapplied. |
+| `TimerSyncEvent` | Fired when networked timers are synchronized. |
 
 ---
 
@@ -199,7 +206,7 @@ Imagine a game with mods. Each mod can add its own events via a JSON file:
 The `EventChannelLoader` allows loading these events dynamically:
 
 ```csharp
-using Eraflo.UnityImportPackage.Events;
+using Eraflo.Catalyst.Events;
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -243,7 +250,7 @@ public class ModLoader : MonoBehaviour
 Simplify subscription with `[SubscribeTo]` attribute:
 
 ```csharp
-using Eraflo.UnityImportPackage.Events;
+using Eraflo.Catalyst.Events;
 
 public class PlayerUI : EventSubscriber  // Inherit from EventSubscriber
 {
@@ -274,7 +281,7 @@ public class PlayerUI : EventSubscriber  // Inherit from EventSubscriber
 
 ```csharp
 using UnityEngine;
-using Eraflo.UnityImportPackage.Events;
+using Eraflo.Catalyst.Events;
 
 [CreateAssetMenu(menuName = "Events/Player Data Channel")]
 public class PlayerDataChannel : EventChannel<PlayerData> { }
@@ -291,7 +298,7 @@ public struct PlayerData
 ### Step 2: Create the Listener (Optional)
 
 ```csharp
-using Eraflo.UnityImportPackage.Events;
+using Eraflo.Catalyst.Events;
 
 public class PlayerDataChannelListener : EventChannelListener<PlayerDataChannel, PlayerData> { }
 ```
@@ -311,6 +318,25 @@ Handlers are auto-registered via `PackageSettings`.
 | `EnableNetwork` | Send over network |
 | `NetworkTarget` | `All`, `Others`, `Server`, `Clients` |
 | `RaiseLocally` | Also trigger locally |
+
+### Network Routing
+
+```mermaid
+sequenceDiagram
+    participant App as Sender Code
+    participant EC as NetworkEventChannel
+    participant EB as EventBus
+    participant NH as EventNetworkHandler
+    participant NM as NetworkManager
+    participant R as Remote Clients
+
+    App->>EC: Raise(Target)
+    EC->>EB: OnEventRaised
+    EB->>NH: HandleNetworkEvent
+    NH->>NM: Send(EventMessage)
+    NM-->>R: Network Packet
+    R->>R: RaiseLocal()
+```
 
 ### Usage
 

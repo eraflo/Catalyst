@@ -114,7 +114,14 @@ namespace Eraflo.Catalyst
         public static void Register<T>(T instance) where T : class, IGameService
         {
             var type = typeof(T);
-            if (_services.ContainsKey(type)) _services.Remove(type);
+            
+            // Remove existing instance from all collections
+            if (_services.TryGetValue(type, out var existing))
+            {
+                if (existing is IUpdatable oldUpdatable) _updatables.Remove(oldUpdatable);
+                if (existing is IFixedUpdatable oldFixed) _fixedUpdatables.Remove(oldFixed);
+                _services.Remove(type);
+            }
 
             _services[type] = instance;
             if (instance is IUpdatable updatable) _updatables.Add(updatable);

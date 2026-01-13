@@ -128,11 +128,16 @@ var combo = await _combos.WaitForComboAsync("UltimateMove", token);
 ExecuteUltimate(combo);
 ```
 
-### Input Tolerance (Async)
-For high-speed actions, use `TryConsumeActionAsync` to allow a small window of tolerance.
+### Lag Compensation (Chronos Integration)
+The `InputManager` works closely with the **Networking** and **Chronos** modules to ensure fair gameplay.
+- **Timestamps**: Every input in the buffer is automatically tagged with `Chronos.AppTime`.
+- **Historical Validation**: On the server, you can query older inputs to validate actions that occurred in the client's past.
+
+### Input Tolerance & Network Jitter (Async)
+For high-speed actions or to compensate for network jitter, use `TryConsumeActionAsync`. This allows the server to "wait" slightly for a packet to arrive before failing the action.
 
 ```csharp
-// Wait up to 100ms for a "Jump" input
+// Wait up to 100ms for a "Jump" input to arrive or be pressed
 bool success = await input.TryConsumeActionAsync("Jump", 0.1f);
 if (success) PerformHighJump();
 ```

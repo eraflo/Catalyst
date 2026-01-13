@@ -1,461 +1,163 @@
 # Networking System
 
-Unified, extensible networking abstraction with auto-registration.
-
-## Architecture
-
-```mermaid
-graph TB
-    subgraph "Service Locator"
-        SL["ServiceLocator / App"]
-    end
-
-    subgraph "Bootstrap"
-        NB[NetworkBootstrapper]
-        NB --> |Register| BR
-        NB --> |Register| HR
-    end
-
-    subgraph "Catalyst Networking"
-        IM[NetworkIdManager]
-        NM[NetworkManager]
-        OM[NetworkOwnershipManager]
-        ND[NetworkDiscovery]
-        IM --> NM
-        NM --> OM
-    end
-
-    subgraph "Backends"
-        BR --> MB[MockBackend]
-        BR --> NCB[NetcodeBackend]
-    end
-
-    subgraph "System Handlers"
-        HR --> TH[TimerNetworkHandler]
-        HR --> PH[PoolNetworkHandler]
-        HR --> EH[EventNetworkHandler]
-        HR --> CH[CommandNetworkHandler]
-    end
-
-    subgraph "Usage"
-        SL -- "Get" --> NM
-        SL -- "Get" --> OM
-        SL -- "Get" --> ND
-        T[Timer] --> |Extension| TH
-        P[Pool] --> |Extension| PH
-        E[NetworkEventChannel] --> |OnEnable| EH
-    end
-```
-
-Everything is automatic! Configure in `PackageSettings` and use:
-
-```csharp
-// Timers
-var timer = App.Get<Timer>();
-var handle = timer.CreateTimer<CountdownTimer>(10f);
-handle.MakeNetworked();
-timer.Start(handle);
-TimerNetworkExtensions.BroadcastTimerSync();
-
-// Pool - Unified (GameObjects & C# Classes)
-var pool = App.Get<Pool>();
-var (h1, id1) = pool.SpawnNetworked(prefab, pos, rot);  // Local spawn + network sync
-h1.DespawnNetworked();                                 // Local despawn + network sync
-
-var (h2, id2) = pool.GetFromPoolNetworked<MyData>();   // C# class sync
-h2.DespawnNetworked();
-
-// Events - with target selection
-myNetworkChannel.Raise();                    // Use default target
-myNetworkChannel.Raise(NetworkTarget.Server); // Send to server only
-myNetworkChannel.RaiseLocal();               // Local only
-```
+Eraflo.Catalyst provides a professional-grade, **backend-agnostic** networking abstraction. This module allows you to build complex multi-player experiences while remaining decoupled from any specific transport library.
 
 ---
 
-## Configuration
+## 1. Core Architecture
 
-### PackageSettings
-
-| Setting | Values | Description |
-|---------|--------|-------------|
-| **Backend ID** | `mock`, `netcode`, custom | **Backends**: Choice between `Mock` (testing) and `Netcode` (production).
-| **Handler Mode** | `Auto`, `Manual` | **Manual Control**: Proxy methods for starting/stopping the network.
-| **Debug Mode** | bool | **Authority**: Built-in support for Server and Client authoritative models.
-
----
-
-## Setup for Netcode (NGO)
-
-When using the `Netcode` backend, minimal setup is required in the Unity Editor:
-
-1.  **NetworkManager**: Create a GameObject in your bootstrapper scene and add the `NetworkManager` component.
-2.  **UnityTransport**: On the same GameObject, add the `UnityTransport` component.
-3.  **Catalyst Config**: Go to `Edit > Project Settings > Catalyst` and ensure the **Default Backend** is set to `netcode`.
-4.  **Network Prefabs**: Any object spawned via the `Pool` system over the network must be registered in the `NetworkManager`'s "Network Prefabs" list.
-
----
-
-## API Overview
-
-## NetworkTarget
-
-```csharp
-public enum NetworkTarget
-{
-    All,      // Server + all clients
-    Others,   // Everyone except sender
-    Server,   // Server only
-    Clients   // All clients only
-}
-```
-
-## Lifecycle Management
-
-You can manually start and stop the networking system using the `NetworkManager` facade. This requires the active backend to implement `INetworkLifecycle`.
-
-```csharp
-var nm = App.Get<NetworkManager>();
-
-// Start as Server (UDP by default)
-nm.StartServer(7777, NetworkTransportType.UDP);
-
-// Start as Client (TCP example)
-nm.StartClient("127.0.0.1", 7777, NetworkTransportType.TCP);
-
-// Start as Host (WebSocket example)
-nm.StartHost(7777, NetworkTransportType.WebSocket);
-
-// Stop everything
-nm.Stop();
-```
-
-### Connection Events
-Monitor when clients connect or disconnect:
-
-```csharp
-nm.OnClientConnected += (id) => Debug.Log($"Client {id} joined!");
-nm.OnClientDisconnected += (id) => Debug.Log($"Client {id} left.");
-```
-
----
-
-## Authority & Ownership
-
-The system uses `AuthorityMode` to determine who is allowed to trigger or modify state.
-
-| Mode | Description |
-|------|-------------|
-| **ServerAuthoritative** | Only the server can broadcast changes. Client requests are ignored or validated. |
-| **ClientAuthoritative** | The owner of the object (or any client for global events) can broadcast changes. |
-
-### Network Identification
-Every networked object (GameObjects or C# classes) is identified by a unique `uint` ID managed by the `NetworkIdManager`.
-
-```csharp
-using Eraflo.Catalyst.Networking;
-
-// Get ID of any networked instance
-uint id = instance.GetNetworkId();
-
-// Resolve instance from ID
-var obj = App.Get<NetworkIdManager>().GetObject<MyClass>(id);
-```
-
-### Ownership Tracking
-The `NetworkOwnershipManager` tracks which client owns specific networked objects.
-
-```csharp
-var ownership = App.Get<NetworkOwnershipManager>();
-bool iAmOwner = ownership.IsOwner(networkId);
-```
-
----
-
-## Message Reliability
-
-You can specify the delivery guarantee for any message:
-
-```csharp
-nm.Send(new MyMessage(), NetworkTarget.All, NetworkDelivery.ReliableSequenced);
-```
-
-| Mode | Description |
-|------|-------------|
-| **Unreliable** | Best for high-frequency data (positions, rotations). No ordering or delivery guarantee. |
-| **Reliable** | Guaranteed delivery and order. Best for one-time events (Game Started). |
-| **UnreliableSequenced** | Best for health updates. Newer packets discard older ones if they arrive out of order. |
-| **ReliableSequenced** | Standard reliable stream. Guaranteed delivery and exact order. |
-
----
-
-## State Synchronization (C# Classes)
-
-For non-GameObject pooled objects, you can use `NetworkProperty<T>` for automatic state sync.
-
-```mermaid
-sequenceDiagram
-    participant S as Server Object
-    participant H as PoolNetworkHandler (S)
-    participant C as PoolNetworkHandler (C)
-    participant O as Client Object
-
-    S->>S: prop.Value = 10
-    S->>H: Sync()
-    H->>C: NetworkStateUpdateMessage
-    C->>O: OnNetworkStateUpdate("prop", 10)
-    O->>O: SetValueInternal(10)
-```
-
-**Usage:**
-
-```csharp
-public class MyRemoteData : INetworkPoolable, INetworkStateSyncable
-{
-    private NetworkProperty<int> _score;
-    public int Score => _score.Value;
-
-    public void OnNetworkSpawn(byte[] data)
-    {
-        uint id = this.GetNetworkId(); // Universal extension method
-        _score = new NetworkProperty<int>("Score", id, 0);
-    }
-
-    public void OnNetworkStateUpdate(string name, byte[] data)
-    {
-        if (name == "Score") _score.SetValueInternal(NetworkSerializer.DeserializeValue<int>(data));
-    }
-}
-```
-
----
-
-## Network Discovery
-
-Find and join games on the local network using UDP broadcast.
+### 1.1 The Bridge Pattern
+Catalyst functions as a high-level API bridge. Your game logic interacts with a unified interface, while the `INetworkBackend` handles the actual transmission (NGO, Mock, or custom).
 
 ```mermaid
 graph TD
-    S[Server] -->|UDP Broadcast| LAN((Local Network))
-    LAN --> C1[Client 1]
-    LAN --> C2[Client 2]
-    C1 -->|found| UI[Server Browser]
-```
-
-**Usage:**
-
-```csharp
-var discovery = App.Get<NetworkDiscovery>();
-
-// Server: Start advertising
-discovery.StartAdvertising("My Epic Room", 7777);
-
-// Client: Scan for games
-discovery.OnServerFound += (info) => {
-    Debug.Log($"Found {info.Name} at {info.Address}:{info.Port}");
-    nm.StartClient(info.Address, info.Port);
-};
-discovery.StartScanning();
-```
-
----
-
-## Client-Specific Targeting
-
-Send messages to specific clients (server only):
-
-```csharp
-var nm = App.Get<NetworkManager>();
-
-// SERVER: Send to one specific client
-nm.SendToClient(new MyMessage { Data = 42 }, clientId);
-
-// SERVER: Send to multiple specific clients
-nm.SendToClients(new MyMessage { Data = 42 }, clientA, clientB, clientC);
-
-// SERVER: Send to array of clients
-ulong[] teamMembers = GetTeamMembers();
-nm.SendToClients(new TeamUpdate { Score = 100 }, teamMembers);
-
-// Get local client ID
-ulong myId = nm.LocalClientId;
-```
-
-> [!NOTE]
-> These methods are server-only. Clients send to server with `SendToServer`, then the server relays.
-
----
-
-## Extension Methods
-
-### Timer
-
-```csharp
-// SERVER: Create and network a timer
-var timer = App.Get<Timer>();
-var handle = timer.CreateTimer<CountdownTimer>(5f);
-handle.MakeNetworked(AuthorityMode.ServerAuthoritative);
-timer.Start(handle);
-
-// SERVER: Sync all timers to clients
-TimerNetworkExtensions.BroadcastTimerSync();
-
-// Cleanup
-handle.RemoveNetworking();
-handle.GetNetworkId();
-```
-
-### Pool (Unified)
-
-The pooling system is backend-agnostic and supports both **GameObjects** and **C# Classes**.
-
-```csharp
-var pool = App.Get<Pool>();
-
-// 1. Spawning a GameObject (NGO uses NetworkManager settings)
-var (goHandle, goId) = pool.SpawnNetworked(playerPrefab, position);
-
-// 2. Spawning a C# Class (Synchronized by Catalyst)
-var (dataHandle, dataId) = pool.GetFromPoolNetworked<PlayerData>();
-
-// Despawn (Unified)
-goHandle.DespawnNetworked();
-dataHandle.DespawnNetworked();
-```
-
-```mermaid
-sequenceDiagram
-    participant U as User Code
-    participant P as Pool
-    participant H as PoolNetworkHandler
-    participant B as Backend (NGO/Mock)
-    
-    U->>P: SpawnNetworked(prefab)
-    P->>P: GetFromPool()
-    P->>H: SpawnNetworked(instance)
-    H->>B: SynchronizeInstance()
-    B->>B: NGO.Spawn()
-    H->>B: Send(PoolNetworkMessage)
-    B-->>H: Route to clients
-```
-
-> [!IMPORTANT]
-> - GameObjects MUST have a `NetworkObject` component for backends like NGO to sync them.
-> - C# Classes should implement `INetworkPoolable` to receive `OnNetworkSpawn(byte[] data)`.
-
-### Events
-
-```csharp
-// Use default target from inspector
-myNetworkChannel.Raise();
-
-// Override target at runtime
-myNetworkChannel.Raise(NetworkTarget.Server);
-myNetworkChannel.Raise(NetworkTarget.Others);
-
-// Local only
-myNetworkChannel.RaiseLocal();
-```
-
-### Commands
-
-Synchronize complex actions using the [Command System](CommandSystem.md).
-
-```csharp
-// Execute locally and broadcast to all clients
-await myCommand.ExecuteNetworked();
-```
-
-### Chronos Synchronization
-
-Time scale transitions on the server are automatically replicated to all clients via the [Chronos Manager](../Core/ChronosManager.md).
-
-```mermaid
-graph LR
-    subgraph "Server"
-        S_CM[ChronosManager] --> |OnTransitionStarted| S_NH[ChronosNetworkHandler]
-        S_NH --> |Send| S_NM[NetworkManager]
+    subgraph "Game Logic"
+        P[Player] --> NM[NetworkManager]
     end
-
-    S_NM --> |"ChronosSyncMessage"| C_NM[NetworkManager Client]
-
-    subgraph "Client"
-        C_NM --> |Route| C_NH[ChronosNetworkHandler]
-        C_NH --> |SetTimeScale| C_CM[ChronosManager]
+    subgraph "Catalyst Core"
+        NM --> NB["INetworkBackend"]
+        NM --> NIM[NetworkIdManager]
+        NM --> NOM[NetworkOwnershipManager]
+    end
+    subgraph "Backends"
+        NB --- M[Mock]
+        NB --- NG[Netcode/NGO]
     end
 ```
 
-**Usage (Server only):**
+### 1.2 Identification & NGO Integration
+- **Deterministic ID**: Catalyst assigns internal IDs (`uint`) for state tracking. For pooled objects, this is managed by the server to avoid collisions.
+- **NGO Coexistence**: If you use Unity Netcode (NGO) in parallel, an object will possess **two independent IDs**:
+    1. The Catalyst ID (used for `NetworkProperty` and Collections).
+    2. The NGO `NetworkObjectId` (used for `NetworkTransform` or NGO RPCs).
+- **Mapping**: Catalyst's `NetcodeBackend` automatically handles the binding between these two systems during the spawn process.
+
+---
+
+## 2. Communication Patterns
+
+### 2.1 Structured Messages (`INetworkMessage`)
+Messages are binary-serialized for performance. They provide a strongly-typed way to communicate between peers.
+
 ```csharp
-var chronos = App.Get<ChronosManager>();
-// This will smoothly slow down the "World" channel on all clients
-chronos.SetTimeScale("World", 0.1f, 2.0f, EasingType.CubicInOut);
+public struct DamageMessage : INetworkMessage {
+    public int Amount;
+    public void Serialize(BinaryWriter w) => w.Write(Amount);
+    public void Deserialize(BinaryReader r) => Amount = r.ReadInt32();
+}
+
+// Sending
+nm.Send(new DamageMessage { Amount = 10 }, NetworkTarget.Server);
+
+// Receiving
+nm.On<DamageMessage>(msg => ApplyDamage(msg.Amount));
 ```
 
 ---
 
-## Custom Backend
+## 3. State Synchronization
+
+### 3.1 `NetworkProperty<T>`
+A reactive property with **Client Prediction** and **Server Reconciliation**.
+1. **Client**: Updates the value locally for instant visual feedback.
+2. **Server**: Validates the new value. If invalid, the server sends a correction packet that "rolls back" the client's local state.
+
+### 3.2 Delta-Synchronized Collections
+Catalyst synchronizes only the **changes** (Deltas) rather than the entire collection.
+
+| Collection | Key Events | Use Case |
+| :--- | :--- | :--- |
+| **`NetworkList<X>`** | `OnItemAdded`, `OnItemRemoved`, `OnItemSet`, `OnChanged` | Player lists, Skill bars. |
+| **`NetworkDictionary<K,V>`** | `OnItemAdded`, `OnItemRemoved`, `OnItemSet`, `OnChanged` | Scoreboards, Inventories. |
+| **`NetworkHashSet<X>`** | `OnItemAdded`, `OnItemRemoved`, `OnChanged` | Active Buffs, Team tags. |
+| **`NetworkQueue/Stack<X>`** | `OnEnqueued/Pushed`, `OnDequeued/Popped` | Combat logs, Undo stacks. |
+
+---
+
+## 4. Lobby & Matchmaking
+
+### 4.1 Custom Lobby Providers
+Catalyst is provider-agnostic. You can integrate any service (Steam, Epic, Nakama) by implementing `ILobbyProvider`.
 
 ```csharp
-public class MyBackend : INetworkBackend
-{
-    public bool IsServer => ...;
-    public bool IsClient => ...;
-    public bool IsConnected => ...;
-    
-    public void Initialize() { }
-    public void Shutdown() { }
-    public void RegisterHandler(ushort msgType, Action<byte[], ulong> h) { }
-    public void UnregisterHandler(ushort msgType) { }
-}
-
-public class MyLifecycleBackend : MyBackend, INetworkLifecycle
-{
-    public bool StartServer(ushort port) { /* Logic */ return true; }
-    public bool StartClient(string addr, ushort port) { /* Logic */ return true; }
-    public bool StartHost(ushort port) { /* Logic */ return true; }
-    public void Stop() { /* Logic */ }
-}
-
-public class MyFactory : INetworkBackendFactory
-{
-    public string Id => "mybackend";
-    public string DisplayName => "My Backend";
-    public bool IsAvailable => true;
-    public bool OnInitialize()
-    {
-        App.Get<NetworkManager>().SetBackendById(Id);
-        return true;
+public class MySteamProvider : ILobbyProvider {
+    public string Name => "Steam";
+    public async Task<LobbyResult> CreateLobby(LobbyOptions options) {
+        // 1. Call Steamworks API
+        // 2. Return result with JoinCode
+        return LobbyResult.Ok(new LobbyInfo { Id = "XYZ", JoinCode = "12345" });
     }
-    public INetworkBackend Create() => new MyBackend();
+    // Implement SearchLobbies, JoinLobby, LeaveLobby...
 }
 ```
 
 ---
 
-## Custom Message
+## 5. Lag Compensation & Input
+
+Lag compensation in Catalyst is achieved through deep integration with the [InputSystem](InputSystem.md).
+
+- **Timestamps**: The `InputNetworkHandler` automatically attaches the current `Chronos.AppTime` to every input sent by the client.
+- **Historical Validation**: When the server receives an action, it can use this timestamp to "rewind" logic.
+- **Consumption**: Use `InputManager.TryConsumeActionAsync()` on the server to handle incoming packets within a specific latency window.
+
+---
+
+## 6. Implementation Tutorials
+
+### 6.1 Beginner: Global Scoreboard
+A simple example of synchronizing a shared dictionary.
 
 ```csharp
-var nm = App.Get<NetworkManager>();
-nm.Send(new MyMessage { Data = 42 }, NetworkTarget.All);
-nm.On<MyMessage>(msg => Debug.Log(msg.Data));
+// 1. Define the handler
+public class ScoreboardHandler : MonoBehaviour {
+    private NetworkDictionary<string, int> _scores;
+
+    void Awake() {
+        // Initialize as Server-Authoritative (Default)
+        _scores = new NetworkDictionary<string, int>("GlobalScores", this.GetNetworkId());
+        
+        // Update UI when any score changes
+        _scores.OnItemAdded += (name, val) => RefreshUI();
+        _scores.OnItemSet += (name, old, @new) => RefreshUI();
+    }
+
+    public void AddPoints(string playerName, int points) {
+        if (!App.Get<NetworkManager>().IsServer) return;
+        _scores[playerName] = _scores.TryGetValue(playerName, out int s) ? s + points : points;
+    }
+}
+```
+
+### 6.2 Advanced: Latency-Compensated Melee
+Using `Chronos` timestamps and `InputManager` for a "fair" combat system.
+
+```csharp
+// Client Side:
+void OnAttackInput() {
+    PlayAnimationLocally(); // Instant feedback
+    nm.Send(new MeleeAttackMessage { 
+        Timestamp = App.Get<ChronosManager>().AppTime 
+    }, NetworkTarget.Server);
+}
+
+// Server Side:
+void HandleAttack(MeleeAttackMessage msg, ulong senderId) {
+    // 1. Validate the timestamp isn't too old (Anti-cheat)
+    float latency = App.Get<ChronosManager>().AppTime - msg.Timestamp;
+    if (latency > 0.5f) return; // Too much lag
+
+    // 2. Perform distance check based on world state at msg.Timestamp
+    if (CheckDistanceAtTime(senderId, msg.Timestamp)) {
+        ApplyDamageToTarget();
+    }
+}
 ```
 
 ---
 
-## File Structure
-
-```
-Runtime/Networking/
-├── Core/            NetworkManager, NetworkSerializer
-├── Registries/      BackendRegistry, MessageRouter, HandlerRegistry
-├── Bootstrap/       NetworkBootstrapper
-├── Backends/
-│   ├── Mock/
-│   └── Netcode/
-└── Messages/
-
-Runtime/Timers/Features/   TimerNetworkHandler, Extensions
-Runtime/Pooling/Features/  PoolNetworkHandler, Extensions
-Runtime/Events/Network/    EventNetworkHandler, NetworkEventChannel
-```
+## 7. See Also
+- [Input System](InputSystem.md): Details on input buffering and timestamps.
+- [Pooling System](Pooling.md): Details on `SpawnNetworked()`.
+- [Event Bus](EventBus.md): Network-aware event channels.
+- [Timers](Timers.md): Explains how to use `MakeNetworked()`.

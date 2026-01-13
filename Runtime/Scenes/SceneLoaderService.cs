@@ -12,16 +12,25 @@ namespace Eraflo.Catalyst
     /// Service responsible for orchestrating complex scene loading flows.
     /// Handles additive loading, loading screens, and memory management.
     /// </summary>
-    [Service(Priority = 12)]
+    [Service(Priority = 11)]
     public class SceneLoaderService : IGameService
     {
         private SceneTransitionChannel _onTransitionStarted;
         private SceneTransitionChannel _onTransitionCompleted;
 
+        private ISceneLoadingStrategy _strategy;
         private ILoadingScreen _loadingScreen;
         private ISceneManager _sceneManager;
         private readonly List<SceneGroup> _groups = new List<SceneGroup>();
         private bool _isTransitioning;
+
+        /// <summary>
+        /// Sets the loading strategy (Local, Networked, etc.).
+        /// </summary>
+        public void SetStrategy(ISceneLoadingStrategy strategy)
+        {
+            _strategy = strategy;
+        }
 
         /// <summary>
         /// Sets the LoadingScreen implementation (useful for testing).
@@ -37,6 +46,8 @@ namespace Eraflo.Catalyst
         public void SetSceneManager(ISceneManager sceneManager)
         {
             _sceneManager = sceneManager;
+            // Re-initialize default strategy if none set
+            if (_strategy == null) _strategy = new LocalLoadingStrategy(_sceneManager);
         }
 
         #region IGameService
@@ -51,11 +62,17 @@ namespace Eraflo.Catalyst
             {
                 _sceneManager = new UnitySceneManager();
             }
+
+            if (_strategy == null)
+            {
+                _strategy = new LocalLoadingStrategy(_sceneManager);
+            }
         }
 
         public void Shutdown()
         {
             _groups.Clear();
+            _strategy = null;
         }
 
         #endregion
@@ -109,7 +126,7 @@ namespace Eraflo.Catalyst
                     }
                 }
 
-                // 3. Unload current scenes
+                // 3. Unload current scenes using strategy
                 int sceneCount = _sceneManager.SceneCount;
                 var scenesToUnload = new List<Scene>();
                 for (int i = 0; i < sceneCount; i++)
@@ -117,31 +134,17 @@ namespace Eraflo.Catalyst
                     scenesToUnload.Add(_sceneManager.GetSceneAt(i));
                 }
 
-                foreach (var scene in scenesToUnload)
-                {
-                    if (scene.isLoaded)
-                    {
-                        await _sceneManager.UnloadSceneAsync(scene);
-                    }
-                }
+                await _strategy.UnloadAsync(scenesToUnload);
 
                 // 4. Memory Cleanup
                 await UnloadUnusedAssetsAsync();
                 GC.Collect();
 
-                // 5. Load new scenes additively
-                float totalScenes = group.Scenes.Count;
-                for (int i = 0; i < group.Scenes.Count; i++)
+                // 5. Load new scenes via strategy
+                await _strategy.LoadAsync(group.Scenes, (p) => 
                 {
-                    var sceneName = group.Scenes[i];
-                    int sceneIndex = i;
-
-                    await _sceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive, (p) => 
-                    {
-                        float progress = (sceneIndex + p) / totalScenes;
-                        loadingScreen?.UpdateProgress(progress);
-                    });
-                }
+                    loadingScreen?.UpdateProgress(p);
+                });
 
                 loadingScreen?.UpdateProgress(1f);
 

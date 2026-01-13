@@ -6,6 +6,7 @@ using UnityEngine.TestTools;
 using Eraflo.Catalyst.Pooling;
 using Eraflo.Catalyst.Networking;
 using Eraflo.Catalyst.Networking.Backends;
+using Eraflo.Catalyst.Networking.Backends.Mock;
 
 namespace Eraflo.Catalyst.Tests
 {

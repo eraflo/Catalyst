@@ -5,7 +5,7 @@ Central configuration for the package.
 ## Location
 
 ```
-Assets/Resources/UnityImportPackageSettings.asset
+Assets/Resources/CatalystSettings.asset
 ```
 
 **Menu**: Tools > Eraflo Catalyst > Settings

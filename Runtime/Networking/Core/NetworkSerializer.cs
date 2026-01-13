@@ -91,16 +91,17 @@ namespace Eraflo.Catalyst.Networking
 
         private static void WriteValue<T>(BinaryWriter writer, T value)
         {
-            if (value is int i) writer.Write(i);
-            else if (value is float f) writer.Write(f);
-            else if (value is bool b) writer.Write(b);
-            else if (value is string s) writer.Write(s ?? string.Empty);
-            else if (value is Vector3 v) WriteVector3(writer, v);
-            else if (value is Quaternion q) WriteQuaternion(writer, q);
-            else if (value is byte b2) writer.Write(b2);
-            else if (value is long l) writer.Write(l);
-            else if (value is double d) writer.Write(d);
-            else throw new NotSupportedException($"Type {typeof(T).Name} is not supported for automatic network serialization.");
+            Type t = typeof(T);
+            if (t == typeof(int)) writer.Write((int)(object)value);
+            else if (t == typeof(float)) writer.Write((float)(object)value);
+            else if (t == typeof(bool)) writer.Write((bool)(object)value);
+            else if (t == typeof(string)) writer.Write((string)(object)value ?? string.Empty);
+            else if (t == typeof(Vector3)) WriteVector3(writer, (Vector3)(object)value);
+            else if (t == typeof(Quaternion)) WriteQuaternion(writer, (Quaternion)(object)value);
+            else if (t == typeof(byte)) writer.Write((byte)(object)value);
+            else if (t == typeof(long)) writer.Write((long)(object)value);
+            else if (t == typeof(double)) writer.Write((double)(object)value);
+            else throw new NotSupportedException($"Type {t.Name} is not supported for automatic network serialization.");
         }
 
         private static T ReadValue<T>(BinaryReader reader)

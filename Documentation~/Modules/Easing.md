@@ -5,7 +5,7 @@ A comprehensive library of standard easing functions (Linear, Quad, Cubic, Elast
 ## Quick Start
 
 ```csharp
-using Eraflo.UnityImportPackage.Easing;
+using Eraflo.Catalyst.Easing;
 
 // Interpolate between 0 and 1
 float t = 0.5f; // 50% progress

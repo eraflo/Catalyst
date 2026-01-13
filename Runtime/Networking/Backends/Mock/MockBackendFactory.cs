@@ -1,7 +1,7 @@
 using Eraflo.Catalyst.Networking;
 using Eraflo.Catalyst;
 
-namespace Eraflo.Catalyst.Networking.Backends
+namespace Eraflo.Catalyst.Networking.Backends.Mock
 {
     /// <summary>
     /// Factory for Mock backend.

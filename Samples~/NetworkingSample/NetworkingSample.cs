@@ -1,6 +1,6 @@
 using UnityEngine;
 using Eraflo.Catalyst.Networking;
-using Eraflo.Catalyst.Networking.Backends;
+using Eraflo.Catalyst.Networking.Backends.Mock;
 using Eraflo.Catalyst.Timers;
 using Eraflo.Catalyst.Pooling;
 using Eraflo.Catalyst.Events;

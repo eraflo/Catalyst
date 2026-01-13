@@ -9,6 +9,7 @@ using Eraflo.Catalyst.Networking;
 using Eraflo.Catalyst.Core.Chronos.Features;
 using Eraflo.Catalyst.EasingSystem;
 using Eraflo.Catalyst.Networking.Backends;
+using Eraflo.Catalyst.Networking.Backends.Mock;
 
 namespace Eraflo.Catalyst.Tests.Chronos
 {
@@ -23,7 +24,6 @@ namespace Eraflo.Catalyst.Tests.Chronos
         {
             _chronos = new ChronosManager();
             App.Register(_chronos);
-            ((IGameService)_chronos).Initialize();
 
             _network = new NetworkManager();
             App.Register(_network);

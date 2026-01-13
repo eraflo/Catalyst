@@ -8,7 +8,7 @@ namespace Eraflo.Catalyst.Core.Blackboard
     /// <summary>
     /// Service managing global and scoped blackboards.
     /// </summary>
-    [Service(Priority = 5)]
+    [Service(Priority = -5)]
     public class BlackboardManager : IGameService, ISaveable
     {
         private Blackboard _global;

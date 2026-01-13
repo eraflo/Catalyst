@@ -57,8 +57,12 @@ graph TB
     PF --> PP
     PP --> PO
     PF --> PM
-    PF --> PHL["Network Handlers"]
+    PF --> PNH["PoolNetworkHandler"]
+    PNH -.-> IPB["IPoolNetworkBackend"]
 ```
+
+### Modular Networking
+The pool system is decoupled from specific networking backends. It communicates with the active backend using the `IPoolNetworkBackend` interface. This follows the **Owner Inversion** pattern, where the Pooling module defines what it needs from the network.
 
 ---
 
@@ -204,6 +208,17 @@ App.Get<NetworkIdManager>().Unregister(handle);
 ```csharp
 // CLIENT: IDs and instances are automatically synced in NetworkIdManager
 var obj = App.Get<NetworkIdManager>().GetObject<GameObject>(id);
+```
+
+### Universal ID & Deconstruction
+You can easily retrieve the network ID from any `PoolHandle` using the universal extension or the C# 7.0 deconstruction pattern.
+
+```csharp
+// Method 1: Extension method
+uint id = handle.GetNetworkId();
+
+// Method 2: Deconstruction
+var (h, networkId) = handle;
 ```
 
 See [Networking.md](Networking.md) for details.

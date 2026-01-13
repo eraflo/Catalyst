@@ -43,9 +43,9 @@ namespace Eraflo.Catalyst.Pooling
             RegisterLocal(id, instance);
 
             // Notify backend if GO
-            if (instance is GameObject go)
+            if (instance is GameObject go && _network.Backend is IPoolNetworkBackend backend)
             {
-                _network.Backend.SynchronizeInstance(go, id);
+                backend.SynchronizeInstance(go, id);
             }
 
             // Call hooks
@@ -140,7 +140,10 @@ namespace Eraflo.Catalyst.Pooling
                     instance = handle.Instance;
                     
                     // Client side sync
-                    _network.Backend.SynchronizeInstance((GameObject)instance, msg.NetworkId);
+                    if (_network.Backend is IPoolNetworkBackend backend)
+                    {
+                        backend.SynchronizeInstance((GameObject)instance, msg.NetworkId);
+                    }
                 }
                 else
                 {

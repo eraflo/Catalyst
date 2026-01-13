@@ -2,6 +2,7 @@ using NUnit.Framework;
 using Eraflo.Catalyst.Events;
 using Eraflo.Catalyst.Networking;
 using Eraflo.Catalyst.Networking.Backends;
+using Eraflo.Catalyst.Networking.Backends.Mock;
 using UnityEngine;
 
 namespace Eraflo.Catalyst.Tests

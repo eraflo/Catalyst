@@ -1,14 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
+using Eraflo.Catalyst.Scenes.Networking;
+using Eraflo.Catalyst.Networking.Features.Connection;
+using Eraflo.Catalyst.Pooling;
 
-namespace Eraflo.Catalyst.Networking.Backends
+namespace Eraflo.Catalyst.Networking.Backends.Mock
 {
     /// <summary>
     /// Mock network backend for testing without actual network.
     /// Logs all operations and can simulate local message delivery.
     /// </summary>
-    public class MockNetworkBackend : INetworkBackend, INetworkLifecycle
+    public class MockNetworkBackend : INetworkBackend, INetworkLifecycle,
+        IConnectionBackend, ISceneNetworkBackend, IPoolNetworkBackend
     {
         private readonly Dictionary<ushort, Action<byte[], ulong>> _handlers = new Dictionary<ushort, Action<byte[], ulong>>();
         private bool _isServer;
@@ -20,10 +25,32 @@ namespace Eraflo.Catalyst.Networking.Backends
         public bool IsConnected => _isConnected;
         public bool SupportsNativeGameObjectReplication => false;
 
+        #region Module Backend Implementations
+
+        void IConnectionBackend.Initialize() => Debug.Log("[MockNetworkBackend] Connection initialized");
+
+        async Task ISceneNetworkBackend.LoadSceneAsync(string sceneName, UnityEngine.SceneManagement.LoadSceneMode mode)
+        {
+            Debug.Log($"[MockNetworkBackend] Simulating LoadSceneAsync '{sceneName}' ({mode})");
+            await Task.Yield();
+        }
+
+        void IPoolNetworkBackend.SynchronizeInstance(GameObject instance, uint networkId)
+        {
+            Debug.Log($"[MockNetworkBackend] Synchronized instance {instance.name} with NetworkId {networkId}");
+        }
+
+        #endregion
+
         /// <summary>
         /// Simulated local client ID.
         /// </summary>
         public ulong LocalClientId { get; set; } = 0;
+
+        /// <summary>
+        /// Simulated server client ID.
+        /// </summary>
+        public ulong ServerClientId { get; set; } = 0;
 
         private readonly List<(ushort Type, byte[] Data, NetworkTarget Target)> _sentMessages = new List<(ushort, byte[], NetworkTarget)>();
 
@@ -53,7 +80,7 @@ namespace Eraflo.Catalyst.Networking.Backends
         {
             _handlers.Clear();
             Debug.Log("[MockNetworkBackend] Shutdown");
-        }
+        }      
 
         public void Send(ushort msgType, byte[] data, NetworkTarget target, NetworkDelivery delivery = NetworkDelivery.Reliable)
         {
@@ -67,13 +94,9 @@ namespace Eraflo.Catalyst.Networking.Backends
             {
                 Debug.Log($"[MockNetworkBackend] Send msgType={msgType}, {data.Length} bytes, target={target} ({delivery})");
             }
-
-            // Loopback for testing
-            if (EnableLoopback && _handlers.TryGetValue(msgType, out var handler))
-            {
-                handler.Invoke(data, LocalClientId);
-            }
         }
+
+
 
         public void RegisterHandler(ushort msgType, Action<byte[], ulong> handler)
         {
@@ -89,6 +112,7 @@ namespace Eraflo.Catalyst.Networking.Backends
 
         public void SendToClient(ushort msgType, byte[] data, ulong clientId, NetworkDelivery delivery = NetworkDelivery.Reliable)
         {
+            if (clientId == LocalClientId) return;
             _sentMessages.Add((msgType, data, NetworkTarget.Clients));
 
             if (PackageSettings.Instance.NetworkDebugMode)
@@ -99,17 +123,15 @@ namespace Eraflo.Catalyst.Networking.Backends
             {
                 Debug.Log($"[MockNetworkBackend] SendToClient msgType={msgType}, {data.Length} bytes, clientId={clientId} ({delivery})");
             }
-
-            // Loopback if targeting self
-            if (EnableLoopback && clientId == LocalClientId && _handlers.TryGetValue(msgType, out var handler))
-            {
-                handler.Invoke(data, LocalClientId);
-            }
         }
 
         public void SendToClients(ushort msgType, byte[] data, ulong[] clientIds, NetworkDelivery delivery = NetworkDelivery.Reliable)
         {
-            _sentMessages.Add((msgType, data, NetworkTarget.Clients)); 
+            foreach (var clientId in clientIds)
+            {
+                if (clientId == LocalClientId) continue;
+                _sentMessages.Add((msgType, data, NetworkTarget.Clients));
+            }
 
             if (PackageSettings.Instance.NetworkDebugMode)
             {
@@ -118,14 +140,6 @@ namespace Eraflo.Catalyst.Networking.Backends
             else
             {
                 Debug.Log($"[MockNetworkBackend] SendToClients msgType={msgType}, {data.Length} bytes, clients={clientIds.Length} ({delivery})");
-            }
-
-            foreach (var clientId in clientIds)
-            {
-                if (EnableLoopback && clientId == LocalClientId && _handlers.TryGetValue(msgType, out var handler))
-                {
-                    handler.Invoke(data, LocalClientId);
-                }
             }
         }
 
@@ -139,6 +153,7 @@ namespace Eraflo.Catalyst.Networking.Backends
                 handler.Invoke(data, senderId);
             }
         }
+
 
         /// <summary>
         /// Alias for SimulateReceive to match test expectations.
@@ -208,11 +223,6 @@ namespace Eraflo.Catalyst.Networking.Backends
             _isConnected = false;
             Debug.Log("[MockNetworkBackend] Stopped");
             App.Get<NetworkManager>().NotifyDisconnected();
-        }
-
-        public void SynchronizeInstance(GameObject instance, uint networkId)
-        {
-            Debug.Log($"[MockNetworkBackend] Synchronized instance {instance.name} with NetworkId {networkId}");
         }
 
         #endregion

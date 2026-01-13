@@ -5,11 +5,8 @@ using Eraflo.Catalyst;
 namespace Eraflo.Catalyst.Networking
 {
     /// <summary>
-    /// Central network manager facade.
-    /// </summary>
-    /// <summary>
-    /// Central network manager API.
-    /// Can be used as a static facade or as a service via Service Locator.
+    /// Central network manager service.
+    /// Provides access to the backend, messaging router, and network handlers.
     /// </summary>
     [Service(Priority = 2)]
     public class NetworkManager : IGameService, INetworkService
@@ -30,6 +27,7 @@ namespace Eraflo.Catalyst.Networking
         public bool IsConnected => _backend?.IsConnected ?? false;
         public bool IsHost => IsServer && IsClient;
         public ulong LocalClientId => _backend?.LocalClientId ?? 0;
+        public ulong ServerClientId => _backend?.ServerClientId ?? 0;
 
         public event Action<INetworkBackend> OnBackendChanged
         {
@@ -105,6 +103,16 @@ namespace Eraflo.Catalyst.Networking
             {
                 _backend.Initialize();
                 
+                // Ensure we don't double-subscribe to router events
+                _router.ClearEventSubscribers();
+
+                // Register existing types
+                foreach (var type in _router.RegisteredTypes)
+                {
+                    var msgId = _router.GetIdByType(type);
+                    _backend.RegisterHandler(msgId, (data, senderId) => _router.Route(msgId, data, senderId));
+                }
+
                 // Wire router to backend
                 _router.OnTypeRegistered += msgId =>
                 {
@@ -134,6 +142,14 @@ namespace Eraflo.Catalyst.Networking
 
             var msgId = _router.GetId<T>();
             var data = NetworkSerializer.Serialize(message);
+
+            // 1. Centralized Loopback logic
+            if (ShouldLoopback(target))
+            {
+                _router.Route(msgId, data, LocalClientId);
+            }
+
+            // 2. Remote Send (Backends should skip self)
             _backend.Send(msgId, data, target, delivery);
 
             if (PackageSettings.Instance.NetworkDebugMode)
@@ -144,11 +160,19 @@ namespace Eraflo.Catalyst.Networking
 
         public void SendToClient<T>(T message, ulong clientId, NetworkDelivery delivery = NetworkDelivery.Reliable) where T : struct, INetworkMessage
         {
-            if (_backend == null || !_backend.IsConnected || !_backend.IsServer) return;
+            if (_backend == null || !_backend.IsConnected || !IsServer) return;
 
             var msgId = _router.GetId<T>();
             var data = NetworkSerializer.Serialize(message);
-            _backend.SendToClient(msgId, data, clientId, delivery);
+
+            if (clientId == LocalClientId)
+            {
+                _router.Route(msgId, data, LocalClientId);
+            }
+            else 
+            {
+                _backend.SendToClient(msgId, data, clientId, delivery);
+            }
 
             if (PackageSettings.Instance.NetworkDebugMode)
             {
@@ -158,15 +182,38 @@ namespace Eraflo.Catalyst.Networking
 
         public void SendToClients<T>(T message, NetworkDelivery delivery, params ulong[] clientIds) where T : struct, INetworkMessage
         {
-            if (_backend == null || !_backend.IsConnected || !_backend.IsServer) return;
+            if (_backend == null || !_backend.IsConnected || !IsServer) return;
 
             var msgId = _router.GetId<T>();
             var data = NetworkSerializer.Serialize(message);
+
+            // 1. Loopback for each occurrence of self in the list
+            foreach (var id in clientIds)
+            {
+                if (id == LocalClientId)
+                {
+                    _router.Route(msgId, data, LocalClientId);
+                }
+            }
+
+            // 2. Remote Send
             _backend.SendToClients(msgId, data, clientIds, delivery);
 
             if (PackageSettings.Instance.NetworkDebugMode)
             {
                 Debug.Log($"[NetworkManager] Sent {typeof(T).Name} to {clientIds.Length} clients ({delivery})");
+            }
+        }
+
+        private bool ShouldLoopback(NetworkTarget target)
+        {
+            switch (target)
+            {
+                case NetworkTarget.All: return true;
+                case NetworkTarget.Others: return false;
+                case NetworkTarget.Server: return IsServer;
+                case NetworkTarget.Clients: return IsClient || IsServer; // Host acts as client too
+                default: return false;
             }
         }
 

@@ -86,8 +86,8 @@ Timers can now be linked to Chronos channels. If a channel is slowed down, the t
 
 ```csharp
 // The timer will take twice as long if "SlowMo" scale is 0.5
-Timer.Create(5f, () => Debug.Log("Done"))
-     .SetChannel("SlowMo");
+App.Get<Timer>().CreateDelay(5f, () => Debug.Log("Done"))
+   .SetChannel("SlowMo");
 ```
 
 ### 2. Networking

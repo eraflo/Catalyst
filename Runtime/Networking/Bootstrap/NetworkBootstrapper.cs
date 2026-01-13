@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using Eraflo.Catalyst.Networking.Backends;
+using Eraflo.Catalyst.Networking.Backends.Mock;
+#if UNITY_NETCODE
+using Eraflo.Catalyst.Networking.Backends.Netcode;
+#endif
 
 namespace Eraflo.Catalyst.Networking
 {

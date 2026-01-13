@@ -147,3 +147,44 @@ classDiagram
     ISceneManager <|-- UnitySceneManager : implementation
     ISceneManager <|-- MockSceneManager : tests
 ```
+
+## Networked Scene Loading
+Scene transitions can be synchronized across the network using the `SceneNetworkHandler`.
+
+### Features
+- **Server-Driven**: The server initiates scene transitions for all clients.
+- **Progress Synchronization**: Clients report their loading progress, allowing the server to wait for everyone before proceeding.
+- **ISceneNetworkBackend**: A specialized interface for networking backends to implement scene loading primitives.
+
+### Flow
+1. **Server** calls `LoadGroupAsync`.
+2. **SceneNetworkHandler** broadcasts a `SceneLoadMessage` to clients.
+3. **Clients** receive the message and start loading locally.
+4. **Clients** poll the `SceneManager` and send progress updates back to the server.
+5. **Server** proceeds once all clients are synchronized.
+
+```mermaid
+sequenceDiagram
+    participant S_Code as Server Gameplay Code
+    participant S_SL as SceneLoaderService (Server)
+    participant S_NH as SceneNetworkHandler (Server)
+    participant C_NH as SceneNetworkHandler (Client)
+    participant C_SL as SceneLoaderService (Client)
+
+    S_Code->>S_SL: LoadGroupAsync("Zone_A")
+    S_SL->>S_NH: OnTransitionStarted
+    S_NH->>C_NH: SceneLoadMessage("Zone_A")
+    
+    par Server Loading
+        S_SL->>S_SL: Local Loading Workflow
+    and Client Loading
+        C_NH->>C_SL: LoadGroupAsync("Zone_A")
+        loop Every Tick
+            C_SL-->>C_NH: Progress Updates
+            C_NH->>S_NH: SceneProgressMessage(float)
+        end
+    end
+
+    S_NH->>S_SL: All Clients Ready
+    S_SL-->>S_Code: Task Completed
+```
