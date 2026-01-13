@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/eraflo/Catalyst/compare/v1.7.0...v1.8.0) (2026-01-13)
+
+
+### Features
+
+* **networking:** major architecture refactor and comprehensive documentation ([5aa28e9](https://github.com/eraflo/Catalyst/commit/5aa28e93d632b92fca2a6a32e4189f2fa6b8df47))
+
 # [1.7.0](https://github.com/eraflo/Catalyst/compare/v1.6.0...v1.7.0) (2026-01-13)
 
 
