@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Catalyst Naming Standards
 
 Exact naming conventions for the `Eraflo.Catalyst` framework to ensure high readability and consistency.

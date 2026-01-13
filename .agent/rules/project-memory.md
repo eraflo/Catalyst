@@ -1,6 +1,9 @@
-# Agent Project Memory
+---
+trigger: model_decision
+description: This document stores key technical decisions, "lessons learned", and context that might be lost across chat sessions.
+---
 
-This document stores key technical decisions, "lessons learned", and context that might be lost across chat sessions.
+# Agent Project Memory
 
 ## 🔑 Key Architectural Decisions
 - **Service Locator Usage**: We use `App.Get<T>()` and `App.Register(instance)`. The system is being transitioned from static calls to instance-based calls to improve testability.

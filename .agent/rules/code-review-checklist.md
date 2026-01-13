@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Agent Code Review Checklist
 
 Consult this checklist before delivering any task to the user to ensure quality, consistency, and non-regression.

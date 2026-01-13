@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Catalyst Framework Development Guidelines
 
 This document serves as the primary reference for best practices when coding, planning, and maintaining the `Eraflo.Catalyst` framework.
