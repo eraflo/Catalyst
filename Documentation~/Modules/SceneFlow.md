@@ -1,190 +1,273 @@
 # Scene Flow Manager
 
-The **Scene Flow Manager** is a robust system for handling complex scene transitions in Unity. It supports additive scene groups, automated loading screen management, memory cleanup, and transition events.
+A robust system for orchestrating complex scene transitions. Supports additive loading, loading screen integration, memory management, and network synchronization.
 
-## Features
+---
 
-- **Scene Groups**: Define sets of scenes that belong together (e.g., Level 1 + HUD + Persistent UI).
-- **Automated Flow**: Orchestrates the entire transition: Events -> Fade In -> Unload -> GC -> Load -> Set Active -> Fade Out.
-- **UI Abstraction**: Seamlessly integrates with any loading screen UI via the `ILoadingScreen` interface.
-- **Memory Management**: Automatically calls `Resources.UnloadUnusedAssets()` and `GC.Collect()` between loads to prevent fragmentation and memory spikes.
-- **Testable Architecture**: Uses an abstracted `ISceneManager` to allow unit testing of scene flows without physical scene assets.
+## Table of Contents
 
-## The Transition Flow
+1. [Features](#1-features)
+2. [Quick Start](#2-quick-start)
+3. [Architecture](#3-architecture)
+4. [Scene Groups](#4-scene-groups)
+5. [Loading Screens](#5-loading-screens)
+6. [Transition Flow](#6-transition-flow)
+7. [Networking](#7-networking)
+8. [Advanced Configuration](#8-advanced-configuration)
+9. [API Reference](#9-api-reference)
 
-The following diagram illustrates the sequence of operations during a scene transition:
+---
+
+## 1. Features
+
+- **Scene Groups**: Define related scenes (e.g., Gameplay + HUD + Environment) as a single unit.
+- **Automated Lifecycle**: Handles Fade In -> Unload -> Memory Cleanup -> Load -> Set Active -> Fade Out.
+- **Loading Screen Abstraction**: Works with any UI via the `ILoadingScreen` interface.
+- **Memory Optimized**: Automatic `Resources.UnloadUnusedAssets()` and `GC.Collect()` during transitions.
+- **Strategy Pattern**: Swap loading logic (Local vs. Networked) seamlessly.
+- **Event-Driven**: Hook into transitions via `SceneTransitionChannel`.
+
+---
+
+## 2. Quick Start
+
+### 2.1 Basic Scene Loading
+
+```csharp
+using UnityEngine;
+using Eraflo.Catalyst;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+public class GameFlow : MonoBehaviour
+{
+    private SceneLoaderService _sceneLoader;
+
+    void Start()
+    {
+        _sceneLoader = App.Get<SceneLoaderService>();
+
+        // 1. Define a scene group
+        var mainLevel = new SceneGroup
+        {
+            Name = "Level_1",
+            Scenes = new List<string> { "Environment_GreenHill", "UI_HUD", "Gameplay_Systems" },
+            ActiveScene = "Gameplay_Systems"
+        };
+
+        // 2. Register it
+        _sceneLoader.RegisterGroup(mainLevel);
+    }
+
+    public async void GoToLevel1()
+    {
+        // 3. Load with transition
+        await _sceneLoader.LoadGroupAsync("Level_1", showLoadingScreen: true, waitForInput: false);
+    }
+}
+```
+
+---
+
+## 3. Architecture
+
+The system uses a strategy-based approach to decouple the transition logic from the underlying loading mechanism.
+
+```mermaid
+graph TD
+    SLS[SceneLoaderService] -->|uses| LS[ILoadingScreen]
+    SLS -->|uses| STR[ISceneLoadingStrategy]
+    
+    STR -->|Local| LLS[LocalLoadingStrategy]
+    STR -->|Networked| SNH[SceneNetworkHandler]
+    
+    LLS -->|wraps| SM[ISceneManager]
+```
+
+---
+
+## 4. Scene Groups
+
+A `SceneGroup` allows you to load multiple scenes additively.
+
+- **Name**: Unique identifier for the group.
+- **Scenes**: List of scene names (must be in Build Settings).
+- **ActiveScene**: The scene that will be set as `SceneManager.SetActiveScene` after all scenes are loaded.
+
+> [!TIP]
+> Use Scene Groups to split your game into "Core Gameplay", "EnvironmentAssets", and "DynamicUI" for better lighting and memory control.
+
+---
+
+## 5. Loading Screens
+
+Implement `ILoadingScreen` to create custom transitions.
+
+```csharp
+using UnityEngine;
+using UnityEngine.UI;
+using System.Threading.Tasks;
+using Eraflo.Catalyst;
+
+public class MyLoadingScreen : MonoBehaviour, ILoadingScreen
+{
+    [SerializeField] private CanvasGroup _canvas;
+    [SerializeField] private Slider _progressBar;
+
+    // Optional: Auto-register on Awake
+    void Awake()
+    {
+        // The service will look for this via App.Get<ILoadingScreen>()
+    }
+
+    public async Task Show()
+    {
+        // Perform Fade In
+        _canvas.alpha = 1f;
+        _canvas.blocksRaycasts = true;
+        await Task.Delay(500); // Optional wait for animation
+    }
+
+    public async Task Hide()
+    {
+        // Perform Fade Out
+        _canvas.alpha = 0f;
+        _canvas.blocksRaycasts = false;
+        await Task.CompletedTask;
+    }
+
+    public void UpdateProgress(float value)
+    {
+        _progressBar.value = value;
+    }
+
+    // Required for IGameService though usually empty for UI
+    public void Initialize() { }
+    public void Shutdown() { }
+}
+```
+
+---
+
+## 6. Transition Flow
 
 ```mermaid
 sequenceDiagram
     participant App
     participant SL as SceneLoaderService
-    participant EB as EventBus
     participant UI as ILoadingScreen
-    participant SM as ISceneManager
-    participant Res as Resources/GC
-
-    App->>SL: LoadGroupAsync("Level1", ...)
-    SL->>EB: Raise(OnTransitionStarted)
+    participant Str as ILoadingStrategy
+    
+    App->>SL: LoadGroupAsync("MapX")
     SL->>UI: Show() (Fade In)
-    UI-->>SL: Completed
     
     rect rgb(240, 240, 240)
-        Note right of SL: Scene Cleanup
-        SL->>SM: Unload current scenes
-        SL->>Res: UnloadUnusedAssets & GC.Collect
+        Note over SL, Str: Cleanup
+        SL->>Str: UnloadAsync(CurrentScenes)
+        SL->>SL: GC.Collect()
     end
-
-    rect rgb(230, 250, 230)
-        Note right of SL: Scene Loading
-        loop For each Scene in Group
-            SL->>SM: LoadSceneAsync(scene, Additive)
-            SM-->>SL: Progress update
-            SL->>UI: UpdateProgress(float)
-        end
-    end
-
-    SL->>SM: SetActiveScene(activeScene)
     
-    opt If waitForInput is true
-        SL->>SL: Wait for AnyKey/Click
+    rect rgb(230, 250, 230)
+        Note over SL, Str: Loading
+        SL->>Str: LoadAsync(GroupScenes)
+        Str-->>UI: UpdateProgress(float)
     end
-
+    
+    SL->>SL: Wait for Input (Optional)
     SL->>UI: Hide() (Fade Out)
-    UI-->>SL: Completed
-    SL->>EB: Raise(OnTransitionCompleted)
-    SL-->>App: Task Completed
+    SL-->>App: Completed
 ```
 
-## How to Use
+---
 
-### 1. Registering Scene Groups
+## 7. Networking
 
-You can define and register scene groups during your initialization phase:
+The `SceneNetworkHandler` synchronizes scene loading across the network.
 
-```csharp
-var group = new SceneGroup {
-    Name = "Level_Desert",
-    Scenes = new List<string> { "Environment_Desert", "UI_HUD", "Gameplay_Core" },
-    ActiveScene = "Gameplay_Core"
-};
+### 7.1 Server Usage
 
-App.Get<SceneLoaderService>().RegisterGroup(group);
-```
-
-### 2. Triggering a Load
-
-To transition to a group:
+On the server, simply set the strategy to `SceneNetworkHandler`.
 
 ```csharp
-// Simple load
-await App.Get<SceneLoaderService>().LoadGroupAsync("Level_Desert");
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Scenes.Networking;
 
-// Load with "Press any key to continue"
-await App.Get<SceneLoaderService>().LoadGroupAsync("Level_Desert", waitForInput: true);
-```
-
-### 3. Implementing a Loading Screen
-
-Simply implement the `ILoadingScreen` interface on a MonoBehaviour:
-
-```csharp
-public class MyLoadingUI : MonoBehaviour, ILoadingScreen {
-    public CanvasGroup fadeGroup;
-    public Image progressBar;
-
-    public void Initialize() { /* Register yourself or setup */ }
-    public void Shutdown() { }
-
-    public async Task Show() {
-        await fadeGroup.DOFade(1, 0.5f).AsyncWaitForCompletion();
-    }
-
-    public async Task Hide() {
-        await fadeGroup.DOFade(0, 0.5f).AsyncWaitForCompletion();
-    }
-
-    public void UpdateProgress(float value) {
-        progressBar.fillAmount = value;
+public class NetworkFlow : MonoBehaviour
+{
+    void Start()
+    {
+        if (App.Get<NetworkManager>().IsServer)
+        {
+            App.Get<SceneLoaderService>().SetStrategy(new SceneNetworkHandler());
+        }
     }
 }
 ```
 
-## Architecture
+### 7.2 How it works
+1. **Server** starts local loading.
+2. **Backend** (e.g., NGO) broadcasts scene load commands to clients.
+3. **Clients** auto-trigger their `SceneLoaderService` (if using a networked backend).
+4. **Synchronization**: The server can wait for all clients to finish loading before hiding the loading screen.
 
-The system is built on a decoupled architecture to ensure testability and flexibility.
+---
 
-```mermaid
-classDiagram
-    class SceneLoaderService {
-        +RegisterGroup(SceneGroup group)
-        +LoadGroupAsync(string name, bool showUI, bool wait) Task
-        -ISceneManager _sceneManager
-        -ILoadingScreen _loadingScreen
+## 8. Advanced Configuration
+
+### 8.1 Events
+Subscribe to `SceneTransitionChannel` in your `PackageSettings` to trigger global logic (e.g., stop music, reset pooling).
+
+```csharp
+using Eraflo.Catalyst.Events;
+
+public class GameObserver : MonoBehaviour
+{
+    [SerializeField] private SceneTransitionChannel _onTransition;
+
+    void OnEnable() => _onTransition.OnEventRaised += HandleTransition;
+    void OnDisable() => _onTransition.OnEventRaised -= HandleTransition;
+
+    private void HandleTransition(string groupName)
+    {
+        Debug.Log($"Loading group: {groupName}");
     }
-
-    class ILoadingScreen {
-        <<interface>>
-        +Show() Task
-        +Hide() Task
-        +UpdateProgress(float value)
-    }
-
-    class ISceneManager {
-        <<interface>>
-        +LoadSceneAsync(string name, mode) Task
-        +UnloadSceneAsync(scene) Task
-    }
-
-    class SceneGroup {
-        +string Name
-        +List<string> Scenes
-        +string ActiveScene
-    }
-
-    SceneLoaderService --> ILoadingScreen : uses
-    SceneLoaderService --> ISceneManager : uses
-    SceneLoaderService --> SceneGroup : manages
-    ISceneManager <|-- UnitySceneManager : implementation
-    ISceneManager <|-- MockSceneManager : tests
+}
 ```
 
-## Networked Scene Loading
-Scene transitions can be synchronized across the network using the `SceneNetworkHandler`.
+---
 
-### Features
-- **Server-Driven**: The server initiates scene transitions for all clients.
-- **Progress Synchronization**: Clients report their loading progress, allowing the server to wait for everyone before proceeding.
-- **ISceneNetworkBackend**: A specialized interface for networking backends to implement scene loading primitives.
+## 9. API Reference
 
-### Flow
-1. **Server** calls `LoadGroupAsync`.
-2. **SceneNetworkHandler** broadcasts a `SceneLoadMessage` to clients.
-3. **Clients** receive the message and start loading locally.
-4. **Clients** poll the `SceneManager` and send progress updates back to the server.
-5. **Server** proceeds once all clients are synchronized.
+### SceneLoaderService (Service)
 
-```mermaid
-sequenceDiagram
-    participant S_Code as Server Gameplay Code
-    participant S_SL as SceneLoaderService (Server)
-    participant S_NH as SceneNetworkHandler (Server)
-    participant C_NH as SceneNetworkHandler (Client)
-    participant C_SL as SceneLoaderService (Client)
+| Member | Description |
+|--------|-------------|
+| `RegisterGroup(group)` | Add a scene group to the registry |
+| `LoadGroupAsync(name, showUI, wait)` | Main entry point for transitions |
+| `SetStrategy(strategy)` | Swap between Local or Networked loading |
+| `SetLoadingScreen(ui)` | Force a specific loading screen instance |
+| `UnloadUnusedAssetsAsync()`| Manual memory cleanup helper |
 
-    S_Code->>S_SL: LoadGroupAsync("Zone_A")
-    S_SL->>S_NH: OnTransitionStarted
-    S_NH->>C_NH: SceneLoadMessage("Zone_A")
-    
-    par Server Loading
-        S_SL->>S_SL: Local Loading Workflow
-    and Client Loading
-        C_NH->>C_SL: LoadGroupAsync("Zone_A")
-        loop Every Tick
-            C_SL-->>C_NH: Progress Updates
-            C_NH->>S_NH: SceneProgressMessage(float)
-        end
-    end
+### ILoadingScreen (Interface)
 
-    S_NH->>S_SL: All Clients Ready
-    S_SL-->>S_Code: Task Completed
-```
+| Member | Description |
+|--------|-------------|
+| `Show()` | Called at start (Async Fade In) |
+| `Hide()` | Called at end (Async Fade Out) |
+| `UpdateProgress(f)`| Called during the load phase (0.0 to 1.0) |
+
+### SceneGroup (Class)
+
+| Field | Description |
+|-------|-------------|
+| `Name` | Unique identifier used for loading |
+| `Scenes` | List of scene path names |
+| `ActiveScene` | Scene to set active after loading |
+
+---
+
+## See Also
+
+- [Networking](Networking.md): Network backend details
+- [Asset Management](AssetManagement.md): Dynamic scene loading tips
+- [Event Bus](EventBus.md): Channel communication
