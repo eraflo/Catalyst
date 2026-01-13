@@ -1,3 +1,15 @@
+# [1.7.0](https://github.com/eraflo/Catalyst/compare/v1.6.0...v1.7.0) (2026-01-13)
+
+
+### Bug Fixes
+
+* network ownership missing hook ([ecf8973](https://github.com/eraflo/Catalyst/commit/ecf89736f3b472aaab57cf51f9da3ec7e455c357))
+
+
+### Features
+
+* new HFSM module ([570b8a4](https://github.com/eraflo/Catalyst/commit/570b8a4446d86fd69e4b20af607dc7f4fc2c579a))
+
 # [1.6.0](https://github.com/eraflo/Catalyst/compare/v1.5.0...v1.6.0) (2026-01-12)
 
 
