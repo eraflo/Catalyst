@@ -66,9 +66,9 @@ namespace Eraflo.Catalyst.Networking
         /// <summary>
         /// Gets the object instance for a given network ID.
         /// </summary>
-        public T GetObject<T>(uint networkId) where T : class
+        public T GetObject<T>(uint networkId)
         {
-            return _idToObject.TryGetValue(networkId, out object obj) ? obj as T : null;
+            return _idToObject.TryGetValue(networkId, out object obj) && obj is T typedObj ? typedObj : default;
         }
 
         /// <summary>

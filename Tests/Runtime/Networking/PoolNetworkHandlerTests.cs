@@ -42,6 +42,7 @@ namespace Eraflo.Catalyst.Tests
         {
             _network.Stop();
             _pool.ClearAllPools();
+            App.Shutdown();
         }
 
         [Test]

@@ -73,5 +73,18 @@ namespace Eraflo.Catalyst.Networking
         {
             return _ownershipMap.TryGetValue(networkId, out ulong ownerId) ? ownerId : 0;
         }
+
+        #region INetworkMessageHandler
+
+        public void OnRegistered() { }
+        public void OnUnregistered() { }
+        public void OnNetworkConnected() { }
+        
+        public void OnNetworkDisconnected()
+        {
+            _ownershipMap.Clear();
+        }
+
+        #endregion
     }
 }

@@ -79,7 +79,8 @@ namespace Eraflo.Catalyst.Pooling
         /// </summary>
         public void DespawnNetworked<T>(T instance, NetworkTarget target = NetworkTarget.Clients) where T : class
         {
-            if (!_network.IsConnected || !_objectToId.TryGetValue(instance, out uint id)) return;
+            uint id = GetId(instance);
+            if (!_network.IsConnected || id == 0) return;
 
             // Authority check
             var ownership = App.Get<NetworkOwnershipManager>();
