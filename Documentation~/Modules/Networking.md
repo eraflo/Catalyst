@@ -726,6 +726,64 @@ public class LANDiscoveryExample : MonoBehaviour
 }
 ```
 
+### 7.4 Network Actions (Lightweight RPCs)
+
+The `NetworkActionManager` provides a simple way to trigger remote actions **without defining custom message classes**. Ideal for quick events like damage, pickups, or UI notifications.
+
+```csharp
+using UnityEngine;
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Networking;
+using Eraflo.Catalyst.Networking.Features.Actions;
+
+public class NetworkActionsExample : MonoBehaviour
+{
+    private NetworkActionManager _actions;
+    
+    void Start()
+    {
+        _actions = App.Get<NetworkActionManager>();
+        
+        // Register handlers for incoming actions
+        _actions.RegisterAction("PlayerDamaged", OnPlayerDamaged);
+        _actions.RegisterAction("ItemPickedUp", OnItemPickedUp);
+    }
+    
+    // Send action to all other clients
+    public void TakeDamage(int damage, int attackerId)
+    {
+        // Trigger sends to Others by default
+        _actions.Trigger("PlayerDamaged", damage, attackerId);
+    }
+    
+    // Send action to specific target
+    public void PickupItem(string itemId)
+    {
+        // Send to server only
+        _actions.TriggerToTarget("ItemPickedUp", NetworkTarget.Server, itemId);
+    }
+    
+    // Handler receives raw payload
+    private void OnPlayerDamaged(byte[] payload)
+    {
+        var data = NetworkSerializer.Deserialize<object[]>(payload);
+        int damage = (int)data[0];
+        int attackerId = (int)data[1];
+        Debug.Log($"Player took {damage} damage from attacker {attackerId}");
+    }
+    
+    private void OnItemPickedUp(byte[] payload)
+    {
+        var data = NetworkSerializer.Deserialize<object[]>(payload);
+        string itemId = (string)data[0];
+        Debug.Log($"Item picked up: {itemId}");
+    }
+}
+```
+
+> [!TIP]
+> Use Network Actions for simple fire-and-forget events. For complex data or type safety, prefer `INetworkMessage` classes.
+
 ---
 
 ## 8. Module Integrations
