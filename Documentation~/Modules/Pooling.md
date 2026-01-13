@@ -1,323 +1,275 @@
 # Object Pooling System
 
-A generic, thread-safe, async-safe, multiplayer-ready object pooling system.
+A generic, thread-safe, and network-ready object pooling system. Seamlessly handles both C# classes and Unity Prefabs with automatic lifecycle management and sync.
 
-## Quick Start
+---
+
+## Table of Contents
+
+1. [Features](#1-features)
+2. [Quick Start](#2-quick-start)
+3. [Architecture](#3-architecture)
+4. [Generic Pooling (C# Classes)](#4-generic-pooling-c-classes)
+5. [Prefab Pooling (GameObjects)](#5-prefab-pooling-gameobjects)
+6. [Lifecycle Callbacks (IPoolable)](#6-lifecycle-callbacks-ipoolable)
+7. [Networking](#7-networking)
+8. [Performance & Metrics](#8-performance--metrics)
+9. [API Reference](#9-api-reference)
+
+---
+
+## 1. Features
+
+- **Consolidated API**: One service (`Pool`) for all pool types
+- **Thread-Safe**: Safe for multi-threaded access (via `GenericPool`)
+- **Prefab Support**: Automated `GameObject` activation/deactivation
+- **Timer Integration**: Built-in methods for time-based despawning
+- **Pre-allocation**: Warmup pools to avoid runtime spikes
+- **Network Sync**: Synchronize spawns/despawns across clients
+- **Real-time Metrics**: Track active, peak, and total counts
+
+---
+
+## 2. Quick Start
+
+### 2.1 Basic Usage
 
 ```csharp
+using UnityEngine;
+using Eraflo.Catalyst;
 using Eraflo.Catalyst.Pooling;
 
-// 1. Get the service
-var pool = App.Get<Pool>();
-
-// Generic objects
-var handle = pool.GetFromPool<Bullet>();
-pool.ReleaseToPool(handle);
-
-// Prefabs (GameObjects)
-var vfx = pool.SpawnObject(explosionPrefab, transform.position);
-pool.DespawnObject(vfx);
-
-// Auto-despawn after 2 seconds
-pool.SpawnObjectTimed(particlePrefab, pos, 2f);
-
-// Pre-allocate for performance
-pool.Warmup<Bullet>(100);
-pool.WarmupObject(enemyPrefab, 20);
-```
-
----
-
-## Architecture
-
-```mermaid
-graph TB
-    subgraph "Service Locator"
-        SL["ServiceLocator / App"]
-    end
-
-    subgraph "Pooling API"
-        PF["Pool (Service)"]
-        PH["PoolHandle&lt;T&gt;"]
-    end
-
-    subgraph "Core"
-        GP["GenericPool&lt;T&gt;"]
-        PP["PrefabPool"]
-        PO["PooledObject"]
-    end
-
-    subgraph "Features"
-        PM["PoolMetrics"]
-        NPS["NetworkPoolSync"]
-    end
-
-    SL -- "Get<Pool>()" --> PF
-    PF --> GP
-    PF --> PP
-    PP --> PO
-    PF --> PM
-    PF --> PNH["PoolNetworkHandler"]
-    PNH -.-> IPB["IPoolNetworkBackend"]
-```
-
-### Modular Networking
-The pool system is decoupled from specific networking backends. It communicates with the active backend using the `IPoolNetworkBackend` interface. This follows the **Owner Inversion** pattern, where the Pooling module defines what it needs from the network.
-
----
-
-## Features
-
-### Generic Pool (Any Class)
-
-```csharp
-var pool = App.Get<Pool>();
-
-// Get from pool
-var handle = pool.GetFromPool<MyClass>();
-var instance = handle.Instance;
-
-// Use the object...
-instance.DoSomething();
-
-// Return to pool
-pool.ReleaseToPool(handle);
-```
-
-### Prefab Pool (GameObjects)
-
-```csharp
-var pool = App.Get<Pool>();
-
-// Spawn prefab
-var handle = pool.SpawnObject(prefab, position, rotation);
-
-// Access the GameObject
-handle.Instance.transform.LookAt(target);
-
-// Despawn (return to pool)
-pool.DespawnObject(handle);
-```
-
-### IPoolable Callbacks
-
-```csharp
-public class Bullet : MonoBehaviour, IPoolable
+public class SpawnerExample : MonoBehaviour
 {
-    public void OnSpawn()
+    [SerializeField] private GameObject _prefab;
+    
+    private Pool _pool;
+    
+    void Start()
     {
-        // Reset state when spawned
-        velocity = Vector3.zero;
-        damage = 10;
+        _pool = App.Get<Pool>();
+        
+        // Warmup for performance
+        _pool.WarmupObject(_prefab, 10);
     }
-
-    public void OnDespawn()
+    
+    void Update()
     {
-        // Cleanup when returned to pool
-        trail.Clear();
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            // Spawn from pool
+            var handle = _pool.SpawnObject(_prefab, transform.position, Quaternion.identity);
+            
+            // Auto-despawn after 2 seconds
+            _pool.DespawnObject(handle, 2f); 
+        }
     }
 }
 ```
 
-### Timer Integration
+---
 
-```csharp
-// Auto-despawn after duration
-App.Get<Pool>().SpawnObjectTimed(explosionPrefab, pos, 2f);
+## 3. Architecture
 
-// PooledObject component also supports this:
-pooledObject.DespawnAfter(3f);
-```
+```mermaid
+graph TB
+    subgraph "Service Locator"
+        SL["App"]
+    end
 
-### Warmup (Pre-allocation)
+    subgraph "Pooling API"
+        PF["Pool (Service)"]
+        PH["PoolHandle<T>"]
+    end
 
-```csharp
-// Generic pool warmup
-var pool = App.Get<Pool>();
-pool.Warmup<Bullet>(100);
+    subgraph "Internal Pools"
+        GP["GenericPool<T>"]
+        PP["PrefabPool"]
+        PO["PooledObject"]
+    end
 
-// Prefab pool warmup
-pool.WarmupObject(enemyPrefab, 20);
+    SL -->|"Get<Pool>()"| PF
+    PF --> GP
+    PF --> PP
+    PP --> PO
 ```
 
 ---
 
-## Thread Safety
+## 4. Generic Pooling (C# Classes)
 
-The pool system is thread-safe when `PackageRuntime.IsThreadSafe` is enabled.
+Pool any C# class with a parameterless constructor.
 
 ```csharp
-// Operations from any thread are safe
-await Task.Run(() =>
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Pooling;
+
+public class DataSystem
 {
-    var pool = App.Get<Pool>();
-    var handle = pool.GetFromPool<MyClass>();
-    pool.ReleaseToPool(handle);
-});
+    public void Process()
+    {
+        Pool pool = App.Get<Pool>();
+        
+        // Get handle from pool
+        PoolHandle<MyData> handle = pool.GetFromPool<MyData>();
+        
+        // Use instance
+        handle.Instance.Reset();
+        handle.Instance.Value = 42;
+        
+        // Return to pool when done
+        pool.ReleaseToPool(handle);
+    }
+}
+
+public class MyData { public int Value; public void Reset() => Value = 0; }
 ```
 
 ---
 
-## Networking
+## 5. Prefab Pooling (GameObjects)
 
-Handlers are auto-registered via `PackageSettings`.
+Optimized for Unity GameObjects and Components.
 
-### Spawning (Server → Target)
+### 5.1 Spawning and Despawning
 
 ```csharp
-// SERVER: Spawn and broadcast to all clients (default)
-var handle = pool.SpawnNetworked(prefab, pos, rot);  // Local spawn + network sync
-uint id = handle.GetNetworkId();                    // Universal ID access
-handle.DespawnNetworked();                          // Local despawn + network sync
+// Simple spawn
+var handle = pool.SpawnObject(prefab, pos, rot);
 
-var dataHandle = pool.GetFromPoolNetworked<MyData>(); // C# class sync
-dataHandle.DespawnNetworked();
+// Spawn and auto-despawn
+pool.SpawnObjectTimed(prefab, pos, 3f);
 
-// SERVER: Spawn and broadcast to specific target
-var h = pool.SpawnNetworked(
-    prefab, pos, Quaternion.identity,
-    data: null,
-    target: NetworkTarget.All
-);
+// Despawn manually
+pool.DespawnObject(handle);
 ```
 
-### Despawning (Server → Target)
+### 5.2 Component Access
 
 ```csharp
-// SERVER: Despawn and notify all clients (default)
-handle.DespawnNetworked();
-
-// SERVER: Despawn with specific target
-handle.DespawnNetworked(NetworkTarget.All);
-```
-
-### Manual Registration
-
-```csharp
-// SERVER: Register existing object for networking
-var pool = App.Get<Pool>();
-var handle = pool.SpawnObject(prefab, pos);
-App.Get<NetworkIdManager>().Register(123, handle); // Manual registration
-
-// SERVER: Unregister when done
-App.Get<NetworkIdManager>().Unregister(handle);
-```
-
-### Client Handling
-
-```csharp
-// CLIENT: IDs and instances are automatically synced in NetworkIdManager
-var obj = App.Get<NetworkIdManager>().GetObject<GameObject>(id);
-```
-
-### Universal ID & Deconstruction
-You can easily retrieve the network ID from any `PoolHandle` using the universal extension or the C# 7.0 deconstruction pattern.
-
-```csharp
-// Method 1: Extension method
-uint id = handle.GetNetworkId();
-
-// Method 2: Deconstruction
-var (h, networkId) = handle;
-```
-
-See [Networking.md](Networking.md) for details.
-
----
-
-## Metrics
-
-```csharp
-var metrics = App.Get<Pool>().Metrics;
-
-metrics.TotalSpawned;     // Total objects spawned
-metrics.TotalDespawned;   // Total objects despawned
-metrics.ActiveCount;      // Currently active
-metrics.PeakActiveCount;  // Peak simultaneous active
+// Get directly as a component type
+PoolHandle<Bullet> handle = pool.SpawnObject<Bullet>(bulletPrefab, pos, rot);
+handle.Instance.Initialize();
 ```
 
 ---
 
-## Editor Tools
+## 6. Lifecycle Callbacks (IPoolable)
 
-### Pool Debugger Window
+Implement `IPoolable` to receive callbacks when an object enters or leaves the pool.
 
-**Tools > Eraflo Catalyst > Pool Debugger**
+```csharp
+using UnityEngine;
+using Eraflo.Catalyst.Pooling;
 
-Shows:
-- List of all active pools
-- Active/Available counts per pool
-- Real-time metrics
-- Clear pool buttons
-
-### PooledObject Inspector
-
-Shows:
-- Current spawn state (Spawned/Pooled)
-- Handle ID and Pool ID
-- Time since spawn
-- Quick Despawn buttons
+public class PooledVFX : MonoBehaviour, IPoolable
+{
+    [SerializeField] private ParticleSystem _particles;
+    
+    public void OnSpawn()
+    {
+        // Reset state and play
+        _particles.Play();
+    }
+    
+    public void OnDespawn()
+    {
+        // Stop and cleanup
+        _particles.Stop();
+        _particles.Clear();
+    }
+}
+```
 
 ---
 
-## API Reference
+## 7. Networking
 
-### Pool
+Sync pool operations across the network with `PoolNetworkHandler`.
+
+### 7.1 Synchronized Spawning
+
+```csharp
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Pooling;
+using Eraflo.Catalyst.Networking;
+
+// On Server
+var handle = pool.SpawnNetworked(prefab, pos, rot);
+
+// On Clients
+// Handled automatically via PoolNetworkHandler!
+```
+
+### 7.2 Universal Network ID deconstruction
+
+```csharp
+// Easily get the network ID from a pool handle
+var (handle, networkId) = pool.SpawnNetworked(prefab, pos, rot);
+```
+
+---
+
+## 8. Performance & Metrics
+
+### 8.1 Warmup
+
+Avoid frame drops by pre-allocating objects during loading or scene start.
+
+```csharp
+pool.Warmup<MyData>(50);          // Pre-allocate 50 C# objects
+pool.WarmupObject(bulletPrefab, 100); // Pre-allocate 100 prefabs
+```
+
+### 8.2 Monitoring
+
+```csharp
+var info = pool.GetDebugInfo();
+foreach (var poolInfo in info)
+{
+    Debug.Log($"Pool: {poolInfo.Name} | Active: {poolInfo.ActiveCount} | Available: {poolInfo.AvailableCount}");
+}
+```
+
+---
+
+## 9. API Reference
+
+### Pool (Service)
 
 | Method | Description |
 |--------|-------------|
-| `GetFromPool<T>()` | Get object from generic pool |
-| `ReleaseToPool<T>(handle)` | Return object to generic pool |
-| `SpawnObject(prefab, pos, rot)` | Spawn prefab from pool |
-| `SpawnObjectTimed(prefab, pos, duration)` | Spawn with auto-despawn |
-| `DespawnObject(handle)` | Return prefab to pool |
-| `Warmup<T>(count)` | Pre-allocate generic objects |
-| `WarmupObject(prefab, count)` | Pre-allocate prefabs |
-| `ClearFromPool<T>()` | Clear specific generic pool |
-| `ClearObject(prefab)` | Clear specific prefab pool |
-| `ClearAll()` | Clear all pools |
+| `GetFromPool<T>()` | Get C# object from pool |
+| `ReleaseToPool<T>(handle)` | Return C# object to pool |
+| `SpawnObject(prefab, pos, rot)` | Spawn GameObject from pool |
+| `SpawnObjectTimed(prefab, pos, duration)` | Spawn with auto-timer |
+| `DespawnObject(handle, [delay])` | Return to pool (optional delay) |
+| `Warmup<T>(count)` | Pre-allocate C# objects |
+| `WarmupObject(prefab, count)` | Pre-allocate prefab instances |
+| `ClearAllPools()` | Full cleanup of all pools |
 
 ### PoolHandle<T>
 
 | Property | Description |
 |----------|-------------|
-| `Id` | Unique handle ID |
+| `Id` | Unique instance ID |
 | `Instance` | The pooled object |
-| `PoolId` | Pool identifier |
-| `SpawnTime` | Timestamp when spawned |
-| `IsValid` | Whether handle is valid |
+| `IsValid` | Whether the handle is active |
+| `SpawnTime` | Realtime timestamp of spawn |
 
-### PooledObject
+### PooledObject (Component)
 
-| Property | Description |
-|----------|-------------|
-| `HandleId` | Current handle ID |
-| `PoolId` | Pool identifier |
-| `IsSpawned` | Whether currently spawned |
-| `TimeSinceSpawn` | Seconds since spawn |
-| `Despawn()` | Return to pool |
-| `DespawnAfter(delay)` | Delayed despawn |
+| Property/Method | Description |
+|-----------------|-------------|
+| `IsSpawned` | Current pooling state |
+| `TimeSinceSpawn`| Elapsed time since activation |
+| `Despawn()` | Manual despawn via component |
+| `DespawnAfter(t)` | Scheduled despawn |
 
 ---
 
-## File Structure
+## See Also
 
-```
-Runtime/Pooling/
-├── Core/
-│   ├── IPoolable.cs
-│   ├── PoolHandle.cs
-│   ├── GenericPool.cs
-│   └── Pool.cs
-├── Prefabs/
-│   ├── PrefabPool.cs
-│   └── PooledObject.cs
-└── Features/
-    ├── PoolMetrics.cs
-    ├── PoolNetworkHandler.cs
-    └── PoolNetworkExtensions.cs
-
-Editor/Pooling/
-├── PoolDebuggerWindow.cs
-└── PooledObjectEditor.cs
-```
+- [Asset Management](AssetManagement.md): Loading prefabs for pooling
+- [Chronos Manager](../Core/ChronosManager.md): Time scaling for timed despawns
+- [Networking](Networking.md): Network sync details
