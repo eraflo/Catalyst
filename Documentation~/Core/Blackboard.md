@@ -1,120 +1,358 @@
 # Blackboard Service
 
-The Blackboard is a hierarchy-aware shared data container. It allows different systems to share and override data in a decoupled way, supporting both global and localized scoping.
+The Blackboard is a hierarchy-aware shared data container. It allows different systems to share and override data in a decoupled way, supporting global, scoped, and per-entity contexts.
 
-## Key Features
+---
 
-- **Hierarchical Scoping**: A blackboard can have a parent. If a key is not found locally, it recursively searches up the parent chain.
-- **Thread-Safety**: Integrated with the Catalyst thread-safe runtime.
-- **Persistence**: Fully integrated with the `SaveManager`. The **Global** blackboard is persisted automatically.
-- **Type-Safe**: Provides generic `Set<T>` and `Get<T>` methods.
-- **Reactive**: Support for general and key-specific change listeners via `OnValueChanged` and `RegisterListener`.
+## Table of Contents
 
-## Architecture
+1. [Features](#1-features)
+2. [Architecture](#2-architecture)
+3. [Quick Start](#3-quick-start)
+4. [Scoped Blackboards](#4-scoped-blackboards)
+5. [Change Listeners](#5-change-listeners)
+6. [Persistence](#6-persistence)
+7. [API Reference](#7-api-reference)
 
-### Hierarchical Lookup
-When a value is requested, the blackboard searches its local data. If not found, it delegates the request to its parent, continuing until a value is found or the root is reached.
+---
+
+## 1. Features
+
+- **Hierarchical Scoping**: Blackboards can have parents; missing keys search up the hierarchy
+- **Type-Safe**: Generic `Set<T>` and `Get<T>` methods with type checking
+- **Thread-Safe**: Optional thread safety controlled by `PackageRuntime.IsThreadSafe`
+- **Reactive**: Global and key-specific change listeners
+- **Serializable**: Full JSON serialization for editor and save system
+- **Persistence**: Global blackboard auto-persists with `SaveManager`
+
+---
+
+## 2. Architecture
+
+### 2.1 Hierarchical Lookup
 
 ```mermaid
 flowchart TD
-    Req[Get 'Key'] --> Local{Found Locally?}
+    Req["Get(key)"] --> Local{Found Locally?}
     Local -- Yes --> Return[Return Value]
     Local -- No --> Parent{Has Parent?}
     Parent -- Yes --> SearchParent[Search in Parent]
     SearchParent --> Local
-    Parent -- No --> Default[Return null/default]
+    Parent -- No --> Default[Return default]
 ```
 
-### Persistence Flow
-The `BlackboardManager` bridges the `Blackboard` system with the `SaveManager`.
+### 2.2 System Overview
 
 ```mermaid
-sequenceDiagram
-    participant S as SaveManager
-    participant BM as BlackboardManager
-    participant G as Global Blackboard
+graph TD
+    BM[BlackboardManager] --> Global[Global Blackboard]
+    BM -->|CreateScoped| Scoped[Scoped Blackboard]
+    Scoped -->|parent| Global
     
-    Note over S, G: Saving
-    S->>BM: SaveState()
-    BM->>G: GetEntries() (Deep Copy)
-    G->>BM: Entry List
-    BM->>S: Return State Object
+    AI[AI Agent] --> AgentBB[Agent Blackboard]
+    AgentBB -->|parent| Global
     
-    Note over S, G: Loading
-    S->>BM: LoadState(data)
-    BM->>G: RestoreEntries(entries)
-    G->>G: Clear & Re-Initialize
+    SaveManager -->|ISaveable| BM
 ```
 
-## Usage
+---
 
-### Accessing the Global Blackboard
+## 3. Quick Start
 
-The global blackboard is managed by the `BlackboardManager` service.
+### 3.1 Access the Global Blackboard
+
+```csharp
+using UnityEngine;
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Core.Blackboard;
+
+public class GameManager : MonoBehaviour
+{
+    void Start()
+    {
+        // Get the global blackboard
+        Blackboard bb = App.Get<BlackboardManager>().Global;
+        
+        // Set values
+        bb.Set("PlayerName", "Hero");
+        bb.Set("Score", 0);
+        bb.Set("IsGameOver", false);
+        
+        // Get values
+        string name = bb.Get<string>("PlayerName");
+        int score = bb.Get<int>("Score");
+        bool gameOver = bb.Get<bool>("IsGameOver");
+        
+        Debug.Log($"Player: {name}, Score: {score}");
+    }
+}
+```
+
+### 3.2 Basic Operations
 
 ```csharp
 using Eraflo.Catalyst;
 using Eraflo.Catalyst.Core.Blackboard;
 
-// Get the global blackboard
-var blackboard = App.Get<BlackboardManager>().Global;
-
-// Set a value
-blackboard.Set("Score", 100);
-
-// Get a value
-int score = blackboard.Get<int>("Score");
+public class BlackboardExample
+{
+    void Example()
+    {
+        Blackboard bb = App.Get<BlackboardManager>().Global;
+        
+        // Set
+        bb.Set("Health", 100);
+        
+        // Get with default if not found
+        int health = bb.Get<int>("Health");      // 100
+        int mana = bb.Get<int>("Mana");          // 0 (default for int)
+        
+        // TryGet for safe access
+        if (bb.TryGet<int>("Health", out int hp))
+        {
+            Debug.Log($"Health: {hp}");
+        }
+        
+        // Check existence
+        bool hasHealth = bb.Contains("Health");  // true
+        bool hasMana = bb.Contains("Mana");      // false
+        
+        // Remove
+        bb.Remove("Health");
+        
+        // Clear all
+        bb.Clear();
+        
+        // Get all keys
+        List<string> keys = bb.GetAllKeys();
+    }
+}
 ```
 
-### Scoped Blackboards
+---
 
-You can create a "scoped" blackboard that inherits from the global one. This is useful for AI, localized states, or temporary contexts.
+## 4. Scoped Blackboards
+
+Create child blackboards that inherit from the global one. Useful for AI, level contexts, or temporary states.
+
+### 4.1 Creating a Scoped Blackboard
 
 ```csharp
-var bm = App.Get<BlackboardManager>();
-var scoped = bm.CreateScoped();
+using UnityEngine;
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Core.Blackboard;
 
-// This will find the value in the global blackboard if it exists there
-int globalScore = scoped.Get<int>("Score");
-
-// This only affects the scoped blackboard
-scoped.Set("LocalTarget", someObject);
+public class AIAgent : MonoBehaviour
+{
+    private Blackboard _agentBlackboard;
+    
+    void Start()
+    {
+        BlackboardManager bm = App.Get<BlackboardManager>();
+        
+        // Create a scoped blackboard (inherits from global)
+        _agentBlackboard = bm.CreateScoped();
+        
+        // Set agent-specific values
+        _agentBlackboard.Set("Target", transform);
+        _agentBlackboard.Set("AlertLevel", 0);
+    }
+    
+    void OnThreatDetected(Transform threat)
+    {
+        // Local override - only affects this agent
+        _agentBlackboard.Set("Target", threat);
+        _agentBlackboard.Set("AlertLevel", 100);
+        
+        // Global values are still accessible
+        string playerName = _agentBlackboard.Get<string>("PlayerName");
+    }
+}
 ```
 
-### Value Overriding
-
-If you set a value in a scoped blackboard that already exists in the parent, the scoped value takes precedence for that blackboard and its children.
+### 4.2 Value Overriding
 
 ```csharp
+Blackboard global = App.Get<BlackboardManager>().Global;
+Blackboard scoped = App.Get<BlackboardManager>().CreateScoped();
+
+// Set in global
 global.Set("Gravity", 9.81f);
+
+// Read from scoped (finds in parent)
+float gravity = scoped.Get<float>("Gravity"); // 9.81
+
+// Override in scoped
 scoped.Set("Gravity", 1.62f); // Moon gravity for this context
 
-float g = scoped.Get<float>("Gravity"); // Returns 1.62
+// Now scoped returns local value
+gravity = scoped.Get<float>("Gravity"); // 1.62
+
+// Global is unchanged
+gravity = global.Get<float>("Gravity"); // 9.81
 ```
 
-### Change Listeners
+### 4.3 Custom Parent Hierarchy
 
-#### Global Listener
 ```csharp
-blackboard.OnValueChanged += (key, oldVal, newVal) => {
-    Debug.Log($"Key {key} changed from {oldVal} to {newVal}");
-};
+// Create custom hierarchy: agent -> team -> global
+Blackboard teamBlackboard = new Blackboard();
+teamBlackboard.SetParent(App.Get<BlackboardManager>().Global);
+
+Blackboard agentBlackboard = new Blackboard();
+agentBlackboard.SetParent(teamBlackboard);
+
+// Agent can access team and global values
+teamBlackboard.Set("TeamObjective", "CaptureFlag");
+string objective = agentBlackboard.Get<string>("TeamObjective"); // "CaptureFlag"
 ```
 
-#### Key-Specific Listener
+---
+
+## 5. Change Listeners
+
+### 5.1 Global Change Listener
+
 ```csharp
-blackboard.RegisterListener("Score", (oldVal, newVal) => {
-    UpdateScoreUI((int)newVal);
-});
+using UnityEngine;
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Core.Blackboard;
+
+public class BlackboardDebugger : MonoBehaviour
+{
+    private Blackboard _bb;
+    
+    void Start()
+    {
+        _bb = App.Get<BlackboardManager>().Global;
+        
+        // Listen to ALL changes
+        _bb.OnValueChanged += OnAnyValueChanged;
+    }
+    
+    void OnDestroy()
+    {
+        if (_bb != null)
+            _bb.OnValueChanged -= OnAnyValueChanged;
+    }
+    
+    void OnAnyValueChanged(string key, object oldValue, object newValue)
+    {
+        Debug.Log($"[Blackboard] '{key}' changed: {oldValue} -> {newValue}");
+    }
+}
 ```
 
-## Save System Integration
+### 5.2 Key-Specific Listener
 
-The `BlackboardManager` implements `ISaveable`. During a save operation, it captures all entries from the `Global` blackboard. These are restored automatically when the game state is loaded.
+```csharp
+using UnityEngine;
+using UnityEngine.UI;
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Core.Blackboard;
+
+public class ScoreDisplay : MonoBehaviour
+{
+    [SerializeField] private Text _scoreText;
+    
+    private Blackboard _bb;
+    private Action<object, object> _scoreListener;
+    
+    void Start()
+    {
+        _bb = App.Get<BlackboardManager>().Global;
+        
+        // Lambda for cleanup
+        _scoreListener = (oldVal, newVal) =>
+        {
+            if (newVal is int score)
+                _scoreText.text = $"Score: {score}";
+        };
+        
+        // Register for specific key
+        _bb.RegisterListener("Score", _scoreListener);
+        
+        // Initialize display
+        _scoreText.text = $"Score: {_bb.Get<int>("Score")}";
+    }
+    
+    void OnDestroy()
+    {
+        // Always unregister
+        _bb?.UnregisterListener("Score", _scoreListener);
+    }
+}
+```
+
+---
+
+## 6. Persistence
+
+### 6.1 Automatic Save
+
+The `BlackboardManager` implements `ISaveable`. The global blackboard is automatically saved/loaded with the game state.
+
+```csharp
+// Set values that will be persisted
+Blackboard bb = App.Get<BlackboardManager>().Global;
+bb.Set("CurrentLevel", 5);
+bb.Set("UnlockedAchievements", new List<string> { "FirstBlood", "Unstoppable" });
+
+// When SaveManager.SaveGame() is called, these are persisted
+// When SaveManager.LoadGame() is called, they are restored
+```
 
 > [!IMPORTANT]
-> To be persisted, values in the blackboard must be serializable by the `JsonSerializer`. Custom types may require specific converters if they are complex.
+> Values must be JSON-serializable. Complex types may need custom JsonConverters.
 
-## Editor Integration
+### 6.2 Supported Types
 
-Catalyst provides a **Blackboard Panel** in the Behaviour Tree editor and a **Blackboard Runtime Viewer** in the `BehaviourTreeRunner` inspector. These allow you to monitor and modify blackboard values in real-time during Play Mode.
+- Primitives: `int`, `float`, `bool`, `string`
+- Unity types: `Vector2`, `Vector3`, `Color` (via built-in converters)
+- Collections: `List<T>`, `Dictionary<K,V>` (if contents are serializable)
+- Custom classes: Must be `[Serializable]` or have JsonConverter
+
+---
+
+## 7. API Reference
+
+### BlackboardManager (Service)
+
+| Member | Description |
+|--------|-------------|
+| `Blackboard Global` | The global blackboard instance |
+| `CreateScoped()` | Create a new blackboard with Global as parent |
+
+### Blackboard
+
+**Properties:**
+
+| Member | Type | Description |
+|--------|------|-------------|
+| `OnValueChanged` | `Action<string, object, object>` | Event: (key, oldValue, newValue) |
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `Set<T>(key, value)` | Set a value |
+| `T Get<T>(key)` | Get value or default |
+| `bool TryGet<T>(key, out T value)` | Try get with success bool |
+| `bool Contains(key)` | Check if key exists (including parents) |
+| `bool Remove(key)` | Remove a local key |
+| `void Clear()` | Clear all local entries |
+| `List<string> GetAllKeys()` | Get all local keys |
+| `Dictionary<string, Type> GetKeysAndTypes()` | Get keys with their types |
+| `void Rename(oldKey, newKey)` | Rename a key |
+| `Blackboard Clone()` | Deep clone the blackboard |
+| `void SetParent(Blackboard)` | Set the parent blackboard |
+| `void RegisterListener(key, callback)` | Listen to specific key changes |
+| `void UnregisterListener(key, callback)` | Stop listening to key |
+
+---
+
+## See Also
+
+- [Service Locator](ServiceLocator.md): Accessing `BlackboardManager`
+- [Persistence](Persistence.md): Save system integration
+- [Behaviour Trees](../BehaviourTree/README.md): AI using blackboards
