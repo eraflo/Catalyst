@@ -1,3 +1,11 @@
+## [1.8.1](https://github.com/eraflo/Catalyst/compare/v1.8.0...v1.8.1) (2026-01-14)
+
+
+### Bug Fixes
+
+* change ci/cd to not have crash on first try of ci/cd ([a9ac2b6](https://github.com/eraflo/Catalyst/commit/a9ac2b6806907dd19aefee8d63befb94c7f94925))
+* created rules for agent in right location ([c20e244](https://github.com/eraflo/Catalyst/commit/c20e244a38a9187030d2b115cbe45f73d01dba23))
+
 # [1.8.0](https://github.com/eraflo/Catalyst/compare/v1.7.0...v1.8.0) (2026-01-13)
 
 
