@@ -60,23 +60,31 @@ jobs:
         with:
           path: package
 
-      # Cache Unity Library folder (speeds up compilation)
-      - name: Cache Library
-        uses: actions/cache@v3
-        with:
-          path: TestProject/Library
-          key: Library-${{ hashFiles('package/**/*.cs', 'package/**/*.asmdef') }}
-          restore-keys: |
-            Library-
+      # 1. Free Disk Space & Create Swap (Virtual RAM)
+      # This prevents the "Exit Code 1" crash (OOM) occurring between license check and testing start
+      - name: Free Disk Space & Create Swap
+        run: |
+          # Free up space for the swap file
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          
+          # Create a 4GB Swap file to act as extra RAM
+          sudo fallocate -l 4G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
 
-      # Create a temporary Unity project
+      # 2. Create the test project structure first (needed before cache restoration)
       - name: Create test project
         run: |
           mkdir -p TestProject/Assets
           mkdir -p TestProject/Packages
           mkdir -p TestProject/ProjectSettings
 
-          # Create manifest.json with package reference and required dependencies
+          # Create manifest.json
           cat > TestProject/Packages/manifest.json << 'EOF'
           {
             "dependencies": {
@@ -88,21 +96,18 @@ jobs:
               "com.unity.modules.ui": "1.0.0",
               "com.unity.modules.unitywebrequest": "1.0.0",
               "com.unity.modules.audio": "1.0.0"
-
             },
-            "testables": [
-              "com.eraflo.catalyst"
-            ]
+            "testables": ["com.eraflo.catalyst"]
           }
           EOF
 
-          # Create minimal ProjectSettings
+          # Create ProjectVersion.txt
           cat > TestProject/ProjectSettings/ProjectVersion.txt << EOF
           m_EditorVersion: 2022.3.62f1
           m_EditorVersionWithRevision: 2022.3.62f1 (0000000000000)
           EOF
 
-          # Create ProjectSettings.asset with Animation enabled
+          # Create ProjectSettings.asset
           cat > TestProject/ProjectSettings/ProjectSettings.asset << 'EOF'
           %YAML 1.1
           %TAG !u! tag:unity3d.com,2011:
@@ -112,13 +117,17 @@ jobs:
             companyName: Test
           EOF
 
+      # 3. Restore the cache AFTER creating the folders
+      # This ensures Unity doesn't have to rebuild the Library from scratch every time
       - uses: actions/cache@v3
         with:
           path: TestProject/Library
-          key: Library-Test-${{ hashFiles('package/**') }}
+          # Added manifest.json hash: invalidates cache if dependencies change
+          key: Library-Test-${{ hashFiles('package/**/*.cs', 'package/**/*.asmdef', 'TestProject/Packages/manifest.json') }}
           restore-keys: |
             Library-Test-
 
+      # 4. Run the Unity Tests
       - uses: game-ci/unity-test-runner@v4
         id: tests
         env:
@@ -134,7 +143,7 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Test Results
           useHostNetwork: true
-          customParameters: -logFile - -nographics -silent-crashes -batchmode
+          customParameters: -logFile - -nographics -batchmode
 
       - uses: actions/upload-artifact@v4
         if: always()
