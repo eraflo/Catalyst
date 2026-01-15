@@ -61,6 +61,8 @@ namespace Eraflo.Catalyst
             if (_sceneManager == null)
             {
                 _sceneManager = new UnitySceneManager();
+                // Register as service so strategies can find it
+                App.Register<ISceneManager>(_sceneManager);
             }
 
             if (_strategy == null)
@@ -109,6 +111,7 @@ namespace Eraflo.Catalyst
             }
 
             _isTransitioning = true;
+            ILoadingScreen loadingScreen = null;
 
             try
             {
@@ -116,7 +119,6 @@ namespace Eraflo.Catalyst
                 _onTransitionStarted?.Raise(groupName);
 
                 // 2. Show loading screen
-                ILoadingScreen loadingScreen = null;
                 if (showLoadingScreen)
                 {
                     loadingScreen = _loadingScreen ?? App.Get<ILoadingScreen>();
@@ -127,6 +129,7 @@ namespace Eraflo.Catalyst
                 }
 
                 // 3. Unload current scenes using strategy
+                // 3. Keep track of current scenes to unload later
                 int sceneCount = _sceneManager.SceneCount;
                 var scenesToUnload = new List<Scene>();
                 for (int i = 0; i < sceneCount; i++)
@@ -134,17 +137,19 @@ namespace Eraflo.Catalyst
                     scenesToUnload.Add(_sceneManager.GetSceneAt(i));
                 }
 
-                await _strategy.UnloadAsync(scenesToUnload);
-
-                // 4. Memory Cleanup
-                await UnloadUnusedAssetsAsync();
-                GC.Collect();
-
-                // 5. Load new scenes via strategy
+                // 4. Load new scenes via strategy first
                 await _strategy.LoadAsync(group.Scenes, (p) => 
                 {
-                    loadingScreen?.UpdateProgress(p);
+                    loadingScreen?.UpdateProgress(p * 0.8f); // 80% for loading
                 });
+
+                // 5. Unload old scenes using strategy
+                await _strategy.UnloadAsync(scenesToUnload);
+                loadingScreen?.UpdateProgress(0.9f); // 90% after unload
+
+                // 6. Memory Cleanup
+                await UnloadUnusedAssetsAsync();
+                GC.Collect();
 
                 loadingScreen?.UpdateProgress(1f);
 
@@ -179,6 +184,12 @@ namespace Eraflo.Catalyst
             catch (Exception e)
             {
                 Debug.LogException(e);
+                
+                // Safety: always try to hide UI on error
+                if (loadingScreen != null)
+                {
+                    await loadingScreen.Hide();
+                }
             }
             finally
             {

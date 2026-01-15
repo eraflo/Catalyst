@@ -110,6 +110,11 @@ namespace Eraflo.Catalyst.Networking.Backends.Mock
             Debug.Log($"[MockNetworkBackend] Unregistered handler for msgType={msgType}");
         }
 
+        public void SpawnPlayer(ulong clientId, Vector3? position = null, Quaternion? rotation = null)
+        {
+            Debug.Log($"[MockNetworkBackend] Manually spawned player for client {clientId} at {position ?? Vector3.zero}");
+        }
+
         public void SendToClient(ushort msgType, byte[] data, ulong clientId, NetworkDelivery delivery = NetworkDelivery.Reliable)
         {
             if (clientId == LocalClientId) return;

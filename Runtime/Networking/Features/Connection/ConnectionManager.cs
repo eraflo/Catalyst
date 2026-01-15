@@ -10,7 +10,7 @@ namespace Eraflo.Catalyst.Networking.Features.Connection
     [Service(Priority = 4)]
     public class ConnectionManager : IGameService
     {
-        private byte[] _localPayload;
+        private byte[] _localPayload = System.Array.Empty<byte>();
         
         /// <summary>
         /// Event triggered on the server to validate an incoming connection.

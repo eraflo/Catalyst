@@ -180,6 +180,12 @@ namespace Eraflo.Catalyst.Networking
             }
         }
 
+        public void SpawnPlayer(ulong clientId, Vector3? position = null, Quaternion? rotation = null)
+        {
+            if (_backend == null || !IsServer) return;
+            _backend.SpawnPlayer(clientId, position, rotation);
+        }
+
         public void SendToClients<T>(T message, NetworkDelivery delivery, params ulong[] clientIds) where T : struct, INetworkMessage
         {
             if (_backend == null || !_backend.IsConnected || !IsServer) return;

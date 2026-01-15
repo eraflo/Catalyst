@@ -6,7 +6,6 @@ using UnityEngine;
 using NetcodeMgr = Unity.Netcode.NetworkManager;
 using Eraflo.Catalyst.Pooling;
 using Eraflo.Catalyst.Networking.Features.Connection;
-
 using Eraflo.Catalyst.Scenes.Networking;
 
 namespace Eraflo.Catalyst.Networking.Backends.Netcode
@@ -14,11 +13,11 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
     /// <summary>
     /// Network backend implementation for Unity Netcode for GameObjects.
     /// </summary>
-    public class NetcodeBackend : INetworkBackend, INetworkLifecycle, 
+    public class NetcodeBackend : INetworkBackend, INetworkLifecycle,
         IConnectionBackend, ISceneNetworkBackend, IPoolNetworkBackend
     {
         private readonly Dictionary<ushort, Action<byte[], ulong>> _handlers = new Dictionary<ushort, Action<byte[], ulong>>();
-        
+
         private NetcodeConnectionHandler _connectionHandler;
         private NetcodeSceneHandler _sceneHandler;
         private NetcodePrefabHandler _prefabHandler;
@@ -43,7 +42,11 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
 
             _connectionHandler.Initialize();
 
-            NetcodeMgr.Singleton.CustomMessagingManager.OnUnnamedMessage += HandleUnnamedMessage;
+            if (NetcodeMgr.Singleton.CustomMessagingManager != null)
+            {
+                NetcodeMgr.Singleton.CustomMessagingManager.OnUnnamedMessage += HandleUnnamedMessage;
+            }
+
             NetcodeMgr.Singleton.OnClientConnectedCallback += HandleClientConnected;
             NetcodeMgr.Singleton.OnClientDisconnectCallback += HandleClientDisconnected;
 
@@ -69,11 +72,11 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             {
                 if (NetcodeMgr.Singleton.CustomMessagingManager != null)
                     NetcodeMgr.Singleton.CustomMessagingManager.OnUnnamedMessage -= HandleUnnamedMessage;
-                
+
                 NetcodeMgr.Singleton.OnClientConnectedCallback -= HandleClientConnected;
                 NetcodeMgr.Singleton.OnClientDisconnectCallback -= HandleClientDisconnected;
             }
-            
+
             _handlers.Clear();
         }
 
@@ -83,7 +86,7 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
 
             var ngoDelivery = MapDelivery(delivery);
             var writer = CreateWriter(msgType, data);
-            
+
             try
             {
                 switch (target)
@@ -114,7 +117,7 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             fullData[0] = (byte)(msgType >> 8);
             fullData[1] = (byte)(msgType & 0xFF);
             Buffer.BlockCopy(data, 0, fullData, 2, data.Length);
-            
+
             var writer = new Unity.Netcode.FastBufferWriter(fullData.Length, Unity.Collections.Allocator.Temp);
             writer.WriteBytesSafe(fullData);
             return writer;
@@ -230,6 +233,22 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             _handlers.Remove(msgType);
         }
 
+        public void SpawnPlayer(ulong clientId, Vector3? position = null, Quaternion? rotation = null)
+        {
+            if (NetcodeMgr.Singleton == null || !NetcodeMgr.Singleton.IsServer) return;
+
+            var playerPrefab = NetcodeMgr.Singleton.NetworkConfig.PlayerPrefab;
+            if (playerPrefab == null)
+            {
+                Debug.LogWarning("[NetcodeBackend] No Player Prefab configured in NetworkManager.");
+                return;
+            }
+
+            var instance = GameObject.Instantiate(playerPrefab, position ?? Vector3.zero, rotation ?? Quaternion.identity);
+            var netObj = instance.GetComponent<Unity.Netcode.NetworkObject>();
+            netObj.SpawnAsPlayerObject(clientId, true);
+        }
+
         #region Module Backend Implementations
 
         void IConnectionBackend.Initialize() => _connectionHandler?.Initialize();
@@ -300,49 +319,58 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
         {
             if (NetcodeMgr.Singleton == null) return false;
             ConfigureTransport(null, port, transport);
-            return NetcodeMgr.Singleton.StartServer();
+            bool success = NetcodeMgr.Singleton.StartServer();
+            if (success) EnsureMessagingSubscribed();
+            return success;
         }
 
         public bool StartClient(string address, ushort port, NetworkTransportType transport = NetworkTransportType.UDP)
         {
             if (NetcodeMgr.Singleton == null) return false;
             ConfigureTransport(address, port, transport);
-            return NetcodeMgr.Singleton.StartClient();
+            bool success = NetcodeMgr.Singleton.StartClient();
+            if (success) EnsureMessagingSubscribed();
+            return success;
         }
 
         public bool StartHost(ushort port, NetworkTransportType transport = NetworkTransportType.UDP)
         {
             if (NetcodeMgr.Singleton == null) return false;
             ConfigureTransport(null, port, transport);
-            return NetcodeMgr.Singleton.StartHost();
+            bool success = NetcodeMgr.Singleton.StartHost();
+            if (success) EnsureMessagingSubscribed();
+            return success;
         }
 
-        private void ConfigureTransport(string address, ushort port, NetworkTransportType transportType)
+        private void EnsureMessagingSubscribed()
         {
-            var ut = NetcodeMgr.Singleton.GetComponent<Unity.Netcode.Transports.UTP.UnityTransport>();
-            if (ut == null) return;
-
-            if (!string.IsNullOrEmpty(address)) ut.ConnectionData.Address = address;
-            ut.ConnectionData.Port = port;
-
-            switch (transportType)
+            if (NetcodeMgr.Singleton?.CustomMessagingManager != null)
             {
-                case NetworkTransportType.UDP:
-                    ut.ConnectionData.ServerListenAddress = "0.0.0.0";
-                    break;
-                case NetworkTransportType.TCP:
-                    Debug.LogWarning("[NetcodeBackend] UnityTransport has limited TCP support. Using default.");
-                    break;
-                case NetworkTransportType.WebSocket:
-                    Debug.LogWarning("[NetcodeBackend] WebSocket requested. Ensure UnityTransport is configured for WSS.");
-                    break;
+                // Unsubscribe first to prevent duplicates
+                NetcodeMgr.Singleton.CustomMessagingManager.OnUnnamedMessage -= HandleUnnamedMessage;
+                NetcodeMgr.Singleton.CustomMessagingManager.OnUnnamedMessage += HandleUnnamedMessage;
+            }
+        }
+
+        private void ConfigureTransport(string address, ushort port, NetworkTransportType transport)
+        {
+            if (NetcodeMgr.Singleton?.NetworkConfig?.NetworkTransport is Unity.Netcode.Transports.UTP.UnityTransport utp)
+            {
+                if (!string.IsNullOrEmpty(address))
+                {
+                    utp.ConnectionData.Address = address;
+                }
+                utp.ConnectionData.Port = port;
             }
         }
 
         public void Stop()
         {
             if (NetcodeMgr.Singleton != null)
+            {
                 NetcodeMgr.Singleton.Shutdown();
+            }
+            App.Get<NetworkManager>()?.NotifyDisconnected();
         }
 
         #endregion

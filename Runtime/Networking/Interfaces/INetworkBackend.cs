@@ -70,5 +70,10 @@ namespace Eraflo.Catalyst.Networking
         /// Called when the backend is being replaced or shutdown.
         /// </summary>
         void Shutdown();
+        
+        /// <summary>
+        /// Manually spawns the player object for a client.
+        /// </summary>
+        void SpawnPlayer(ulong clientId, UnityEngine.Vector3? position = null, UnityEngine.Quaternion? rotation = null);
     }
 }

@@ -21,7 +21,7 @@ A robust system for orchestrating complex scene transitions. Supports additive l
 ## 1. Features
 
 - **Scene Groups**: Define related scenes (e.g., Gameplay + HUD + Environment) as a single unit.
-- **Automated Lifecycle**: Handles Fade In -> Unload -> Memory Cleanup -> Load -> Set Active -> Fade Out.
+- **Automated Lifecycle**: Handles Fade In -> Load New -> Unload Old -> Memory Cleanup -> Set Active -> Fade Out.
 - **Loading Screen Abstraction**: Works with any UI via the `ILoadingScreen` interface.
 - **Memory Optimized**: Automatic `Resources.UnloadUnusedAssets()` and `GC.Collect()` during transitions.
 - **Strategy Pattern**: Swap loading logic (Local vs. Networked) seamlessly.
@@ -114,10 +114,11 @@ public class MyLoadingScreen : MonoBehaviour, ILoadingScreen
     [SerializeField] private CanvasGroup _canvas;
     [SerializeField] private Slider _progressBar;
 
-    // Optional: Auto-register on Awake
+    // Required: Register the UI and make it persistent
     void Awake()
     {
-        // The service will look for this via App.Get<ILoadingScreen>()
+        DontDestroyOnLoad(gameObject);
+        App.Register<ILoadingScreen>(this);
     }
 
     public async Task Show()
@@ -161,16 +162,16 @@ sequenceDiagram
     App->>SL: LoadGroupAsync("MapX")
     SL->>UI: Show() (Fade In)
     
-    rect rgb(240, 240, 240)
-        Note over SL, Str: Cleanup
-        SL->>Str: UnloadAsync(CurrentScenes)
-        SL->>SL: GC.Collect()
-    end
-    
     rect rgb(230, 250, 230)
         Note over SL, Str: Loading
         SL->>Str: LoadAsync(GroupScenes)
         Str-->>UI: UpdateProgress(float)
+    end
+
+    rect rgb(240, 240, 240)
+        Note over SL, Str: Cleanup
+        SL->>Str: UnloadAsync(OldScenes)
+        SL->>SL: GC.Collect()
     end
     
     SL->>SL: Wait for Input (Optional)
@@ -270,4 +271,4 @@ public class GameObserver : MonoBehaviour
 
 - [Networking](Networking.md): Network backend details
 - [Asset Management](AssetManagement.md): Dynamic scene loading tips
-- [Event Bus](EventBus.md): Channel communication
+- [Event Bus](EventBus.

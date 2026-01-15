@@ -19,13 +19,15 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
 
         public void Initialize()
         {
+            _netcodeMgr.NetworkConfig.ConnectionApproval = true;
             _netcodeMgr.ConnectionApprovalCallback = HandleConnectionApproval;
-            
+
             // Sync local payload
             var connectionManager = App.Get<ConnectionManager>();
             if (connectionManager != null)
             {
-                _netcodeMgr.NetworkConfig.ConnectionData = connectionManager.GetLocalPayload();
+                var payload = connectionManager.GetLocalPayload();
+                _netcodeMgr.NetworkConfig.ConnectionData = payload ?? System.Array.Empty<byte>();
             }
         }
 
@@ -40,12 +42,19 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             }
 
             var result = cm.HandleApproval(request.ClientNetworkId, request.Payload);
-            
+
             response.Approved = result.Approved;
             response.Reason = result.Reason;
             response.CreatePlayerObject = result.CreatePlayerObject;
-            if (result.PlayerPrefabHash.HasValue) 
+
+            if (result.PlayerPrefabHash.HasValue)
                 response.PlayerPrefabHash = (uint)result.PlayerPrefabHash.Value;
+
+            if (result.Position.HasValue)
+                response.Position = result.Position.Value;
+
+            if (result.Rotation.HasValue)
+                response.Rotation = result.Rotation.Value;
         }
     }
 }
