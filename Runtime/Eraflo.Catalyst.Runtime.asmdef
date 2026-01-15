@@ -11,7 +11,8 @@
         "Unity.Mathematics",
         "Unity.TextMeshPro",
         "UnityEngine.UI",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Eraflo.Catalyst.Spatial"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

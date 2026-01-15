@@ -12,7 +12,7 @@ namespace Eraflo.Catalyst
     /// Service responsible for orchestrating complex scene loading flows.
     /// Handles additive loading, loading screens, and memory management.
     /// </summary>
-    [Service(Priority = 11)]
+    [Service(Priority = 16)]  
     public class SceneLoaderService : IGameService
     {
         private SceneTransitionChannel _onTransitionStarted;

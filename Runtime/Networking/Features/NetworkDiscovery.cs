@@ -10,7 +10,7 @@ namespace Eraflo.Catalyst.Networking
     /// <summary>
     /// Service for discovering servers on the local network using UDP broadcast.
     /// </summary>
-    [Service(Priority = 7)]
+    [Service(Priority = 12)]
     public class NetworkDiscovery : IGameService
     {
         private const int DiscoveryPort = 47777;

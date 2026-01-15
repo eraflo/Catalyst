@@ -7,7 +7,7 @@ using Eraflo.Catalyst.Core.Save;
 
 namespace Eraflo.Catalyst.Core.Settings
 {
-    [Service(Priority = 8)]
+    [Service(Priority = 13)]
     public class SettingsManager : IGameService
     {
         private string SettingsFileName => PackageSettings.Instance.SettingsFilename;

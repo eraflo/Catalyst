@@ -11,7 +11,7 @@ namespace Eraflo.Catalyst.Pooling
     /// Can be used as a service via Service Locator.
     /// Provides unified access to generic and prefab pools.
     /// </summary>
-    [Service(Priority = 9)]
+    [Service(Priority = 14)]
     public class Pool : IGameService, IUpdatable
     {
         private readonly Dictionary<Type, object> _genericPools = new Dictionary<Type, object>();

@@ -120,11 +120,9 @@ namespace Eraflo.Catalyst.Tests
             _testChannel.Subscribe((v) => count++);
 
             // Expect the exception to be logged
-            LogAssert.ignoreFailingMessages = true;
+            LogAssert.Expect(LogType.Exception, "Exception: Test exception");
             
             _testChannel.Raise(1);
-            
-            LogAssert.ignoreFailingMessages = false;
 
             // Second subscriber should still have been called
             Assert.AreEqual(1, count);

@@ -6,6 +6,7 @@ using UnityEngine;
 using NetcodeMgr = Unity.Netcode.NetworkManager;
 using Eraflo.Catalyst.Pooling;
 using Eraflo.Catalyst.Networking.Features.Connection;
+using Eraflo.Catalyst.Networking.Features.Culling;
 using Eraflo.Catalyst.Scenes.Networking;
 
 namespace Eraflo.Catalyst.Networking.Backends.Netcode
@@ -14,13 +15,23 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
     /// Network backend implementation for Unity Netcode for GameObjects.
     /// </summary>
     public class NetcodeBackend : INetworkBackend, INetworkLifecycle,
-        IConnectionBackend, ISceneNetworkBackend, IPoolNetworkBackend
+        IConnectionBackend, ISceneNetworkBackend, IPoolNetworkBackend,
+        ISimulationBackend, ICullingBackend
     {
         private readonly Dictionary<ushort, Action<byte[], ulong>> _handlers = new Dictionary<ushort, Action<byte[], ulong>>();
 
         private NetcodeConnectionHandler _connectionHandler;
         private NetcodeSceneHandler _sceneHandler;
         private NetcodePrefabHandler _prefabHandler;
+
+        // Simulation state
+        private int _simulatedLatencyMs;
+        private float _simulatedPacketLoss;
+        private int _simulatedJitterMs;
+
+        // Visibility tracking
+        private readonly Dictionary<uint, HashSet<ulong>> _objectVisibility = new();
+        private readonly HashSet<uint> _globallyVisible = new();
 
         public bool IsServer => NetcodeMgr.Singleton != null && NetcodeMgr.Singleton.IsServer;
         public bool IsClient => NetcodeMgr.Singleton != null && NetcodeMgr.Singleton.IsClient;
@@ -78,7 +89,186 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             }
 
             _handlers.Clear();
+            _objectVisibility.Clear();
+            _globallyVisible.Clear();
         }
+
+        #region ISimulationBackend
+
+        /// <summary>
+        /// Applies simulation parameters to the Unity Transport.
+        /// </summary>
+        public void ApplySimulationParameters(int latencyMs, float packetLossPercent, int jitterMs)
+        {
+            _simulatedLatencyMs = latencyMs;
+            _simulatedPacketLoss = packetLossPercent;
+            _simulatedJitterMs = jitterMs;
+
+            // Apply to Unity Transport if available
+            if (NetcodeMgr.Singleton?.NetworkConfig?.NetworkTransport is Unity.Netcode.Transports.UTP.UnityTransport utp)
+            {
+                #if UNITY_EDITOR || DEVELOPMENT_BUILD
+                utp.SetDebugSimulatorParameters(
+                    latencyMs,
+                    jitterMs,
+                    (int)packetLossPercent
+                );
+                
+                if (PackageSettings.Instance.NetworkDebugMode)
+                {
+                    Debug.Log($"[NetcodeBackend] Simulation: latency={latencyMs}ms, loss={packetLossPercent}%, jitter={jitterMs}ms");
+                }
+                #endif
+            }
+        }
+
+        /// <summary>Gets RTT from Unity Transport.</summary>
+        public float GetRTT()
+        {
+            if (NetcodeMgr.Singleton?.NetworkConfig?.NetworkTransport is Unity.Netcode.Transports.UTP.UnityTransport utp)
+            {
+                // Unity Transport doesn't expose RTT directly, use server time offset as approximation
+                if (NetcodeMgr.Singleton.IsClient && !NetcodeMgr.Singleton.IsServer)
+                {
+                    return (float)(NetcodeMgr.Singleton.ServerTime.TimeAsFloat - NetcodeMgr.Singleton.LocalTime.TimeAsFloat) * 2000f;
+                }
+            }
+            return 0f;
+        }
+
+        /// <summary>Gets packet loss (returns simulated value if simulation is active).</summary>
+        public float GetPacketLoss() => _simulatedPacketLoss;
+
+        /// <summary>Gets inbound bandwidth (placeholder - Unity Transport doesn't expose this).</summary>
+        public float GetBandwidthIn() => 0f;
+
+        /// <summary>Gets outbound bandwidth (placeholder - Unity Transport doesn't expose this).</summary>
+        public float GetBandwidthOut() => 0f;
+
+        #endregion
+
+        #region ICullingBackend
+
+        /// <summary>Shows a network object to a specific client.</summary>
+        public void NetworkShow(uint networkId, ulong clientId)
+        {
+            if (!_objectVisibility.TryGetValue(networkId, out var clients))
+            {
+                clients = new HashSet<ulong>();
+                _objectVisibility[networkId] = clients;
+            }
+            clients.Add(clientId);
+
+            // Use NGO's NetworkShow if object has NetworkObject component
+            var idManager = App.Get<NetworkIdManager>();
+            var go = idManager?.GetObject<GameObject>(networkId);
+            if (go != null)
+            {
+                var netObj = go.GetComponent<Unity.Netcode.NetworkObject>();
+                if (netObj != null && netObj.IsSpawned)
+                {
+                    netObj.NetworkShow(clientId);
+                }
+            }
+
+            if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.Log($"[NetcodeBackend] NetworkShow: {networkId} -> client {clientId}");
+            }
+        }
+
+        /// <summary>Hides a network object from a specific client.</summary>
+        public void NetworkHide(uint networkId, ulong clientId)
+        {
+            if (_objectVisibility.TryGetValue(networkId, out var clients))
+            {
+                clients.Remove(clientId);
+            }
+
+            // Use NGO's NetworkHide if object has NetworkObject component
+            var idManager = App.Get<NetworkIdManager>();
+            var go = idManager?.GetObject<GameObject>(networkId);
+            if (go != null)
+            {
+                var netObj = go.GetComponent<Unity.Netcode.NetworkObject>();
+                if (netObj != null && netObj.IsSpawned)
+                {
+                    netObj.NetworkHide(clientId);
+                }
+            }
+
+            if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.Log($"[NetcodeBackend] NetworkHide: {networkId} <- client {clientId}");
+            }
+        }
+
+        /// <summary>Shows a network object to all clients.</summary>
+        public void NetworkShowToAll(uint networkId)
+        {
+            _globallyVisible.Add(networkId);
+
+            var idManager = App.Get<NetworkIdManager>();
+            var go = idManager?.GetObject<GameObject>(networkId);
+            if (go != null)
+            {
+                var netObj = go.GetComponent<Unity.Netcode.NetworkObject>();
+                if (netObj != null && netObj.IsSpawned)
+                {
+                    foreach (var clientId in NetcodeMgr.Singleton.ConnectedClientsIds)
+                    {
+                        netObj.NetworkShow(clientId);
+                    }
+                }
+            }
+
+            if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.Log($"[NetcodeBackend] NetworkShowToAll: {networkId}");
+            }
+        }
+
+        /// <summary>Hides a network object from all clients.</summary>
+        public void NetworkHideFromAll(uint networkId)
+        {
+            _globallyVisible.Remove(networkId);
+            _objectVisibility.Remove(networkId);
+
+            var idManager = App.Get<NetworkIdManager>();
+            var go = idManager?.GetObject<GameObject>(networkId);
+            if (go != null)
+            {
+                var netObj = go.GetComponent<Unity.Netcode.NetworkObject>();
+                if (netObj != null && netObj.IsSpawned)
+                {
+                    foreach (var clientId in NetcodeMgr.Singleton.ConnectedClientsIds)
+                    {
+                        if (clientId != netObj.OwnerClientId)
+                        {
+                            netObj.NetworkHide(clientId);
+                        }
+                    }
+                }
+            }
+
+            if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.Log($"[NetcodeBackend] NetworkHideFromAll: {networkId}");
+            }
+        }
+
+        /// <summary>Checks if an object is visible to a client.</summary>
+        public bool IsVisibleTo(uint networkId, ulong clientId)
+        {
+            if (_globallyVisible.Contains(networkId)) return true;
+            if (_objectVisibility.TryGetValue(networkId, out var clients))
+            {
+                return clients.Contains(clientId);
+            }
+            return false;
+        }
+
+        #endregion
 
         public void Send(ushort msgType, byte[] data, NetworkTarget target, NetworkDelivery delivery = NetworkDelivery.Reliable)
         {

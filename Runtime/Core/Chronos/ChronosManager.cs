@@ -33,8 +33,10 @@ namespace Eraflo.Catalyst.Core.Chronos
 
         private float _globalScale = 1f;
         private float _appTime;
+        private float _unscaledAppTime;
 
         public float AppTime => _appTime;
+        public float UnscaledTime => _unscaledAppTime;
 
         public float GlobalScale
         {
@@ -145,6 +147,7 @@ namespace Eraflo.Catalyst.Core.Chronos
             }
 
             _appTime += dt * _globalScale;
+            _unscaledAppTime += dt;
         }
 
         public void PauseGame() => GlobalScale = 0f;

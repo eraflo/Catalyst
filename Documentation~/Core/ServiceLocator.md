@@ -328,14 +328,21 @@ public class AudioManager : IGameService, IUpdatable
 | `NetworkIdManager` | 1 | Network ID registry |
 | `NetworkManager` | 2 | Networking facade |
 | `NetworkOwnershipManager` | 3 | Authority control |
-| `ConnectionManager` | 4 | Connection lifecycle |
-| `LobbyManager` | 5 | Lobby management |
-| `NetworkDiscovery` | 7 | LAN discovery |
-| `SettingsManager` | 8 | Configuration |
-| `Pool` | 9 | Object pooling |
-| `SaveManager` | 10 | Persistence |
-| `SceneLoaderService` | 11 | Scene loading |
+| `NetworkDiagnostics` | 4 | Network simulation & metrics |
+| `ConnectionManager` | 5 | Connection lifecycle |
+| `LobbyManager` | 6 | Lobby management |
+| `NetworkSpawnManager` | 7 | Player spawning |
+| `NetworkActionManager` | 8 | Lightweight actions |
+| `NetworkAttachmentManager` | 9 | Network parenting |
+| `VoiceManager` | 10 | Voice chat abstraction |
+| `NetworkCullingManager` | 11 | Interest management |
+| `NetworkDiscovery` | 12 | LAN discovery |
+| `SettingsManager` | 13 | Configuration |
+| `Pool` | 14 | Object pooling |
+| `SaveManager` | 15 | Persistence |
+| `SceneLoaderService` | 16 | Scene loading |
 | `AssetManager` | 20 | Asset loading |
+| `HfsmNetworkHandler` | 21 | HFSM sync |
 | `InputRemapper` | 40 | Input rebinding |
 | `ChronosManager` | 41 | Time scaling |
 | `InputManager` | 50 | Input processing |

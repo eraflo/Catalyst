@@ -142,6 +142,18 @@ namespace Eraflo.Catalyst
             return _services.Values.OfType<T>().FirstOrDefault();
         }
 
+        public static IGameService Get(Type type)
+        {
+            if (!_initialized) Initialize();
+
+            if (_services.TryGetValue(type, out var service))
+            {
+                return service;
+            }
+
+            return _services.Values.FirstOrDefault(s => type.IsAssignableFrom(s.GetType()));
+        }
+
         private static void InjectIntoPlayerLoop()
         {
             var loop = PlayerLoop.GetCurrentPlayerLoop();

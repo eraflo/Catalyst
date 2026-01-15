@@ -51,6 +51,16 @@ namespace Eraflo.Catalyst
         [SerializeField] private NetworkHandlerMode _handlerMode = NetworkHandlerMode.Auto;
         [SerializeField] private List<string> _enabledHandlers = new List<string>();
         [SerializeField] private AuthorityMode _defaultAuthorityMode = AuthorityMode.ServerAuthoritative;
+        
+        // Network Simulation (Editor/Development only)
+        [SerializeField] private int _simulateLatencyMs = 0;
+        [SerializeField] private float _simulatePacketLossPercent = 0f;
+        [SerializeField] private int _simulateJitterMs = 0;
+        
+        // Culling
+        [SerializeField] private float _cullingCellSize = 50f;
+        [SerializeField] private int _cullingClientsPerFrame = 4;
+        [SerializeField] private float _cullingHysteresis = 5f;
 
         // Timers
         [SerializeField] private bool _useBurstTimers = false;
@@ -95,6 +105,16 @@ namespace Eraflo.Catalyst
         public NetworkHandlerMode HandlerMode => _handlerMode;
         public IReadOnlyList<string> EnabledHandlers => _enabledHandlers;
         public AuthorityMode DefaultAuthorityMode => _defaultAuthorityMode;
+        
+        // Network Simulation
+        public int SimulateLatencyMs => _simulateLatencyMs;
+        public float SimulatePacketLossPercent => _simulatePacketLossPercent;
+        public int SimulateJitterMs => _simulateJitterMs;
+        
+        // Culling
+        public float CullingCellSize => _cullingCellSize;
+        public int CullingClientsPerFrame => _cullingClientsPerFrame;
+        public float CullingHysteresis => _cullingHysteresis;
         public PackageThreadMode ThreadMode => _threadMode;
         public bool UseBurstTimers => _useBurstTimers;
         public bool EnableTimerDebugLogs => _enableTimerDebugLogs;

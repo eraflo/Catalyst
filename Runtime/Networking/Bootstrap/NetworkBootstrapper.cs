@@ -114,7 +114,23 @@ namespace Eraflo.Catalyst.Networking
         {
             try
             {
-                var handler = (INetworkMessageHandler)Activator.CreateInstance(type);
+                // Check if handler is already registered as a service
+                var handler = App.Get(type) as INetworkMessageHandler;
+                
+                // If not, create a new instance
+                if (handler == null)
+                {
+                    handler = (INetworkMessageHandler)Activator.CreateInstance(type);
+                    
+                    // If it's a service, it should have been registered via ServiceLocator already.
+                    // If it's a standalone handler, we just use this instance.
+                    if (handler is IGameService gameService)
+                    {
+                        Debug.LogWarning($"[NetworkBootstrapper] Service {type.Name} was not found in ServiceLocator. Creating standalone instance.");
+                        gameService.Initialize();
+                    }
+                }
+
                 var network = App.Get<NetworkManager>();
                 network?.Handlers.Register(handler);
                 

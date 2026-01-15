@@ -358,6 +358,7 @@ if (gameTime > nextSpawnTime)
 | `UIChannel` | `const string` | `"UI"` - default unscaled channel |
 | `GlobalScale` | `float` | Controls `Time.timeScale` and `Time.fixedDeltaTime` |
 | `AppTime` | `float` | Accumulated game time (respects GlobalScale) |
+| `UnscaledTime` | `float` | Managed accumulator for unscaled app time |
 | `OnChannelTransitionStarted` | `event` | Fired when a transition starts |
 
 **Methods:**

@@ -15,6 +15,14 @@ namespace Eraflo.Catalyst
             return ServiceLocator.Get<T>();
         }
 
+        /// <summary>
+        /// Retrieves a service by its runtime type.
+        /// </summary>
+        public static object Get(System.Type type)
+        {
+            return ServiceLocator.Get(type);
+        }
+
         public static void Register<T>(T instance) where T : class, IGameService
         {
             ServiceLocator.Register<T>(instance);

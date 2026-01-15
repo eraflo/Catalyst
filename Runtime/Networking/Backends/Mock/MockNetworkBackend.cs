@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using Eraflo.Catalyst.Scenes.Networking;
 using Eraflo.Catalyst.Networking.Features.Connection;
+using Eraflo.Catalyst.Networking.Features.Culling;
 using Eraflo.Catalyst.Pooling;
 
 namespace Eraflo.Catalyst.Networking.Backends.Mock
@@ -13,7 +14,8 @@ namespace Eraflo.Catalyst.Networking.Backends.Mock
     /// Logs all operations and can simulate local message delivery.
     /// </summary>
     public class MockNetworkBackend : INetworkBackend, INetworkLifecycle,
-        IConnectionBackend, ISceneNetworkBackend, IPoolNetworkBackend
+        IConnectionBackend, ISceneNetworkBackend, IPoolNetworkBackend,
+        ISimulationBackend, ICullingBackend
     {
         private readonly Dictionary<ushort, Action<byte[], ulong>> _handlers = new Dictionary<ushort, Action<byte[], ulong>>();
         private bool _isServer;
@@ -38,6 +40,121 @@ namespace Eraflo.Catalyst.Networking.Backends.Mock
         void IPoolNetworkBackend.SynchronizeInstance(GameObject instance, uint networkId)
         {
             Debug.Log($"[MockNetworkBackend] Synchronized instance {instance.name} with NetworkId {networkId}");
+        }
+
+        #endregion
+
+        #region ISimulationBackend
+
+        private int _simulatedLatencyMs;
+        private float _simulatedPacketLoss;
+        private int _simulatedJitterMs;
+        private float _mockRTT = 0f;
+        private float _mockPacketLoss = 0f;
+        private float _mockBandwidthIn = 0f;
+        private float _mockBandwidthOut = 0f;
+
+        /// <summary>
+        /// Applies simulation parameters (stores for testing verification).
+        /// </summary>
+        public void ApplySimulationParameters(int latencyMs, float packetLossPercent, int jitterMs)
+        {
+            _simulatedLatencyMs = latencyMs;
+            _simulatedPacketLoss = packetLossPercent;
+            _simulatedJitterMs = jitterMs;
+            Debug.Log($"[MockNetworkBackend] Simulation: latency={latencyMs}ms, loss={packetLossPercent}%, jitter={jitterMs}ms");
+        }
+
+        /// <summary>Gets simulated RTT.</summary>
+        public float GetRTT() => _mockRTT;
+        
+        /// <summary>Gets simulated packet loss.</summary>
+        public float GetPacketLoss() => _mockPacketLoss;
+        
+        /// <summary>Gets simulated inbound bandwidth.</summary>
+        public float GetBandwidthIn() => _mockBandwidthIn;
+        
+        /// <summary>Gets simulated outbound bandwidth.</summary>
+        public float GetBandwidthOut() => _mockBandwidthOut;
+
+        /// <summary>Sets mock RTT for testing.</summary>
+        public void SetMockRTT(float rtt) => _mockRTT = rtt;
+        
+        /// <summary>Sets mock packet loss for testing.</summary>
+        public void SetMockPacketLoss(float loss) => _mockPacketLoss = loss;
+        
+        /// <summary>Sets mock bandwidth for testing.</summary>
+        public void SetMockBandwidth(float inKBps, float outKBps)
+        {
+            _mockBandwidthIn = inKBps;
+            _mockBandwidthOut = outKBps;
+        }
+
+        /// <summary>Gets applied simulation parameters for test verification.</summary>
+        public (int Latency, float PacketLoss, int Jitter) GetSimulationParameters() 
+            => (_simulatedLatencyMs, _simulatedPacketLoss, _simulatedJitterMs);
+
+        #endregion
+
+        #region ICullingBackend
+
+        private readonly Dictionary<uint, HashSet<ulong>> _objectVisibility = new();
+        private readonly HashSet<uint> _globallyVisible = new();
+
+        /// <summary>Shows a network object to a specific client.</summary>
+        public void NetworkShow(uint networkId, ulong clientId)
+        {
+            if (!_objectVisibility.TryGetValue(networkId, out var clients))
+            {
+                clients = new HashSet<ulong>();
+                _objectVisibility[networkId] = clients;
+            }
+            clients.Add(clientId);
+            Debug.Log($"[MockNetworkBackend] NetworkShow: {networkId} -> client {clientId}");
+        }
+
+        /// <summary>Hides a network object from a specific client.</summary>
+        public void NetworkHide(uint networkId, ulong clientId)
+        {
+            if (_objectVisibility.TryGetValue(networkId, out var clients))
+            {
+                clients.Remove(clientId);
+            }
+            Debug.Log($"[MockNetworkBackend] NetworkHide: {networkId} <- client {clientId}");
+        }
+
+        /// <summary>Shows a network object to all clients.</summary>
+        public void NetworkShowToAll(uint networkId)
+        {
+            _globallyVisible.Add(networkId);
+            Debug.Log($"[MockNetworkBackend] NetworkShowToAll: {networkId}");
+        }
+
+        /// <summary>Hides a network object from all clients.</summary>
+        public void NetworkHideFromAll(uint networkId)
+        {
+            _globallyVisible.Remove(networkId);
+            _objectVisibility.Remove(networkId);
+            Debug.Log($"[MockNetworkBackend] NetworkHideFromAll: {networkId}");
+        }
+
+        /// <summary>Checks if an object is visible to a client.</summary>
+        public bool IsVisibleTo(uint networkId, ulong clientId)
+        {
+            if (_globallyVisible.Contains(networkId)) return true;
+            if (_objectVisibility.TryGetValue(networkId, out var clients))
+            {
+                return clients.Contains(clientId);
+            }
+            return false;
+        }
+
+        /// <summary>Gets all clients that can see an object (for testing).</summary>
+        public HashSet<ulong> GetVisibleClients(uint networkId)
+        {
+            if (_objectVisibility.TryGetValue(networkId, out var clients))
+                return new HashSet<ulong>(clients);
+            return new HashSet<ulong>();
         }
 
         #endregion
@@ -79,6 +196,8 @@ namespace Eraflo.Catalyst.Networking.Backends.Mock
         public void Shutdown()
         {
             _handlers.Clear();
+            _objectVisibility.Clear();
+            _globallyVisible.Clear();
             Debug.Log("[MockNetworkBackend] Shutdown");
         }      
 
@@ -187,6 +306,14 @@ namespace Eraflo.Catalyst.Networking.Backends.Mock
         public void SetConnectedState(bool isConnected)
         {
             _isConnected = isConnected;
+        }
+
+        /// <summary>
+        /// Clears sent messages for test isolation.
+        /// </summary>
+        public void ClearSentMessages()
+        {
+            _sentMessages.Clear();
         }
 
         #region INetworkLifecycle

@@ -32,6 +32,16 @@ namespace Eraflo.Catalyst.Editor
         private SerializedProperty _onTransitionStarted;
         private SerializedProperty _onTransitionCompleted;
         private SerializedProperty _settingsFilename;
+        
+        // Simulation
+        private SerializedProperty _simulateLatencyMs;
+        private SerializedProperty _simulatePacketLossPercent;
+        private SerializedProperty _simulateJitterMs;
+        
+        // Culling
+        private SerializedProperty _cullingCellSize;
+        private SerializedProperty _cullingClientsPerFrame;
+        private SerializedProperty _cullingHysteresis;
 
         private void OnEnable()
         {
@@ -51,6 +61,14 @@ namespace Eraflo.Catalyst.Editor
             _onTransitionStarted = serializedObject.FindProperty("_onTransitionStarted");
             _onTransitionCompleted = serializedObject.FindProperty("_onTransitionCompleted");
             _settingsFilename = serializedObject.FindProperty("_settingsFilename");
+            
+            _simulateLatencyMs = serializedObject.FindProperty("_simulateLatencyMs");
+            _simulatePacketLossPercent = serializedObject.FindProperty("_simulatePacketLossPercent");
+            _simulateJitterMs = serializedObject.FindProperty("_simulateJitterMs");
+            
+            _cullingCellSize = serializedObject.FindProperty("_cullingCellSize");
+            _cullingClientsPerFrame = serializedObject.FindProperty("_cullingClientsPerFrame");
+            _cullingHysteresis = serializedObject.FindProperty("_cullingHysteresis");
             
             RefreshHandlerList();
         }
@@ -83,6 +101,21 @@ namespace Eraflo.Catalyst.Editor
             {
                 EditorGUILayout.HelpBox("All INetworkMessageHandler implementations will be auto-registered.", MessageType.Info);
             }
+            
+            if (_networkBackendId.stringValue == "netcode")
+            {
+                EditorGUILayout.Space(5);
+                EditorGUILayout.LabelField("Network Simulation (Editor/Dev)", EditorStyles.miniBoldLabel);
+                EditorGUILayout.PropertyField(_simulateLatencyMs, new GUIContent("Simulate Latency (ms)"));
+                EditorGUILayout.PropertyField(_simulatePacketLossPercent, new GUIContent("Simulate Loss (%)"));
+                EditorGUILayout.PropertyField(_simulateJitterMs, new GUIContent("Simulate Jitter (ms)"));
+            }
+
+            EditorGUILayout.Space(5);
+            EditorGUILayout.LabelField("Interest Management (Culling)", EditorStyles.miniBoldLabel);
+            EditorGUILayout.PropertyField(_cullingCellSize, new GUIContent("Cell Size"));
+            EditorGUILayout.PropertyField(_cullingClientsPerFrame, new GUIContent("Clients Per Frame", "Number of clients to update culling for each frame"));
+            EditorGUILayout.PropertyField(_cullingHysteresis, new GUIContent("Hysteresis", "Distance added to radius to prevent rapid toggling"));
             
             EditorGUILayout.Space(10);
 

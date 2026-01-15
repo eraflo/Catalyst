@@ -9,7 +9,7 @@ namespace Eraflo.Catalyst.Networking.Features.Lobby
     /// Service for managing game lobbies.
     /// Delegates actual lobby logic to an ILobbyProvider.
     /// </summary>
-    [Service(Priority = 5)]
+    [Service(Priority = 6)]
     public class LobbyManager : IGameService
     {
         private ILobbyProvider _provider;

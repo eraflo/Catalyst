@@ -7,7 +7,7 @@ namespace Eraflo.Catalyst.Networking.Features.Connection
     /// Service for managing connection approval.
     /// Allows setting a payload on the client and validating it on the server.
     /// </summary>
-    [Service(Priority = 4)]
+    [Service(Priority = 5)]
     public class ConnectionManager : IGameService
     {
         private byte[] _localPayload = System.Array.Empty<byte>();

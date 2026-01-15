@@ -16,7 +16,7 @@ namespace Eraflo.Catalyst.Timers.Backends
         // Native containers for Burst-compiled updates
         private NativeList<TimerData> _timerData;
         private NativeList<bool> _activeFlags;
-        private NativeHashMap<uint, int> _handleToIndex;
+        private NativeParallelHashMap<uint, int> _handleToIndex;
 
         // Managed wrappers for callback collection (can't be in Burst jobs)
         private readonly List<TimerWrapper> _wrappers = new List<TimerWrapper>();
@@ -40,7 +40,7 @@ namespace Eraflo.Catalyst.Timers.Backends
         {
             _timerData = new NativeList<TimerData>(64, Allocator.Persistent);
             _activeFlags = new NativeList<bool>(64, Allocator.Persistent);
-            _handleToIndex = new NativeHashMap<uint, int>(64, Allocator.Persistent);
+            _handleToIndex = new NativeParallelHashMap<uint, int>(64, Allocator.Persistent);
             _channelScales = new NativeList<float>(8, Allocator.Persistent);
         }
 
@@ -50,7 +50,7 @@ namespace Eraflo.Catalyst.Timers.Backends
             {
                 lock (_lockObject)
                 {
-                    return _handleToIndex.Count;
+                    return _handleToIndex.Count();
                 }
             }
         }

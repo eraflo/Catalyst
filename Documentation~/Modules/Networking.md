@@ -18,6 +18,7 @@ Eraflo.Catalyst provides a professional-grade, **backend-agnostic** networking a
 10. [Backends](#10-backends)
 11. [Tutorials](#11-tutorials)
 12. [API Reference](#12-api-reference)
+13. [See Also](#see-also)
 
 ---
 
@@ -744,9 +745,12 @@ public class NetworkActionsExample : MonoBehaviour
     {
         _actions = App.Get<NetworkActionManager>();
         
-        // Register handlers for incoming actions
+        // Register/Unregister handlers
         _actions.RegisterAction("PlayerDamaged", OnPlayerDamaged);
-        _actions.RegisterAction("ItemPickedUp", OnItemPickedUp);
+        _actions.UnregisterAction("PlayerDamaged");
+        
+        bool hasAction = _actions.HasAction("ItemPickedUp");
+        _actions.ClearAllActions();
     }
     
     // Send action to all other clients
@@ -783,6 +787,218 @@ public class NetworkActionsExample : MonoBehaviour
 
 > [!TIP]
 > Use Network Actions for simple fire-and-forget events. For complex data or type safety, prefer `INetworkMessage` classes.
+
+### 7.5 Smart Spawn System
+
+The `NetworkSpawnManager` handles player spawning using configurable strategies.
+
+```mermaid
+flowchart LR
+    subgraph Strategies["Spawn Strategies"]
+        R[RandomSpawnStrategy]
+        RR[RoundRobinStrategy]
+        TB[TeamBasedStrategy]
+        FF[FurthestFromEnemies]
+    end
+    
+    NSM[NetworkSpawnManager] --> |uses| ISpawnStrategy
+    ISpawnStrategy -.-> R
+    ISpawnStrategy -.-> RR
+    ISpawnStrategy -.-> TB
+    ISpawnStrategy -.-> FF
+    
+    NSM --> KDTree["KDTree for spatial queries"]
+```
+
+```csharp
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Networking.Features.Spawn;
+
+// Configure spawn strategy
+var spawnManager = App.Get<NetworkSpawnManager>();
+spawnManager.Strategy = new TeamBasedSpawnStrategy();
+spawnManager.DefaultPrefabKey = "PlayerPrefab";
+
+// Spawn a player (server only)
+spawnManager.SpawnPlayerForClient(clientId);
+
+// Custom payload for class selection
+spawnManager.SetClientPayload(clientId, new SpawnPayload
+{
+    PrefabKey = "WarriorPrefab",
+    TeamId = 1,
+    SpawnTag = "TeamA"
+});
+```
+
+### 7.6 Network Diagnostics
+
+Real-time metrics and network simulation for testing.
+
+```mermaid
+flowchart TB
+    subgraph Diagnostics["NetworkDiagnostics (Priority 4)"]
+        Metrics["RTT, PacketLoss, Bandwidth"]
+        Sim["Simulation: Latency, Loss, Jitter"]
+    end
+    
+    PS[PackageSettings] -->|SimulateLatencyMs| Sim
+    ISimBackend[ISimulationBackend] -->|GetRTT| Metrics
+    Diagnostics --> Overlay[NetworkDiagnosticsOverlay]
+```
+
+```csharp
+var diagnostics = App.Get<NetworkDiagnostics>();
+
+// Enable simulation (dev/testing)
+diagnostics.SetSimulation(latencyMs: 100, packetLossPercent: 5f, jitterMs: 20);
+
+// Get metrics
+Debug.Log(diagnostics.GetMetricsString()); 
+// "RTT: 45.2ms | Loss: 0.1% | In: 12.5 KB/s | Out: 8.3 KB/s [SIM]"
+
+// Disable simulation
+diagnostics.DisableSimulation();
+```
+
+### 7.7 Network Attachment (Dynamic Parenting)
+
+Synchronized object parenting with Rigidbody state management.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Manager as NetworkAttachmentManager
+    participant Server
+    participant AllClients
+    
+    Client->>Manager: RequestAttach(childId, parentId)
+    Manager->>Server: AttachRequestMessage
+    Server->>Server: Cache Rigidbody state
+    Server->>Server: Set isKinematic = true
+    Server->>AllClients: AttachConfirmMessage
+    AllClients->>AllClients: Apply parenting
+    
+    Note over Client,AllClients: On Detach
+    Client->>Manager: RequestDetach(childId, inheritVelocity)
+    Manager->>Server: DetachRequestMessage
+    Server->>Server: Restore Rigidbody state
+    Server->>Server: Optional: inherit velocity
+    Server->>AllClients: DetachConfirmMessage
+```
+
+```csharp
+using Eraflo.Catalyst.Networking.Features.Attachment;
+
+// One-liner extension methods
+item.NetworkParentTo(player.HandTransform);
+item.NetworkUnparent(inheritVelocity: true);
+
+// With authority override
+var manager = App.Get<NetworkAttachmentManager>();
+manager.RequestAttach(childId, parentId, 
+    localPosition: Vector3.zero,
+    authorityMode: AuthorityMode.OwnerAuthoritative);
+```
+
+### 7.8 Voice Chat System
+
+The `VoiceManager` provides a high-level API for integrated voice communication, supporting multiple backends (Vivox, Photon, etc.) via the `IVoiceProvider` interface.
+
+```mermaid
+classDiagram
+    class VoiceManager {
+        +SetProvider(IVoiceProvider)
+        +JoinChannel(name, use3D)
+        +LeaveChannel()
+        +SetMicEnabled(bool)
+        +MasterVolume
+    }
+    
+    class IVoiceProvider {
+        <<interface>>
+        +Initialize()
+        +JoinChannel(name, use3D)
+        +SetMicEnabled(bool)
+        +UpdateListenerPosition(Transform)
+    }
+    
+    class MockVoiceProvider
+    class VivoxProvider
+    class PhotonVoiceProvider
+    
+    VoiceManager --> IVoiceProvider
+    IVoiceProvider <|.. MockVoiceProvider
+    IVoiceProvider <|.. VivoxProvider
+    IVoiceProvider <|.. PhotonVoiceProvider
+```
+
+**Quick Start:**
+```csharp
+using Eraflo.Catalyst.Networking.Features.Voice;
+
+var voice = App.Get<VoiceManager>();
+
+// Set provider (implement your own for Vivox, Photon Voice, etc.)
+voice.SetProvider(new MockVoiceProvider());
+
+// Join voice channel
+voice.JoinChannel("Lobby", use3D: true);
+
+// Adjust volumes
+voice.MasterVolume = 0.8f;
+voice.SetMicEnabled(true);
+```
+
+**Features:**
+- **3D Spatial Audio**: Integrated listener position updates via `UpdateListenerPosition(Transform)`.
+- **Muting & Volume**: Simple local and per-participant muting/volume control.
+- **Provider Agnostic**: Easily switch between voice services without changing gameplay code.
+- **Network Synced**: Voice state can be linked to network objects for "speaking" indicators via `NetworkVoiceSource` component.
+
+### 7.9 Interest Management (Culling)
+
+Automatic network visibility based on distance using `SpatialHash`.
+
+```mermaid
+flowchart TB
+    subgraph Server["Server"]
+        NCM[NetworkCullingManager]
+        SH[SpatialHash]
+        NCM --> SH
+    end
+    
+    subgraph Clients["Per-Client"]
+        NCA[NetworkCullingArea]
+        Vis[Visibility Set]
+    end
+    
+    NCA -->|radius + hysteresis| NCM
+    NCM -->|QueryRadius| SH
+    SH -->|objects in range| NCM
+    NCM -->|NetworkShow/Hide| ICB[ICullingBackend]
+```
+
+```csharp
+using Eraflo.Catalyst.Networking.Features.Culling;
+
+// Attach NetworkCullingArea to player cameras
+var cullingArea = player.AddComponent<NetworkCullingArea>();
+cullingArea.Radius = 50f;
+cullingArea.Hysteresis = 5f; // Prevents popping
+
+// Register with manager (server-side)
+var culling = App.Get<NetworkCullingManager>();
+culling.RegisterCullingArea(clientId, cullingArea);
+
+// Call each frame on server
+culling.UpdateCulling();
+```
+
+Configuration via PackageSettings:
+- `CullingCellSize`: SpatialHash cell size (default: 50)
+- `CullingClientsPerFrame`: Staggered updates (default: 4)
+- `CullingHysteresis`: Distance buffer (default: 5)
 
 ---
 
@@ -1082,8 +1298,14 @@ public class ChatManager : MonoBehaviour
 | `NetworkManager` | Central hub for messaging, lifecycle, backend selection |
 | `NetworkIdManager` | Object ↔ Network ID mapping |
 | `NetworkOwnershipManager` | Authority and ownership control |
+| `NetworkDiagnostics` | Network simulation and real-time metrics |
 | `ConnectionManager` | Connection approval with payloads |
 | `LobbyManager` | Lobby creation, joining, searching |
+| `NetworkSpawnManager` | Player spawning with strategies |
+| `NetworkActionManager` | Lightweight string-based RPCs |
+| `NetworkAttachmentManager` | Synchronized object parenting |
+| `VoiceManager` | Voice chat abstraction layer |
+| `NetworkCullingManager` | Interest management via SpatialHash |
 | `NetworkDiscovery` | LAN server discovery via UDP broadcast |
 | `NetworkSerializer` | Binary serialization utilities |
 

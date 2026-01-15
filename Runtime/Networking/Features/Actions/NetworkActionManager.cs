@@ -8,7 +8,7 @@ namespace Eraflo.Catalyst.Networking.Features.Actions
     /// Service for triggering lightweight network actions without custom message classes.
     /// Uses string-based identifiers hashed for efficiency.
     /// </summary>
-    [Service(Priority = 6)]
+    [Service(Priority = 8)]
     public class NetworkActionManager : IGameService
     {
         private readonly Dictionary<int, Action<byte[]>> _actionHandlers = new Dictionary<int, Action<byte[]>>();
@@ -35,6 +35,30 @@ namespace Eraflo.Catalyst.Networking.Features.Actions
         }
 
         /// <summary>
+        /// Unregisters a callback for a specific action ID.
+        /// </summary>
+        public void UnregisterAction(string actionId)
+        {
+            _actionHandlers.Remove(actionId.GetHashCode());
+        }
+
+        /// <summary>
+        /// Checks if an action is registered.
+        /// </summary>
+        public bool HasAction(string actionId)
+        {
+            return _actionHandlers.ContainsKey(actionId.GetHashCode());
+        }
+
+        /// <summary>
+        /// Clears all registered actions.
+        /// </summary>
+        public void ClearAllActions()
+        {
+            _actionHandlers.Clear();
+        }
+
+        /// <summary>
         /// Triggers an action on other clients.
         /// </summary>
         public void Trigger(string actionId, params object[] data)
@@ -44,7 +68,7 @@ namespace Eraflo.Catalyst.Networking.Features.Actions
             var msg = new NetworkActionMessage
             {
                 ActionHash = actionId.GetHashCode(),
-                Payload = NetworkSerializer.SerializeValue(data)
+                Payload = NetworkSerializer.SerializeValues(data)
             };
 
             _network.Send(msg, NetworkTarget.Others);
@@ -57,7 +81,7 @@ namespace Eraflo.Catalyst.Networking.Features.Actions
             var msg = new NetworkActionMessage
             {
                 ActionHash = actionId.GetHashCode(),
-                Payload = NetworkSerializer.SerializeValue(data)
+                Payload = NetworkSerializer.SerializeValues(data)
             };
 
             _network.Send(msg, target);
