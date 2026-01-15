@@ -1,3 +1,10 @@
+## [1.8.2](https://github.com/eraflo/Catalyst/compare/v1.8.1...v1.8.2) (2026-01-15)
+
+
+### Bug Fixes
+
+* netcode backend not spawning properly ([97ee4bc](https://github.com/eraflo/Catalyst/commit/97ee4bc613f63ed3af03e4d84fe14002ad52b3b9))
+
 ## [1.8.1](https://github.com/eraflo/Catalyst/compare/v1.8.0...v1.8.1) (2026-01-14)
 
 
