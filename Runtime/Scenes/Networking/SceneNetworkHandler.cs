@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Eraflo.Catalyst.Networking;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Eraflo.Catalyst.Networking;
 
 namespace Eraflo.Catalyst.Scenes.Networking
 {
@@ -15,6 +15,7 @@ namespace Eraflo.Catalyst.Scenes.Networking
     {
         private readonly NetworkManager _network;
         private readonly ISceneManager _localSceneManager;
+        private readonly HashSet<string> _networkLoadedScenes = new HashSet<string>();
         private bool _isSynchronizing;
 
         public SceneNetworkHandler()
@@ -47,13 +48,23 @@ namespace Eraflo.Catalyst.Scenes.Networking
         {
             if (!_network.IsConnected || _network.IsServer)
             {
-                // Unload locally if server or disconnected
                 foreach (var scene in scenes)
                 {
-                    if (scene.isLoaded) await _localSceneManager.UnloadSceneAsync(scene);
+                    if (!scene.isLoaded) continue;
+
+                    // Only use network unload for scenes that were loaded via network
+                    if (_network.IsServer && _networkLoadedScenes.Contains(scene.name) &&
+                        _network.Backend is ISceneNetworkBackend backend)
+                    {
+                        await backend.UnloadSceneAsync(scene);
+                        _networkLoadedScenes.Remove(scene.name);
+                    }
+                    else
+                    {
+                        await _localSceneManager.UnloadSceneAsync(scene);
+                    }
                 }
             }
-            // Clients usually don't unload manually in NGO, they follow the server's scene management
         }
 
         private async Task HandleServerLoad(List<string> sceneNames, Action<float> onProgress)
@@ -68,11 +79,12 @@ namespace Eraflo.Catalyst.Scenes.Networking
                 if (_network.Backend is ISceneNetworkBackend backend)
                 {
                     await backend.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+                    _networkLoadedScenes.Add(sceneName); // Track it
                 }
                 else
                 {
                     // Fallback or manual sync message
-                    await _localSceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive, (p) => 
+                    await _localSceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive, (p) =>
                     {
                         onProgress?.Invoke((index + p) / total);
                     });
@@ -105,7 +117,7 @@ namespace Eraflo.Catalyst.Scenes.Networking
                 if (allLoaded) _isSynchronizing = false;
                 else await Task.Delay(100);
             }
-            
+
             onProgress?.Invoke(1f);
             Debug.Log("[SceneNetworkHandler] Client synchronization complete.");
         }

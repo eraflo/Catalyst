@@ -16,7 +16,9 @@ namespace Eraflo.Catalyst.Networking
     public struct LobbyOptions
     {
         public string Name;
+        public string Address;
         public int MaxPlayers;
+        public ushort Port;
         public bool IsPrivate;
         public Dictionary<string, string> Metadata;
     }

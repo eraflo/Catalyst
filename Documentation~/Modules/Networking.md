@@ -713,7 +713,7 @@ public class LANDiscoveryExample : MonoBehaviour
     
     public void StopDiscovery()
     {
-        _discovery.StopAll();
+        _discovery.StopScanning();
     }
     
     private void OnServerDiscovered(NetworkDiscovery.DiscoveryInfo info)

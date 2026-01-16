@@ -22,20 +22,33 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             _netcodeMgr.NetworkConfig.ConnectionApproval = true;
             _netcodeMgr.ConnectionApprovalCallback = HandleConnectionApproval;
 
-            // Sync local payload
             var connectionManager = App.Get<ConnectionManager>();
             if (connectionManager != null)
             {
-                var payload = connectionManager.GetLocalPayload();
-                _netcodeMgr.NetworkConfig.ConnectionData = payload ?? System.Array.Empty<byte>();
+                // Sync initial payload
+                UpdateConnectionData(connectionManager.GetLocalPayload());
+
+                // Subscribe to future changes
+                connectionManager.OnPayloadChanged += UpdateConnectionData;
+            }
+        }
+
+        private void UpdateConnectionData(byte[] payload)
+        {
+            _netcodeMgr.NetworkConfig.ConnectionData = payload ?? System.Array.Empty<byte>();
+            if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.Log($"[NetcodeConnectionHandler] Updated ConnectionData payload (Size: {_netcodeMgr.NetworkConfig.ConnectionData.Length} bytes)");
             }
         }
 
         private void HandleConnectionApproval(NetcodeMgr.ConnectionApprovalRequest request, NetcodeMgr.ConnectionApprovalResponse response)
         {
+
             var cm = App.Get<ConnectionManager>();
             if (cm == null)
             {
+                Debug.LogWarning("[NetcodeConnectionHandler] ConnectionManager not found during approval. Defaulting to Approved.");
                 response.Approved = true;
                 response.CreatePlayerObject = true;
                 return;

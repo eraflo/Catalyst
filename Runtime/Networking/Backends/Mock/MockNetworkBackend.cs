@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using UnityEngine;
-using Eraflo.Catalyst.Scenes.Networking;
 using Eraflo.Catalyst.Networking.Features.Connection;
 using Eraflo.Catalyst.Networking.Features.Culling;
 using Eraflo.Catalyst.Pooling;
+using Eraflo.Catalyst.Scenes.Networking;
+using UnityEngine;
 
 namespace Eraflo.Catalyst.Networking.Backends.Mock
 {
@@ -34,6 +34,12 @@ namespace Eraflo.Catalyst.Networking.Backends.Mock
         async Task ISceneNetworkBackend.LoadSceneAsync(string sceneName, UnityEngine.SceneManagement.LoadSceneMode mode)
         {
             Debug.Log($"[MockNetworkBackend] Simulating LoadSceneAsync '{sceneName}' ({mode})");
+            await Task.Yield();
+        }
+
+        async Task ISceneNetworkBackend.UnloadSceneAsync(UnityEngine.SceneManagement.Scene scene)
+        {
+            Debug.Log($"[MockNetworkBackend] Simulating UnloadSceneAsync '{scene.name}'");
             await Task.Yield();
         }
 
@@ -67,22 +73,22 @@ namespace Eraflo.Catalyst.Networking.Backends.Mock
 
         /// <summary>Gets simulated RTT.</summary>
         public float GetRTT() => _mockRTT;
-        
+
         /// <summary>Gets simulated packet loss.</summary>
         public float GetPacketLoss() => _mockPacketLoss;
-        
+
         /// <summary>Gets simulated inbound bandwidth.</summary>
         public float GetBandwidthIn() => _mockBandwidthIn;
-        
+
         /// <summary>Gets simulated outbound bandwidth.</summary>
         public float GetBandwidthOut() => _mockBandwidthOut;
 
         /// <summary>Sets mock RTT for testing.</summary>
         public void SetMockRTT(float rtt) => _mockRTT = rtt;
-        
+
         /// <summary>Sets mock packet loss for testing.</summary>
         public void SetMockPacketLoss(float loss) => _mockPacketLoss = loss;
-        
+
         /// <summary>Sets mock bandwidth for testing.</summary>
         public void SetMockBandwidth(float inKBps, float outKBps)
         {
@@ -91,7 +97,7 @@ namespace Eraflo.Catalyst.Networking.Backends.Mock
         }
 
         /// <summary>Gets applied simulation parameters for test verification.</summary>
-        public (int Latency, float PacketLoss, int Jitter) GetSimulationParameters() 
+        public (int Latency, float PacketLoss, int Jitter) GetSimulationParameters()
             => (_simulatedLatencyMs, _simulatedPacketLoss, _simulatedJitterMs);
 
         #endregion
@@ -199,12 +205,12 @@ namespace Eraflo.Catalyst.Networking.Backends.Mock
             _objectVisibility.Clear();
             _globallyVisible.Clear();
             Debug.Log("[MockNetworkBackend] Shutdown");
-        }      
+        }
 
         public void Send(ushort msgType, byte[] data, NetworkTarget target, NetworkDelivery delivery = NetworkDelivery.Reliable)
         {
             _sentMessages.Add((msgType, data, target));
-            
+
             if (PackageSettings.Instance.NetworkDebugMode)
             {
                 Debug.Log($"[MockNetworkBackend] Sent {msgType} to {target} ({delivery})");
@@ -229,9 +235,16 @@ namespace Eraflo.Catalyst.Networking.Backends.Mock
             Debug.Log($"[MockNetworkBackend] Unregistered handler for msgType={msgType}");
         }
 
-        public void SpawnPlayer(ulong clientId, Vector3? position = null, Quaternion? rotation = null)
+        public GameObject SpawnPlayer(ulong clientId, Vector3? position = null, Quaternion? rotation = null)
         {
             Debug.Log($"[MockNetworkBackend] Manually spawned player for client {clientId} at {position ?? Vector3.zero}");
+            return null;
+        }
+
+        public ulong GetOwner(GameObject go)
+        {
+            if (go == null) return 0;
+            return 0; // Default to server/zero for mock
         }
 
         public void SendToClient(ushort msgType, byte[] data, ulong clientId, NetworkDelivery delivery = NetworkDelivery.Reliable)
@@ -318,7 +331,7 @@ namespace Eraflo.Catalyst.Networking.Backends.Mock
 
         #region INetworkLifecycle
 
-        public bool StartServer(ushort port, NetworkTransportType transport = NetworkTransportType.UDP)
+        public bool StartServer(string address, ushort port, NetworkTransportType transport = NetworkTransportType.UDP)
         {
             _isServer = true;
             _isClient = false;
@@ -338,7 +351,7 @@ namespace Eraflo.Catalyst.Networking.Backends.Mock
             return true;
         }
 
-        public bool StartHost(ushort port, NetworkTransportType transport = NetworkTransportType.UDP)
+        public bool StartHost(string address, ushort port, NetworkTransportType transport = NetworkTransportType.UDP)
         {
             _isServer = true;
             _isClient = true;

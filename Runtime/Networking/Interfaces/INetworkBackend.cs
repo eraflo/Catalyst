@@ -10,13 +10,13 @@ namespace Eraflo.Catalyst.Networking
     {
         /// <summary>Whether the local instance is the server/host.</summary>
         bool IsServer { get; }
-        
+
         /// <summary>Whether the local instance is a client.</summary>
         bool IsClient { get; }
-        
+
         /// <summary>Whether the network is currently connected.</summary>
         bool IsConnected { get; }
-        
+
         /// <summary>
         /// Sends a message over the network.
         /// </summary>
@@ -25,14 +25,14 @@ namespace Eraflo.Catalyst.Networking
         /// <param name="target">Target recipients.</param>
         /// <param name="delivery">Delivery guarantee.</param>
         void Send(ushort msgType, byte[] data, NetworkTarget target, NetworkDelivery delivery = NetworkDelivery.Reliable);
-        
+
         /// <summary>
         /// Registers a handler for incoming messages.
         /// </summary>
         /// <param name="msgType">Message type to handle.</param>
         /// <param name="handler">Callback receiving (data, senderId).</param>
         void RegisterHandler(ushort msgType, Action<byte[], ulong> handler);
-        
+
         /// <summary>
         /// Unregisters a message handler.
         /// </summary>
@@ -65,15 +65,20 @@ namespace Eraflo.Catalyst.Networking
         /// Called when the backend is set as active.
         /// </summary>
         void Initialize();
-        
+
         /// <summary>
         /// Called when the backend is being replaced or shutdown.
         /// </summary>
         void Shutdown();
-        
+
         /// <summary>
         /// Manually spawns the player object for a client.
         /// </summary>
-        void SpawnPlayer(ulong clientId, UnityEngine.Vector3? position = null, UnityEngine.Quaternion? rotation = null);
+        UnityEngine.GameObject SpawnPlayer(ulong clientId, UnityEngine.Vector3? position = null, UnityEngine.Quaternion? rotation = null);
+
+        /// <summary>
+        /// Gets the network owner of a GameObject.
+        /// </summary>
+        ulong GetOwner(UnityEngine.GameObject go);
     }
 }

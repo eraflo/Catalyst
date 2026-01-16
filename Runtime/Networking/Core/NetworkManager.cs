@@ -1,6 +1,6 @@
 using System;
-using UnityEngine;
 using Eraflo.Catalyst;
+using UnityEngine;
 
 namespace Eraflo.Catalyst.Networking
 {
@@ -22,9 +22,9 @@ namespace Eraflo.Catalyst.Networking
         public NetworkHandlerRegistry Handlers => _handlers;
 
         public bool HasBackend => _backend != null;
-        public bool IsServer => _backend?.IsServer ?? true;
-        public bool IsClient => _backend?.IsClient ?? false;
-        public bool IsConnected => _backend?.IsConnected ?? false;
+        public bool IsServer => _backend != null && _backend.IsServer;
+        public bool IsClient => _backend != null && _backend.IsClient;
+        public bool IsConnected => _backend != null && _backend.IsConnected;
         public bool IsHost => IsServer && IsClient;
         public ulong LocalClientId => _backend?.LocalClientId ?? 0;
         public ulong ServerClientId => _backend?.ServerClientId ?? 0;
@@ -102,7 +102,7 @@ namespace Eraflo.Catalyst.Networking
             if (_backend != null)
             {
                 _backend.Initialize();
-                
+
                 // Ensure we don't double-subscribe to router events
                 _router.ClearEventSubscribers();
 
@@ -124,16 +124,14 @@ namespace Eraflo.Catalyst.Networking
                     if (_backend != null)
                         _backend.UnregisterHandler(msgId);
                 };
-                
+
                 if (_backend.IsConnected) _handlers.NotifyConnected();
             }
 
             _onBackendChanged?.Invoke(_backend);
 
             if (PackageSettings.Instance.NetworkDebugMode)
-            {
-                Debug.Log($"[NetworkManager] Backend: {backend?.GetType().Name ?? "none"}");
-            }
+                Debug.Log($"[NetworkManager] Active Backend set to: {(_backend != null ? _backend.GetType().Name : "NULL")}");
         }
 
         public void Send<T>(T message, NetworkTarget target = NetworkTarget.All, NetworkDelivery delivery = NetworkDelivery.Reliable) where T : struct, INetworkMessage
@@ -169,7 +167,7 @@ namespace Eraflo.Catalyst.Networking
             {
                 _router.Route(msgId, data, LocalClientId);
             }
-            else 
+            else
             {
                 _backend.SendToClient(msgId, data, clientId, delivery);
             }
@@ -180,10 +178,16 @@ namespace Eraflo.Catalyst.Networking
             }
         }
 
-        public void SpawnPlayer(ulong clientId, Vector3? position = null, Quaternion? rotation = null)
+        public GameObject SpawnPlayer(ulong clientId, Vector3? position = null, Quaternion? rotation = null)
         {
-            if (_backend == null || !IsServer) return;
-            _backend.SpawnPlayer(clientId, position, rotation);
+            if (_backend == null || !IsServer) return null;
+            return _backend.SpawnPlayer(clientId, position, rotation);
+        }
+
+        public ulong GetOwner(GameObject go)
+        {
+            if (_backend == null) return 0;
+            return _backend.GetOwner(go);
         }
 
         public void SendToClients<T>(T message, NetworkDelivery delivery, params ulong[] clientIds) where T : struct, INetworkMessage
@@ -260,9 +264,9 @@ namespace Eraflo.Catalyst.Networking
 
         #region Lifecycle Proxies
 
-        public bool StartServer(ushort port = 7777, NetworkTransportType transport = NetworkTransportType.UDP)
+        public bool StartServer(string address = "127.0.0.1", ushort port = 7777, NetworkTransportType transport = NetworkTransportType.UDP)
         {
-            if (_backend is INetworkLifecycle lifecycle) return lifecycle.StartServer(port, transport);
+            if (_backend is INetworkLifecycle lifecycle) return lifecycle.StartServer(address, port, transport);
             Debug.LogWarning("[NetworkManager] Current backend does not support manual server starting.");
             return false;
         }
@@ -274,9 +278,9 @@ namespace Eraflo.Catalyst.Networking
             return false;
         }
 
-        public bool StartHost(ushort port = 7777, NetworkTransportType transport = NetworkTransportType.UDP)
+        public bool StartHost(string address = "127.0.0.1", ushort port = 7777, NetworkTransportType transport = NetworkTransportType.UDP)
         {
-            if (_backend is INetworkLifecycle lifecycle) return lifecycle.StartHost(port, transport);
+            if (_backend is INetworkLifecycle lifecycle) return lifecycle.StartHost(address, port, transport);
             Debug.LogWarning("[NetworkManager] Current backend does not support manual host starting.");
             return false;
         }
@@ -289,7 +293,7 @@ namespace Eraflo.Catalyst.Networking
 
         /// <summary>Internal use only: notifies the manager of a client connection.</summary>
         internal void NotifyClientConnected(ulong clientId) => OnClientConnected?.Invoke(clientId);
-        
+
         /// <summary>Internal use only: notifies the manager of a client disconnection.</summary>
         internal void NotifyClientDisconnected(ulong clientId) => OnClientDisconnected?.Invoke(clientId);
 

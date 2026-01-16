@@ -12,7 +12,7 @@ namespace Eraflo.Catalyst
     /// Service responsible for orchestrating complex scene loading flows.
     /// Handles additive loading, loading screens, and memory management.
     /// </summary>
-    [Service(Priority = 16)]  
+    [Service(Priority = 16)]
     public class SceneLoaderService : IGameService
     {
         private SceneTransitionChannel _onTransitionStarted;
@@ -138,7 +138,7 @@ namespace Eraflo.Catalyst
                 }
 
                 // 4. Load new scenes via strategy first
-                await _strategy.LoadAsync(group.Scenes, (p) => 
+                await _strategy.LoadAsync(group.Scenes, (p) =>
                 {
                     loadingScreen?.UpdateProgress(p * 0.8f); // 80% for loading
                 });
@@ -184,7 +184,7 @@ namespace Eraflo.Catalyst
             catch (Exception e)
             {
                 Debug.LogException(e);
-                
+
                 // Safety: always try to hide UI on error
                 if (loadingScreen != null)
                 {

@@ -51,12 +51,18 @@ namespace Eraflo.Catalyst
         [SerializeField] private NetworkHandlerMode _handlerMode = NetworkHandlerMode.Auto;
         [SerializeField] private List<string> _enabledHandlers = new List<string>();
         [SerializeField] private AuthorityMode _defaultAuthorityMode = AuthorityMode.ServerAuthoritative;
-        
+        [SerializeField] private bool _allowDiscoveryPortSharing = true;
+
+        // Discovery Security
+        [SerializeField] private int _discoveryMaxMessageSize = 512;
+        [SerializeField] private int _discoveryMaxNameLength = 64;
+        [SerializeField] private int _discoveryRateLimitPerSecond = 10;
+
         // Network Simulation (Editor/Development only)
         [SerializeField] private int _simulateLatencyMs = 0;
         [SerializeField] private float _simulatePacketLossPercent = 0f;
         [SerializeField] private int _simulateJitterMs = 0;
-        
+
         // Culling
         [SerializeField] private float _cullingCellSize = 50f;
         [SerializeField] private int _cullingClientsPerFrame = 4;
@@ -73,7 +79,7 @@ namespace Eraflo.Catalyst
         // Scene Flow
         [SerializeField] private SceneTransitionChannel _onTransitionStarted;
         [SerializeField] private SceneTransitionChannel _onTransitionCompleted;
-        
+
         // Settings
         [SerializeField] private string _settingsFilename = "settings.json";
 
@@ -105,12 +111,18 @@ namespace Eraflo.Catalyst
         public NetworkHandlerMode HandlerMode => _handlerMode;
         public IReadOnlyList<string> EnabledHandlers => _enabledHandlers;
         public AuthorityMode DefaultAuthorityMode => _defaultAuthorityMode;
-        
+        public bool AllowDiscoveryPortSharing => _allowDiscoveryPortSharing;
+
+        // Discovery Security
+        public int DiscoveryMaxMessageSize => _discoveryMaxMessageSize;
+        public int DiscoveryMaxNameLength => _discoveryMaxNameLength;
+        public int DiscoveryRateLimitPerSecond => _discoveryRateLimitPerSecond;
+
         // Network Simulation
         public int SimulateLatencyMs => _simulateLatencyMs;
         public float SimulatePacketLossPercent => _simulatePacketLossPercent;
         public int SimulateJitterMs => _simulateJitterMs;
-        
+
         // Culling
         public float CullingCellSize => _cullingCellSize;
         public int CullingClientsPerFrame => _cullingClientsPerFrame;

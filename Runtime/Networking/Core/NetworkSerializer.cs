@@ -22,7 +22,7 @@ namespace Eraflo.Catalyst.Networking
                 return stream.ToArray();
             }
         }
-        
+
         /// <summary>
         /// Deserializes bytes to a message.
         /// </summary>
@@ -36,7 +36,7 @@ namespace Eraflo.Catalyst.Networking
                 return message;
             }
         }
-        
+
         // Helper methods for common types
         public static void WriteVector3(BinaryWriter writer, Vector3 v)
         {
@@ -44,12 +44,12 @@ namespace Eraflo.Catalyst.Networking
             writer.Write(v.y);
             writer.Write(v.z);
         }
-        
+
         public static Vector3 ReadVector3(BinaryReader reader)
         {
             return new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
         }
-        
+
         public static void WriteQuaternion(BinaryWriter writer, Quaternion q)
         {
             writer.Write(q.x);
@@ -57,13 +57,13 @@ namespace Eraflo.Catalyst.Networking
             writer.Write(q.z);
             writer.Write(q.w);
         }
-        
+
         public static Quaternion ReadQuaternion(BinaryReader reader)
         {
             return new Quaternion(
-                reader.ReadSingle(), 
-                reader.ReadSingle(), 
-                reader.ReadSingle(), 
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
                 reader.ReadSingle()
             );
         }
@@ -103,7 +103,7 @@ namespace Eraflo.Catalyst.Networking
         private static void WriteValue(BinaryWriter writer, object value)
         {
             if (value == null) { writer.Write((byte)0); return; }
-            
+
             if (value is int i) { writer.Write((byte)1); writer.Write(i); }
             else if (value is float f) { writer.Write((byte)2); writer.Write(f); }
             else if (value is bool b) { writer.Write((byte)3); writer.Write(b); }
@@ -158,6 +158,12 @@ namespace Eraflo.Catalyst.Networking
         private static void WriteSpecificValue<T>(BinaryWriter writer, T value)
         {
             Type t = typeof(T);
+            if (typeof(INetworkMessage).IsAssignableFrom(t))
+            {
+                ((INetworkMessage)value).Serialize(writer);
+                return;
+            }
+
             if (t == typeof(int)) writer.Write((int)(object)value);
             else if (t == typeof(float)) writer.Write((float)(object)value);
             else if (t == typeof(bool)) writer.Write((bool)(object)value);
@@ -167,7 +173,7 @@ namespace Eraflo.Catalyst.Networking
             else if (t == typeof(byte)) writer.Write((byte)(object)value);
             else if (t == typeof(long)) writer.Write((long)(object)value);
             else if (t == typeof(double)) writer.Write((double)(object)value);
-            else if (t == typeof(object[])) 
+            else if (t == typeof(object[]))
             {
                 var arr = (object[])(object)value;
                 writer.Write(arr.Length);
@@ -179,6 +185,13 @@ namespace Eraflo.Catalyst.Networking
         private static T ReadSpecificValue<T>(BinaryReader reader)
         {
             Type t = typeof(T);
+            if (typeof(INetworkMessage).IsAssignableFrom(t))
+            {
+                var message = (INetworkMessage)Activator.CreateInstance(t);
+                message.Deserialize(reader);
+                return (T)message;
+            }
+
             if (t == typeof(int)) return (T)(object)reader.ReadInt32();
             if (t == typeof(float)) return (T)(object)reader.ReadSingle();
             if (t == typeof(bool)) return (T)(object)reader.ReadBoolean();

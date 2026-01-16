@@ -13,15 +13,16 @@ namespace Eraflo.Catalyst.Networking.Features.Lobby
     public class LobbyManager : IGameService
     {
         private ILobbyProvider _provider;
-        
-        public ILobbyProvider Provider => _provider;
+        private LobbyInfo? _currentLobby;
+
+        public LobbyInfo? Lobby => _currentLobby;
         public bool HasProvider => _provider != null;
 
         public event Action<LobbyInfo> OnLobbyJoined;
         public event Action OnLobbyLeft;
 
         public void Initialize() { }
-        public void Shutdown() 
+        public void Shutdown()
         {
             _provider?.Shutdown();
             _provider = null;
@@ -36,18 +37,26 @@ namespace Eraflo.Catalyst.Networking.Features.Lobby
         public async Task<LobbyResult> CreateLobby(LobbyOptions options)
         {
             if (_provider == null) return LobbyResult.Failure("No lobby provider set.");
-            
+
             var result = await _provider.CreateLobby(options);
-            if (result.Success) OnLobbyJoined?.Invoke(result.Lobby);
+            if (result.Success)
+            {
+                _currentLobby = result.Lobby;
+                OnLobbyJoined?.Invoke(result.Lobby);
+            }
             return result;
         }
 
         public async Task<LobbyResult> JoinLobby(string joinCode)
         {
             if (_provider == null) return LobbyResult.Failure("No lobby provider set.");
-            
+
             var result = await _provider.JoinLobby(joinCode);
-            if (result.Success) OnLobbyJoined?.Invoke(result.Lobby);
+            if (result.Success)
+            {
+                _currentLobby = result.Lobby;
+                OnLobbyJoined?.Invoke(result.Lobby);
+            }
             return result;
         }
 

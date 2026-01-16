@@ -11,15 +11,20 @@ namespace Eraflo.Catalyst.Networking.Features.Connection
     public class ConnectionManager : IGameService
     {
         private byte[] _localPayload = System.Array.Empty<byte>();
-        
+
         /// <summary>
         /// Event triggered on the server to validate an incoming connection.
         /// Return a ConnectionResponse to approve or reject.
         /// </summary>
         public event Func<ConnectionRequest, ConnectionResponse> OnValidateConnection;
 
+        /// <summary>
+        /// Event triggered when the local connection payload is updated.
+        /// </summary>
+        public event Action<byte[]> OnPayloadChanged;
+
         public void Initialize() { }
-        public void Shutdown() 
+        public void Shutdown()
         {
             OnValidateConnection = null;
             _localPayload = null;
@@ -31,6 +36,7 @@ namespace Eraflo.Catalyst.Networking.Features.Connection
         public void SetPayload<T>(T payload)
         {
             _localPayload = NetworkSerializer.SerializeValue(payload);
+            OnPayloadChanged?.Invoke(_localPayload);
         }
 
         public byte[] GetLocalPayload() => _localPayload;
