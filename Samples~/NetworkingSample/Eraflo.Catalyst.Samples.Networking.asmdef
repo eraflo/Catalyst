@@ -2,8 +2,7 @@
     "name": "Eraflo.Catalyst.Samples.Networking",
     "rootNamespace": "Eraflo.Catalyst.Samples.Networking",
     "references": [
-        "Eraflo.Catalyst.Runtime",
-        "Eraflo.Catalyst.Networking"
+        "Eraflo.Catalyst.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

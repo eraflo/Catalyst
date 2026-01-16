@@ -49,6 +49,21 @@ namespace Eraflo.Catalyst.Editor
         private SerializedProperty _discoveryMaxNameLength;
         private SerializedProperty _discoveryRateLimitPerSecond;
 
+        // Discovery Transport
+        private SerializedProperty _discoveryTransportType;
+        private SerializedProperty _discoveryRelayUrl;
+        private SerializedProperty _discoveryPort;
+
+        // Lobby
+        private SerializedProperty _lobbySearchTimeoutMs;
+        private SerializedProperty _enableRoomPasswords;
+
+        // Connection Security
+        private SerializedProperty _enableSecureConnections;
+        private SerializedProperty _maxConnectionPayloadAge;
+        private SerializedProperty _maxConnectionAttemptsPerMinute;
+        private SerializedProperty _connectionBanDurationSeconds;
+
         private void OnEnable()
         {
             _threadMode = serializedObject.FindProperty("_threadMode");
@@ -81,6 +96,18 @@ namespace Eraflo.Catalyst.Editor
             _discoveryMaxNameLength = serializedObject.FindProperty("_discoveryMaxNameLength");
             _discoveryRateLimitPerSecond = serializedObject.FindProperty("_discoveryRateLimitPerSecond");
 
+            _discoveryTransportType = serializedObject.FindProperty("_discoveryTransportType");
+            _discoveryRelayUrl = serializedObject.FindProperty("_discoveryRelayUrl");
+            _discoveryPort = serializedObject.FindProperty("_discoveryPort");
+
+            _lobbySearchTimeoutMs = serializedObject.FindProperty("_lobbySearchTimeoutMs");
+            _enableRoomPasswords = serializedObject.FindProperty("_enableRoomPasswords");
+
+            _enableSecureConnections = serializedObject.FindProperty("_enableSecureConnections");
+            _maxConnectionPayloadAge = serializedObject.FindProperty("_maxConnectionPayloadAge");
+            _maxConnectionAttemptsPerMinute = serializedObject.FindProperty("_maxConnectionAttemptsPerMinute");
+            _connectionBanDurationSeconds = serializedObject.FindProperty("_connectionBanDurationSeconds");
+
             RefreshHandlerList();
         }
 
@@ -105,11 +132,48 @@ namespace Eraflo.Catalyst.Editor
             EditorGUILayout.PropertyField(_handlerMode, new GUIContent("Handler Mode"));
             EditorGUILayout.PropertyField(_allowDiscoveryPortSharing, new GUIContent("Allow Discovery Port Sharing", "Enable multiple instances on the same machine to share the discovery port (47777)."));
 
+            EditorGUILayout.Space(10);
+
+            DrawHeader("📡 Discovery Transport");
+            EditorGUILayout.PropertyField(_discoveryTransportType, new GUIContent("Transport Type"));
+            
+            // Show relay URL only for WebSocket
+            if ((DiscoveryTransportType)_discoveryTransportType.enumValueIndex == DiscoveryTransportType.WebSocket)
+            {
+                EditorGUILayout.PropertyField(_discoveryRelayUrl, new GUIContent("Relay URL"));
+                EditorGUILayout.HelpBox("Enter your WebSocket relay server URL (e.g., wss://relay.example.com)", MessageType.Info);
+            }
+            
+            // Show port only for UDP
+            if ((DiscoveryTransportType)_discoveryTransportType.enumValueIndex == DiscoveryTransportType.UdpBroadcast)
+            {
+                EditorGUILayout.PropertyField(_discoveryPort, new GUIContent("Discovery Port"));
+            }
+            
             EditorGUILayout.Space(5);
-            EditorGUILayout.LabelField("Discovery Security", EditorStyles.miniBoldLabel);
-            EditorGUILayout.PropertyField(_discoveryMaxMessageSize, new GUIContent("Max Message Size", "Maximum UDP packet size to accept (default: 512 bytes)"));
+            EditorGUILayout.LabelField("Security", EditorStyles.miniBoldLabel);
+            EditorGUILayout.PropertyField(_discoveryMaxMessageSize, new GUIContent("Max Message Size", "Maximum packet size to accept (default: 512 bytes)"));
             EditorGUILayout.PropertyField(_discoveryMaxNameLength, new GUIContent("Max Name Length", "Maximum lobby name length (default: 64 chars)"));
             EditorGUILayout.PropertyField(_discoveryRateLimitPerSecond, new GUIContent("Rate Limit/sec", "Max packets per second per IP (default: 10)"));
+
+            EditorGUILayout.Space(10);
+
+            DrawHeader("🚪 Lobby");
+            EditorGUILayout.PropertyField(_lobbySearchTimeoutMs, new GUIContent("Search Timeout (ms)"));
+            EditorGUILayout.PropertyField(_enableRoomPasswords, new GUIContent("Enable Passwords"));
+
+            EditorGUILayout.Space(10);
+
+            DrawHeader("🔐 Connection Security");
+            EditorGUILayout.PropertyField(_enableSecureConnections, new GUIContent("Enable Secure Connections", "Sign and validate connection payloads with HMAC"));
+            if (_enableSecureConnections.boolValue)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(_maxConnectionPayloadAge, new GUIContent("Max Payload Age (sec)", "Reject payloads older than this"));
+                EditorGUILayout.PropertyField(_maxConnectionAttemptsPerMinute, new GUIContent("Max Attempts/min", "Before temporary ban"));
+                EditorGUILayout.PropertyField(_connectionBanDurationSeconds, new GUIContent("Ban Duration (sec)"));
+                EditorGUI.indentLevel--;
+            }
 
             if ((NetworkHandlerMode)_handlerMode.enumValueIndex == NetworkHandlerMode.Manual)
             {

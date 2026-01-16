@@ -35,6 +35,19 @@ namespace Eraflo.Catalyst
     }
 
     /// <summary>
+    /// Discovery transport types.
+    /// </summary>
+    public enum DiscoveryTransportType
+    {
+        /// <summary>UDP broadcast for LAN discovery.</summary>
+        UdpBroadcast,
+        /// <summary>WebSocket for relay/internet discovery.</summary>
+        WebSocket,
+        /// <summary>Mock transport for testing.</summary>
+        Mock
+    }
+
+    /// <summary>
     /// Global settings for the package.
     /// </summary>
     public class PackageSettings : ScriptableObject
@@ -57,6 +70,21 @@ namespace Eraflo.Catalyst
         [SerializeField] private int _discoveryMaxMessageSize = 512;
         [SerializeField] private int _discoveryMaxNameLength = 64;
         [SerializeField] private int _discoveryRateLimitPerSecond = 10;
+
+        // Lobby
+        [SerializeField] private int _lobbySearchTimeoutMs = 3500;
+        [SerializeField] private bool _enableRoomPasswords = true;
+
+        // Discovery Transport
+        [SerializeField] private DiscoveryTransportType _discoveryTransportType = DiscoveryTransportType.UdpBroadcast;
+        [SerializeField] private string _discoveryRelayUrl = "";
+        [SerializeField] private int _discoveryPort = 47777;
+
+        // Connection Security
+        [SerializeField] private bool _enableSecureConnections = true;
+        [SerializeField] private int _maxConnectionPayloadAge = 30;
+        [SerializeField] private int _maxConnectionAttemptsPerMinute = 5;
+        [SerializeField] private int _connectionBanDurationSeconds = 60;
 
         // Network Simulation (Editor/Development only)
         [SerializeField] private int _simulateLatencyMs = 0;
@@ -117,6 +145,21 @@ namespace Eraflo.Catalyst
         public int DiscoveryMaxMessageSize => _discoveryMaxMessageSize;
         public int DiscoveryMaxNameLength => _discoveryMaxNameLength;
         public int DiscoveryRateLimitPerSecond => _discoveryRateLimitPerSecond;
+
+        // Lobby
+        public int LobbySearchTimeoutMs => _lobbySearchTimeoutMs;
+        public bool EnableRoomPasswords => _enableRoomPasswords;
+
+        // Discovery Transport
+        public DiscoveryTransportType DiscoveryTransportType => _discoveryTransportType;
+        public string DiscoveryRelayUrl => _discoveryRelayUrl;
+        public int DiscoveryPort => _discoveryPort;
+
+        // Connection Security
+        public bool EnableSecureConnections => _enableSecureConnections;
+        public int MaxConnectionPayloadAge => _maxConnectionPayloadAge;
+        public int MaxConnectionAttemptsPerMinute => _maxConnectionAttemptsPerMinute;
+        public int ConnectionBanDurationSeconds => _connectionBanDurationSeconds;
 
         // Network Simulation
         public int SimulateLatencyMs => _simulateLatencyMs;

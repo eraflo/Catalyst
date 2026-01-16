@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Eraflo.Catalyst.Networking;
 
 namespace Eraflo.Catalyst.Networking.Features.Actions
 {

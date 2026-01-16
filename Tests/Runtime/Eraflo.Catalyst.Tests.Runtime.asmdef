@@ -4,7 +4,6 @@
     "references": [
         "UnityEngine.TestRunner",
         "Eraflo.Catalyst.Runtime",
-        "Eraflo.Catalyst.Spatial",
         "Unity.Nuget.Newtonsoft-Json",
         "Unity.Netcode.Runtime",
         "Unity.Mathematics",
@@ -16,7 +15,7 @@
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
+    "allowUnsafeCode": true,
     "overrideReferences": true,
     "precompiledReferences": [
         "nunit.framework.dll"

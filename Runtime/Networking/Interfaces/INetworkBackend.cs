@@ -80,5 +80,11 @@ namespace Eraflo.Catalyst.Networking
         /// Gets the network owner of a GameObject.
         /// </summary>
         ulong GetOwner(UnityEngine.GameObject go);
+
+        /// <summary>
+        /// Optional: Backend-specific discovery provider (e.g., Steam, Relay).
+        /// Returns null if backend doesn't provide discovery.
+        /// </summary>
+        IDiscoveryProvider DiscoveryProvider => null;
     }
 }
