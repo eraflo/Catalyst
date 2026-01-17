@@ -23,7 +23,7 @@ namespace Eraflo.Catalyst.Networking
     /// <summary>
     /// Limits how many times a client can invoke this handler per time window.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Method, AllowMultiple = false)]
     public class RateLimitAttribute : Attribute
     {
         /// <summary>Maximum messages allowed in the window.</summary>

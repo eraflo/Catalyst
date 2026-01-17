@@ -156,6 +156,24 @@ Complete API documentation for the Networking module.
 
 ---
 
+### NetworkDiscovery
+
+| Property | Description |
+|----------|-------------|
+| `IsAdvertising` | True if server is broadcast |
+| `IsScanning` | True if looking for servers |
+
+| Method | Description |
+|--------|-------------|
+| `SetProvider(provider)` | Set discovery backend |
+| `StartAdvertising(info)`| Start broadcasting |
+| `StopAdvertising()` | Stop broadcast |
+| `StartScanning()` | Search for servers |
+| `StopScanning()` | Stop search |
+| `OnServerFound` | Event: `Action<DiscoveryInfo>` |
+
+---
+
 ### NetworkActionManager
 
 | Method | Description |
@@ -340,6 +358,17 @@ Implementing `ISpawnStrategy`:
 | `Reject` | Drop silently |
 | `Warn` | Log + drop |
 | `Disconnect` | Boot client |
+
+### ValidateMessageAttribute
+
+```csharp
+[ValidateMessage(RejectInvalid = true)]
+public struct MyMessage : INetworkMessage { ... }
+```
+
+| Property | Description |
+|----------|-------------|
+| `RejectInvalid` | If true, invalid messages are dropped |
 
 ### MaxLengthAttribute
 

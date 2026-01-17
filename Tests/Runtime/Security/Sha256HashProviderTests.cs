@@ -53,15 +53,15 @@ namespace Eraflo.Catalyst.Tests.Security
         public void Verify_CorrectHash_ReturnsTrue()
         {
             string input = "secret";
-            var hash = _provider.Hash(input);
-            Assert.IsTrue(_provider.Verify(input, hash));
+            var hashHex = _provider.HashToHex(input);
+            Assert.IsTrue(_provider.Verify(input, hashHex));
         }
 
         [Test]
         public void Verify_WrongHash_ReturnsFalse()
         {
-            var hash = _provider.Hash("correct");
-            Assert.IsFalse(_provider.Verify("wrong", hash));
+            var hashHex = _provider.HashToHex("correct");
+            Assert.IsFalse(_provider.Verify("wrong", hashHex));
         }
 
         [Test]

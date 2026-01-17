@@ -105,10 +105,7 @@ namespace Eraflo.Catalyst.Networking
             
             try
             {
-                using var stream = new MemoryStream(data);
-                using var reader = new BinaryReader(stream);
-                message = default(T);
-                ((INetworkMessage)message).Deserialize(reader);
+                message = NetworkSerializer.Deserialize<T>(data);
                 return true;
             }
             catch (Exception e)

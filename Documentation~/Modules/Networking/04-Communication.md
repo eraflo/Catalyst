@@ -109,6 +109,15 @@ flowchart TB
 
 ## Sending Messages
 
+### Manual Registration
+
+```csharp
+network.Handlers.Register(new MyHandler());
+```
+
+> [!TIP]
+> **Auto-Discovery**: By default, the `NetworkBootstrapper` automatically finds all classes implementing `INetworkMessageHandler` and registers them at startup. You don't need to manually register handlers unless they require custom constructor arguments.
+
 ### Basic Send
 
 ```csharp
@@ -214,20 +223,20 @@ flowchart TB
 
 ## Actions (RPC-like)
 
-For simpler use cases, use NetworkActionManager:
+For simpler use cases, use `NetworkActionManager`:
 
 ```csharp
 var actions = App.Get<NetworkActionManager>();
 
-// Server: Register action
-actions.Register("SpawnEnemy", (args) => 
+// 1. Register
+actions.RegisterAction("PlayEffect", payload =>
 {
-    var position = (Vector3)args[0];
-    SpawnEnemyAt(position);
+    var values = NetworkSerializer.DeserializeValues(payload);
+    EffectManager.PlayAt("Explosion", (Vector3)values[0]);
 });
 
-// Client: Invoke
-actions.Invoke("SpawnEnemy", new Vector3(10, 0, 5));
+// 2. Trigger
+actions.Trigger("PlayEffect", transform.position);
 ```
 
 ---

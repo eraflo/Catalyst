@@ -23,6 +23,44 @@ flowchart TB
 
 ---
 
+## Discovery vs Lobbies
+
+While both help players find games, they serve different purposes:
+
+| Feature | **NetworkDiscovery** | **LobbyManager** |
+|---------|----------------------|------------------|
+| **Scope** | Local Area Network (LAN) | Wide Area Network (Internet) |
+| **Backend** | UDP Broadcast | Steam, PlayFab, Catalyst Relay |
+| **Complexity**| Zero configuration | Requires external service account |
+| **Features** | Simple broadcast | Metadata, sorting, passwords |
+
+---
+
+## 🔍 Server Discovery (LAN)
+
+The `NetworkDiscovery` service is the easiest way to support LAN play. It uses UDP broadcasting to find servers on the same network.
+
+### Basic Usage
+
+```csharp
+var discovery = App.Get<NetworkDiscovery>();
+
+// 1. Host side: Start advertising
+discovery.StartAdvertising("Killer Server", 7777);
+
+// 2. Client side: Start scanning
+discovery.OnServerFound += (info) =>
+{
+    Debug.Log($"Found server: {info.Name} at {info.Address}");
+    // Connect using the address
+    App.Get<NetworkManager>().Connect(info.Address);
+};
+
+discovery.StartScanning();
+```
+
+---
+
 ## Transport Types
 
 | Transport | Use Case | Requirements |
@@ -55,7 +93,7 @@ var transport = DiscoveryTransportFactory.Create(DiscoveryTransportType.WebSocke
 
 ---
 
-## UDP Broadcast (LAN)
+## UDP Broadcast (LAN) Architecture
 
 How it works:
 
@@ -102,7 +140,7 @@ sequenceDiagram
 
 ---
 
-## LobbyManager
+## LobbyManager (Internet)
 
 ### Creating a Lobby
 
@@ -126,18 +164,6 @@ await lobby.CreateLobby(new LobbyOptions
     Name = "Private Game",
     MaxPlayers = 4,
     Password = "secret123"  // Hashed automatically
-});
-```
-
-### Dedicated Server Mode
-
-```csharp
-await lobby.CreateLobby(new LobbyOptions
-{
-    Name = "Game Server #1",
-    MaxPlayers = 32,
-    Port = 7777,
-    IsDedicatedServer = true  // Server-only mode
 });
 ```
 
@@ -166,7 +192,7 @@ private void JoinLobby(LobbyInfo info)
 }
 ```
 
-### DiscoveryInfo Properties
+### LobbyInfo Properties
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -196,27 +222,6 @@ else
 }
 ```
 
-### With Password
-
-```csharp
-var result = await lobby.JoinLobby(joinCode, password: "secret123");
-```
-
-### With Timeout
-
-```csharp
-using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-
-try
-{
-    var result = await lobby.JoinLobby(joinCode, ct: cts.Token);
-}
-catch (OperationCanceledException)
-{
-    Debug.Log("Connection timed out");
-}
-```
-
 ---
 
 ## Complete Example
@@ -228,19 +233,18 @@ public class LobbyUI : MonoBehaviour
     [SerializeField] private GameObject _serverItemPrefab;
 
     private LobbyManager _lobby;
-    private List<DiscoveryInfo> _servers = new();
+    private List<LobbyInfo> _lobbies = new();
 
     void Start()
     {
         _lobby = App.Get<LobbyManager>();
-        _lobby.OnServerFound += AddServer;
     }
 
     public async void OnHostClicked()
     {
         await _lobby.CreateLobby(new LobbyOptions
         {
-            Name = $"{PlayerName}'s Game",
+            Name = "My Game",
             MaxPlayers = 4
         });
     }
@@ -248,31 +252,20 @@ public class LobbyUI : MonoBehaviour
     public async void OnRefreshClicked()
     {
         ClearServerList();
-        var lobbies = await _lobby.SearchLobbies();
-        foreach (var l in lobbies) AddServer(l);
+        var results = await _lobby.SearchLobbies();
+        foreach (var l in results) AddLobby(l);
     }
 
-    public async void OnJoinClicked(int index)
-    {
-        var lobbyInfo = _lobbies[index];
-        
-        string password = lobbyInfo.IsPasswordProtected ? AskForPassword() : null;
-        var result = await _lobby.JoinLobby(lobbyInfo.JoinCode, password);
-        
-        if (!result.Success)
-            ShowError(result.Message);
-    }
-
-    private void AddServer(LobbyInfo info)
+    private void AddLobby(LobbyInfo info)
     {
         _lobbies.Add(info);
         var item = Instantiate(_serverItemPrefab, _serverListContent);
-        item.GetComponent<ServerListItem>().Setup(info, _lobbies.Count - 1);
+        item.GetComponent<ServerListItem>().Setup(info);
     }
 
     private void ClearServerList()
     {
-        _servers.Clear();
+        _lobbies.Clear();
         foreach (Transform child in _serverListContent)
             Destroy(child.gameObject);
     }

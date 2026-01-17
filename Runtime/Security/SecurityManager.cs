@@ -49,6 +49,7 @@ namespace Eraflo.Catalyst.Security
         private ISignatureProvider _signatureProvider;
         private ITokenProvider _tokenProvider;
         private IRandomProvider _randomProvider;
+        private IKeyExchangeProvider _keyExchangeProvider;
         
         private byte[] _sessionKey;
 
@@ -66,6 +67,9 @@ namespace Eraflo.Catalyst.Security
         
         /// <summary>Random provider (default: CryptoRandom).</summary>
         public IRandomProvider Random => _randomProvider;
+        
+        /// <summary>Key exchange provider (default: ECDH P-256).</summary>
+        public IKeyExchangeProvider KeyExchange => _keyExchangeProvider;
 
         public void Initialize()
         {
@@ -75,6 +79,7 @@ namespace Eraflo.Catalyst.Security
             _encryptionProvider = new AesGcmEncryptionProvider();
             _signatureProvider = new HmacSignatureProvider();
             _tokenProvider = new SecureTokenProvider(_randomProvider);
+            _keyExchangeProvider = new EcdhKeyExchangeProvider();
             
             // Generate session key
             _sessionKey = _encryptionProvider.GenerateKey();
@@ -123,6 +128,12 @@ namespace Eraflo.Catalyst.Security
         {
             _randomProvider = provider ?? throw new ArgumentNullException(nameof(provider));
             Debug.Log($"[SecurityManager] Random provider set to: CryptoRandom");
+        }
+        
+        public void SetKeyExchangeProvider(IKeyExchangeProvider provider)
+        {
+            _keyExchangeProvider = provider ?? throw new ArgumentNullException(nameof(provider));
+            Debug.Log($"[SecurityManager] KeyExchange provider set to: {provider.Name}");
         }
         
         #endregion
