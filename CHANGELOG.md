@@ -1,3 +1,12 @@
+## [1.8.3](https://github.com/eraflo/Catalyst/compare/v1.8.2...v1.8.3) (2026-01-19)
+
+
+### Bug Fixes
+
+* added more security functions and enhanced doc ([7e8ed57](https://github.com/eraflo/Catalyst/commit/7e8ed57bd1ba822fdeaf93eaefe25a4818cf3041))
+* multiple bugs with lobby feature and backend connexion for netcode ([948231f](https://github.com/eraflo/Catalyst/commit/948231f4b218ec79bfcde1e92eca0774b2342bff))
+* network scenes issues + network timers issue ([46097d4](https://github.com/eraflo/Catalyst/commit/46097d429342427d0f057d22b8faed06ee851fb7))
+
 ## [1.8.2](https://github.com/eraflo/Catalyst/compare/v1.8.1...v1.8.2) (2026-01-15)
 
 
