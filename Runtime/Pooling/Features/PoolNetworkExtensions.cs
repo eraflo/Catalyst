@@ -1,7 +1,8 @@
-using UnityEngine;
+using Eraflo.Catalyst;
 using Eraflo.Catalyst.Networking;
 using Eraflo.Catalyst.Networking.Backends;
 using Eraflo.Catalyst.Networking.Backends.Mock;
+using UnityEngine;
 
 namespace Eraflo.Catalyst.Pooling
 {
@@ -19,12 +20,12 @@ namespace Eraflo.Catalyst.Pooling
         {
             var handle = pool.SpawnObject(prefab, position, rotation);
             var handler = App.Get<NetworkManager>()?.Handlers.Get<PoolNetworkHandler>();
-            
+
             if (handler != null && handle.IsValid)
             {
                 handler.SpawnNetworked(handle.Instance, prefab.name, position, rotation, data, target);
             }
-            
+
             return handle;
         }
 
@@ -35,12 +36,12 @@ namespace Eraflo.Catalyst.Pooling
         {
             var handle = pool.GetFromPool<T>();
             var handler = App.Get<NetworkManager>()?.Handlers.Get<PoolNetworkHandler>();
-            
+
             if (handler != null && handle.IsValid)
             {
                 handler.SpawnNetworked(handle.Instance, typeof(T).FullName, default, default, data, target);
             }
-            
+
             return handle;
         }
 

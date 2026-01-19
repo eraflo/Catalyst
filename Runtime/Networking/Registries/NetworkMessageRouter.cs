@@ -1,3 +1,24 @@
+/*
+ * ============================================================================
+ * NETWORK MESSAGE ROUTER
+ * ============================================================================
+ * 
+ * PURPOSE:
+ * --------
+ * Routes incoming network messages to registered handlers with:
+ * - Type-safe message dispatch
+ * - Rate limiting per client
+ * - Deserialization caching
+ * 
+ * SECURITY:
+ * ---------
+ * - Rate limiting via [RateLimit] attribute
+ * - Recursion guard
+ * - Exception isolation per handler
+ * 
+ * ============================================================================
+ */
+
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,14 +26,17 @@ using UnityEngine;
 namespace Eraflo.Catalyst.Networking
 {
     /// <summary>
-    /// Routes network messages to handlers.
+    /// Routes network messages to handlers with rate limiting.
     /// </summary>
     public class NetworkMessageRouter
     {
-        private readonly Dictionary<Type, ushort> _typeToId = new Dictionary<Type, ushort>();
-        private readonly Dictionary<ushort, Type> _idToType = new Dictionary<ushort, Type>();
-        private readonly Dictionary<ushort, List<Delegate>> _handlers = new Dictionary<ushort, List<Delegate>>();
-        private readonly Dictionary<ushort, System.Reflection.MethodInfo> _deserializeCache = new Dictionary<ushort, System.Reflection.MethodInfo>();
+        private readonly Dictionary<Type, ushort> _typeToId = new();
+        private readonly Dictionary<ushort, Type> _idToType = new();
+        private readonly Dictionary<ushort, List<Delegate>> _handlers = new();
+        private readonly Dictionary<ushort, System.Reflection.MethodInfo> _deserializeCache = new();
+        private readonly Dictionary<ushort, RateLimitAttribute> _rateLimits = new();
+        private readonly Dictionary<(ulong ClientId, ushort MsgId), RateLimitTracker> _rateLimitTrackers = new();
+        
         private ushort _nextId = 1;
         private bool _isRouting = false;
         
@@ -21,6 +45,12 @@ namespace Eraflo.Catalyst.Networking
 
         public event Action<ushort> OnTypeRegistered;
         public event Action<ushort> OnTypeUnregistered;
+        
+        /// <summary>
+        /// Event triggered when a client violates rate limits.
+        /// Subscribe to this to disconnect clients: (clientId, action) => networkManager.DisconnectClient(clientId)
+        /// </summary>
+        public event Action<ulong, RateLimitAction> OnClientViolation;
         
         /// <summary>Types currently registered in the router.</summary>
         public IEnumerable<Type> RegisteredTypes => _typeToId.Keys;
@@ -37,6 +67,13 @@ namespace Eraflo.Catalyst.Networking
                 list = new List<Delegate>();
                 _handlers[msgId] = list;
                 OnTypeRegistered?.Invoke(msgId);
+                
+                // Cache rate limit attribute if present
+                var attr = Attribute.GetCustomAttribute(typeof(T), typeof(RateLimitAttribute)) as RateLimitAttribute;
+                if (attr != null)
+                {
+                    _rateLimits[msgId] = attr;
+                }
             }
             list.Add(handler);
         }
@@ -51,6 +88,7 @@ namespace Eraflo.Catalyst.Networking
                 if (list.Count == 0)
                 {
                     _handlers.Remove(msgId);
+                    _rateLimits.Remove(msgId);
                     OnTypeUnregistered?.Invoke(msgId);
                 }
             }
@@ -63,16 +101,43 @@ namespace Eraflo.Catalyst.Networking
             if (_isRouting) return; // Recursion loop guard
             
             LastMessageSenderId = senderId;
-            if (!_idToType.TryGetValue(msgId, out var type)) return;
-            if (!_handlers.TryGetValue(msgId, out var handlers)) return;
+            if (!_idToType.TryGetValue(msgId, out var type))
+            {
+                Debug.LogWarning($"[NetworkMessageRouter] Received unregistered msgId: {msgId} from {senderId}");
+                return;
+            }
 
+            if (!_handlers.TryGetValue(msgId, out var handlers))
+            {
+                Debug.LogWarning($"[NetworkMessageRouter] No handlers registered for {type.Name} (ID: {msgId}) from {senderId}");
+                return;
+            }
+
+            Debug.Log($"[NetworkMessageRouter] Routing {type.Name} from {senderId} (ID: {msgId})");
+
+            // Rate limiting check
+            if (!CheckRateLimit(msgId, senderId))
+            {
+                return; // Message dropped
+            }
+
+            // Deserialize
             if (!_deserializeCache.TryGetValue(msgId, out var deserialize))
             {
                 deserialize = typeof(NetworkSerializer).GetMethod("Deserialize").MakeGenericMethod(type);
                 _deserializeCache[msgId] = deserialize;
             }
 
-            var message = deserialize.Invoke(null, new object[] { data });
+            object message;
+            try
+            {
+                message = deserialize.Invoke(null, new object[] { data });
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[NetworkMessageRouter] Deserialization failed for {type.Name}: {e.Message}");
+                return;
+            }
 
             _isRouting = true;
             try
@@ -94,16 +159,60 @@ namespace Eraflo.Catalyst.Networking
             }
         }
 
+        private bool CheckRateLimit(ushort msgId, ulong senderId)
+        {
+            if (!_rateLimits.TryGetValue(msgId, out var limit))
+                return true; // No limit configured
+            
+            var key = (senderId, msgId);
+            if (!_rateLimitTrackers.TryGetValue(key, out var tracker))
+            {
+                tracker = new RateLimitTracker(limit.WindowSeconds);
+                _rateLimitTrackers[key] = tracker;
+            }
+
+            if (!tracker.TryConsume())
+            {
+                // Rate limit exceeded
+                switch (limit.Action)
+                {
+                    case RateLimitAction.Warn:
+                        Debug.LogWarning($"[NetworkMessageRouter] Rate limit exceeded for client {senderId} on message {msgId}");
+                        break;
+                    case RateLimitAction.Disconnect:
+                        Debug.LogWarning($"[NetworkMessageRouter] Disconnecting client {senderId} for rate limit violation");
+                        OnClientViolation?.Invoke(senderId, RateLimitAction.Disconnect);
+                        break;
+                }
+                return false;
+            }
+
+            return true;
+        }
+
         private ushort GetOrCreateId<T>() where T : struct, INetworkMessage
         {
             var type = typeof(T);
             if (!_typeToId.TryGetValue(type, out var id))
             {
-                id = _nextId++;
+                // Use deterministic hash of the type name (FNV-1a)
+                id = HashTypeName(type.FullName);
+                if (id == 0) id = 1;
+
                 _typeToId[type] = id;
                 _idToType[id] = type;
             }
             return id;
+        }
+
+        private ushort HashTypeName(string name)
+        {
+            uint hash = 2166136261;
+            foreach (char c in name)
+            {
+                hash = (hash ^ c) * 16777619;
+            }
+            return (ushort)((hash ^ (hash >> 16)) & 0xFFFF);
         }
 
         public void ClearEventSubscribers()
@@ -118,9 +227,69 @@ namespace Eraflo.Catalyst.Networking
             _typeToId.Clear();
             _idToType.Clear();
             _deserializeCache.Clear();
+            _rateLimits.Clear();
+            _rateLimitTrackers.Clear();
             _nextId = 1;
             ClearEventSubscribers();
         }
 
+        /// <summary>
+        /// Cleans up expired rate limit trackers (call periodically).
+        /// </summary>
+        public void CleanupTrackers()
+        {
+            var now = Time.unscaledTime;
+            var toRemove = new List<(ulong, ushort)>();
+            
+            foreach (var kvp in _rateLimitTrackers)
+            {
+                if (now - kvp.Value.LastAccessTime > 60f) // Remove after 60s idle
+                {
+                    toRemove.Add(kvp.Key);
+                }
+            }
+            
+            foreach (var key in toRemove)
+            {
+                _rateLimitTrackers.Remove(key);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tracks rate limit for a specific client+message combination.
+    /// </summary>
+    internal class RateLimitTracker
+    {
+        private readonly float _windowSeconds;
+        private readonly Queue<float> _timestamps = new();
+        
+        public float LastAccessTime { get; private set; }
+
+        public RateLimitTracker(float windowSeconds)
+        {
+            _windowSeconds = windowSeconds;
+        }
+
+        public bool TryConsume()
+        {
+            float now = Time.unscaledTime;
+            LastAccessTime = now;
+            
+            // Remove expired timestamps
+            while (_timestamps.Count > 0 && now - _timestamps.Peek() > _windowSeconds)
+            {
+                _timestamps.Dequeue();
+            }
+
+            // Check limit (default 10 per window if not specified)
+            if (_timestamps.Count >= 10)
+            {
+                return false;
+            }
+
+            _timestamps.Enqueue(now);
+            return true;
+        }
     }
 }

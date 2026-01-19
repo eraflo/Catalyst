@@ -17,7 +17,7 @@ namespace Eraflo.Catalyst
         private static readonly Dictionary<Type, IGameService> _services = new Dictionary<Type, IGameService>();
         private static readonly List<IUpdatable> _updatables = new List<IUpdatable>();
         private static readonly List<IFixedUpdatable> _fixedUpdatables = new List<IFixedUpdatable>();
-        
+
         private static bool _initialized;
 
         private struct ServiceUpdate { }
@@ -56,9 +56,9 @@ namespace Eraflo.Catalyst
                 try
                 {
                     string name = assembly.GetName().Name;
-                    
+
                     // Skip large system assemblies unless they contain Eraflo.Catalyst
-                    if (name.StartsWith("System") || name.StartsWith("Unity") || name.StartsWith("mscorlib") || 
+                    if (name.StartsWith("System") || name.StartsWith("Unity") || name.StartsWith("mscorlib") ||
                         name.StartsWith("netstandard") || name.StartsWith("Microsoft") || name.StartsWith("Mono"))
                     {
                         if (!name.Contains("Eraflo.Catalyst"))
@@ -69,7 +69,7 @@ namespace Eraflo.Catalyst
                     foreach (var type in types)
                     {
                         if (type.IsAbstract || type.IsInterface) continue;
-                        
+
                         var attr = type.GetCustomAttribute<ServiceAttribute>();
                         if (attr != null)
                         {
@@ -98,7 +98,7 @@ namespace Eraflo.Catalyst
                 if (Activator.CreateInstance(type) is IGameService service)
                 {
                     _services[type] = service;
-                    
+
                     if (service is IUpdatable updatable) _updatables.Add(updatable);
                     if (service is IFixedUpdatable fixedUpdatable) _fixedUpdatables.Add(fixedUpdatable);
 
@@ -114,7 +114,7 @@ namespace Eraflo.Catalyst
         public static void Register<T>(T instance) where T : class, IGameService
         {
             var type = typeof(T);
-            
+
             // Remove existing instance from all collections
             if (_services.TryGetValue(type, out var existing))
             {
@@ -126,7 +126,7 @@ namespace Eraflo.Catalyst
             _services[type] = instance;
             if (instance is IUpdatable updatable) _updatables.Add(updatable);
             if (instance is IFixedUpdatable fixedUpdatable) _fixedUpdatables.Add(fixedUpdatable);
-            
+
             instance.Initialize();
         }
 
@@ -158,7 +158,7 @@ namespace Eraflo.Catalyst
         {
             var loop = PlayerLoop.GetCurrentPlayerLoop();
             if (loop.subSystemList == null) return;
-            
+
             InsertSystem<Update, ServiceUpdate>(ref loop, OnUpdate);
             InsertSystem<FixedUpdate, ServiceFixedUpdate>(ref loop, OnFixedUpdate);
 
@@ -209,7 +209,7 @@ namespace Eraflo.Catalyst
             {
                 try { service.Shutdown(); } catch (Exception) { }
             }
-            
+
             _services.Clear();
             _updatables.Clear();
             _fixedUpdatables.Clear();

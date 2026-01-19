@@ -11,12 +11,11 @@
         "Unity.Mathematics",
         "Unity.TextMeshPro",
         "UnityEngine.UI",
-        "Unity.InputSystem",
-        "Eraflo.Catalyst.Spatial"
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
+    "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,

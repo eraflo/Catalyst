@@ -1,7 +1,7 @@
 using System;
-using UnityEngine;
-using Eraflo.Catalyst.Timers.Backends;
 using Eraflo.Catalyst;
+using Eraflo.Catalyst.Timers.Backends;
+using UnityEngine;
 
 namespace Eraflo.Catalyst.Timers
 {
@@ -18,6 +18,11 @@ namespace Eraflo.Catalyst.Timers
 
 
         #region Properties
+
+        /// <summary>
+        /// The backend used for timer operations.
+        /// </summary>
+        public ITimerBackend Backend => _backend;
 
         /// <summary>
         /// Whether Burst mode is active.
@@ -165,6 +170,9 @@ namespace Eraflo.Catalyst.Timers
         /// <summary>Gets the current time of a timer.</summary>
         public float GetCurrentTime(TimerHandle handle) => _backend?.GetCurrentTime(handle) ?? 0f;
 
+        /// <summary>Forces the current time of a timer (used for synchronization).</summary>
+        public void SetCurrentTime(TimerHandle handle, float time) => _backend?.SetCurrentTime(handle, time);
+
         /// <summary>Gets the progress (0-1) of a timer.</summary>
         public float GetProgress(TimerHandle handle) => _backend?.GetProgress(handle) ?? 0f;
 
@@ -178,7 +186,7 @@ namespace Eraflo.Catalyst.Timers
         public void Clear() => _backend?.Clear();
 
         /// <summary>Gets debug info for all active timers.</summary>
-        public System.Collections.Generic.List<TimerDebugInfo> GetActiveTimers() 
+        public System.Collections.Generic.List<TimerDebugInfo> GetActiveTimers()
             => _backend?.GetActiveTimers() ?? new System.Collections.Generic.List<TimerDebugInfo>();
 
         #endregion
@@ -197,7 +205,7 @@ namespace Eraflo.Catalyst.Timers
             if (preset.TimerType == null) return TimerHandle.None;
 
             EnsureInitialized();
-            
+
             // Use reflection to call generic CreateTimer<T>
             var method = typeof(Timer).GetMethod(nameof(CreateTimer), new[] { typeof(TimerConfig) });
             var generic = method.MakeGenericMethod(preset.TimerType);

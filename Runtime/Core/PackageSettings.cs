@@ -35,6 +35,19 @@ namespace Eraflo.Catalyst
     }
 
     /// <summary>
+    /// Discovery transport types.
+    /// </summary>
+    public enum DiscoveryTransportType
+    {
+        /// <summary>UDP broadcast for LAN discovery.</summary>
+        UdpBroadcast,
+        /// <summary>WebSocket for relay/internet discovery.</summary>
+        WebSocket,
+        /// <summary>Mock transport for testing.</summary>
+        Mock
+    }
+
+    /// <summary>
     /// Global settings for the package.
     /// </summary>
     public class PackageSettings : ScriptableObject
@@ -51,12 +64,33 @@ namespace Eraflo.Catalyst
         [SerializeField] private NetworkHandlerMode _handlerMode = NetworkHandlerMode.Auto;
         [SerializeField] private List<string> _enabledHandlers = new List<string>();
         [SerializeField] private AuthorityMode _defaultAuthorityMode = AuthorityMode.ServerAuthoritative;
-        
+        [SerializeField] private bool _allowDiscoveryPortSharing = true;
+
+        // Discovery Security
+        [SerializeField] private int _discoveryMaxMessageSize = 512;
+        [SerializeField] private int _discoveryMaxNameLength = 64;
+        [SerializeField] private int _discoveryRateLimitPerSecond = 10;
+
+        // Lobby
+        [SerializeField] private int _lobbySearchTimeoutMs = 3500;
+        [SerializeField] private bool _enableRoomPasswords = true;
+
+        // Discovery Transport
+        [SerializeField] private DiscoveryTransportType _discoveryTransportType = DiscoveryTransportType.UdpBroadcast;
+        [SerializeField] private string _discoveryRelayUrl = "";
+        [SerializeField] private int _discoveryPort = 47777;
+
+        // Connection Security
+        [SerializeField] private bool _enableSecureConnections = true;
+        [SerializeField] private int _maxConnectionPayloadAge = 30;
+        [SerializeField] private int _maxConnectionAttemptsPerMinute = 5;
+        [SerializeField] private int _connectionBanDurationSeconds = 60;
+
         // Network Simulation (Editor/Development only)
         [SerializeField] private int _simulateLatencyMs = 0;
         [SerializeField] private float _simulatePacketLossPercent = 0f;
         [SerializeField] private int _simulateJitterMs = 0;
-        
+
         // Culling
         [SerializeField] private float _cullingCellSize = 50f;
         [SerializeField] private int _cullingClientsPerFrame = 4;
@@ -73,7 +107,7 @@ namespace Eraflo.Catalyst
         // Scene Flow
         [SerializeField] private SceneTransitionChannel _onTransitionStarted;
         [SerializeField] private SceneTransitionChannel _onTransitionCompleted;
-        
+
         // Settings
         [SerializeField] private string _settingsFilename = "settings.json";
 
@@ -105,12 +139,33 @@ namespace Eraflo.Catalyst
         public NetworkHandlerMode HandlerMode => _handlerMode;
         public IReadOnlyList<string> EnabledHandlers => _enabledHandlers;
         public AuthorityMode DefaultAuthorityMode => _defaultAuthorityMode;
-        
+        public bool AllowDiscoveryPortSharing => _allowDiscoveryPortSharing;
+
+        // Discovery Security
+        public int DiscoveryMaxMessageSize => _discoveryMaxMessageSize;
+        public int DiscoveryMaxNameLength => _discoveryMaxNameLength;
+        public int DiscoveryRateLimitPerSecond => _discoveryRateLimitPerSecond;
+
+        // Lobby
+        public int LobbySearchTimeoutMs => _lobbySearchTimeoutMs;
+        public bool EnableRoomPasswords => _enableRoomPasswords;
+
+        // Discovery Transport
+        public DiscoveryTransportType DiscoveryTransportType => _discoveryTransportType;
+        public string DiscoveryRelayUrl => _discoveryRelayUrl;
+        public int DiscoveryPort => _discoveryPort;
+
+        // Connection Security
+        public bool EnableSecureConnections => _enableSecureConnections;
+        public int MaxConnectionPayloadAge => _maxConnectionPayloadAge;
+        public int MaxConnectionAttemptsPerMinute => _maxConnectionAttemptsPerMinute;
+        public int ConnectionBanDurationSeconds => _connectionBanDurationSeconds;
+
         // Network Simulation
         public int SimulateLatencyMs => _simulateLatencyMs;
         public float SimulatePacketLossPercent => _simulatePacketLossPercent;
         public int SimulateJitterMs => _simulateJitterMs;
-        
+
         // Culling
         public float CullingCellSize => _cullingCellSize;
         public int CullingClientsPerFrame => _cullingClientsPerFrame;

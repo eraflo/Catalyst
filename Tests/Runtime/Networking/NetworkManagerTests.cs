@@ -61,6 +61,47 @@ namespace Eraflo.Catalyst.Tests
 
         #endregion
 
+        #region Lifecycle
+
+        [Test]
+        public void StartServer_CallsBackend()
+        {
+            var success = App.Get<NetworkManager>().StartServer();
+            Assert.IsTrue(success);
+            Assert.IsTrue(_mockBackend.IsServer);
+        }
+
+        [Test]
+        public void StartClient_CallsBackend()
+        {
+            var success = App.Get<NetworkManager>().StartClient();
+            Assert.IsTrue(success);
+            Assert.IsTrue(_mockBackend.IsClient);
+        }
+
+        [Test]
+        public void StartHost_CallsBackend()
+        {
+            var success = App.Get<NetworkManager>().StartHost();
+            Assert.IsTrue(success);
+            Assert.IsTrue(_mockBackend.IsServer);
+            Assert.IsTrue(_mockBackend.IsClient);
+        }
+
+        [Test]
+        public void Stop_CallsBackend()
+        {
+            App.Get<NetworkManager>().StartHost();
+            App.Get<NetworkManager>().Stop();
+            
+            // MockBackend Shutdown should likely clear flags or similar, 
+            // but the test confirms the proxy call doesn't crash.
+            // For MockBackend, we can verify IsConnected or similar.
+            Assert.IsFalse(_mockBackend.IsConnected);
+        }
+
+        #endregion
+
         #region Backends Registry
 
         [Test]

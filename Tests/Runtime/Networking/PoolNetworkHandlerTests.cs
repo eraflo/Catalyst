@@ -35,7 +35,7 @@ namespace Eraflo.Catalyst.Tests
             _handler.Clear();
             
             // Start as host for tests
-            _network.StartHost(7777);
+            _network.StartHost("127.0.0.1", 7777);
         }
 
         [TearDown]

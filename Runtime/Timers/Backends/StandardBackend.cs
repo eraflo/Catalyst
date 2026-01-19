@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 
@@ -15,11 +15,12 @@ namespace Eraflo.Catalyst.Timers.Backends
     {
         private readonly Dictionary<uint, TimerWrapper> _timers = new Dictionary<uint, TimerWrapper>();
         private readonly List<uint> _toRemove = new List<uint>();
-        
+        private readonly List<TimerWrapper> _updateCache = new List<TimerWrapper>();
+
         // Thread-safe pending operations
         private readonly ConcurrentQueue<PendingOperation> _pendingOperations = new ConcurrentQueue<PendingOperation>();
         private readonly object _lockObject = new object();
-        
+
         private int _nextId = 1;
         private byte _generation = 0;
         private int _mainThreadId = -1;
@@ -88,6 +89,27 @@ namespace Eraflo.Catalyst.Timers.Backends
             lock (_lockObject)
             {
                 return _timers.TryGetValue(handle.Id, out var wrapper) ? wrapper.Timer.CurrentTime : 0f;
+            }
+        }
+
+        public void SetCurrentTime(TimerHandle handle, float time)
+        {
+            lock (_lockObject)
+            {
+                if (_timers.TryGetValue(handle.Id, out var wrapper))
+                {
+                    var timer = wrapper.Timer;
+                    timer.CurrentTime = time;
+                    wrapper.Timer = timer;
+                }
+            }
+        }
+
+        public string GetTimerType(TimerHandle handle)
+        {
+            lock (_lockObject)
+            {
+                return _timers.TryGetValue(handle.Id, out var wrapper) ? wrapper.Timer.GetType().AssemblyQualifiedName : null;
             }
         }
 
@@ -227,10 +249,17 @@ namespace Eraflo.Catalyst.Timers.Backends
             lock (_lockObject)
             {
                 var chronos = App.Get<Eraflo.Catalyst.Core.Chronos.ChronosManager>();
-                
-                foreach (var kvp in _timers)
+
+                // Copy to cache to avoid InvalidOperationException if timers are added/removed during callbacks
+                _updateCache.Clear();
+                foreach (var wrapper in _timers.Values)
                 {
-                    var wrapper = kvp.Value;
+                    _updateCache.Add(wrapper);
+                }
+
+                foreach (var wrapper in _updateCache)
+                {
+                    uint id = wrapper.Handle.Id;
                     var timer = wrapper.Timer;
 
                     if (!timer.IsRunning || timer.IsFinished) continue;
@@ -244,12 +273,12 @@ namespace Eraflo.Catalyst.Timers.Backends
                     }
 
                     // Invoke OnTick for each frame (with deltaTime as float parameter)
-                    TimerCallbacks.Invoke<OnTick, float>(kvp.Key, dt);
+                    TimerCallbacks.Invoke<OnTick, float>(id, dt);
 
                     timer.Tick(dt);
 
                     // Let the timer collect its own callbacks
-                    var collector = new CallbackCollector(kvp.Key);
+                    var collector = new CallbackCollector(id);
                     timer.CollectCallbacks(collector);
 
                     wrapper.Timer = timer;
@@ -257,7 +286,7 @@ namespace Eraflo.Catalyst.Timers.Backends
                     // Only auto-remove if finished AND not reset by callback (IsRunning would be true if reset)
                     if (timer.IsFinished && !timer.IsRunning)
                     {
-                        _toRemove.Add(kvp.Key);
+                        _toRemove.Add(id);
                     }
                 }
 

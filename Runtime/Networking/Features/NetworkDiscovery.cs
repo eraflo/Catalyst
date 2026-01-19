@@ -1,117 +1,103 @@
 using System;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
+using Eraflo.Catalyst.Networking.Features.Discovery;
 using UnityEngine;
 
 namespace Eraflo.Catalyst.Networking
 {
     /// <summary>
-    /// Service for discovering servers on the local network using UDP broadcast.
+    /// Service for server discovery. Delegates to an IDiscoveryProvider.
     /// </summary>
     [Service(Priority = 12)]
     public class NetworkDiscovery : IGameService
     {
-        private const int DiscoveryPort = 47777;
-        private UdpClient _udpClient;
-        private bool _isAdvertising;
-        private bool _isScanning;
-        private string _serverName = "Catalyst Game";
+        private IDiscoveryProvider _provider;
+
+        /// <summary>Current provider name.</summary>
+        public string ProviderName => _provider?.Name ?? "None";
         
+        /// <summary>True if currently advertising.</summary>
+        public bool IsAdvertising => _provider?.IsAdvertising ?? false;
+        
+        /// <summary>True if currently scanning.</summary>
+        public bool IsScanning => _provider?.IsScanning ?? false;
+
+        /// <summary>Fired when a server is discovered.</summary>
         public event Action<DiscoveryInfo> OnServerFound;
 
-        public struct DiscoveryInfo
+        public void Initialize()
         {
-            public string Address;
-            public string Name;
-            public ushort Port;
+            // Set default LAN provider
+            SetProvider(new LanDiscoveryProvider());
         }
 
-        public void Initialize() { }
-        public void Shutdown() => StopAll();
-
-        public void StartAdvertising(string serverName, ushort gamePort)
+        public void Shutdown()
         {
-            if (_isAdvertising) return;
-            _serverName = serverName;
-            _isAdvertising = true;
-            
-            _udpClient = new UdpClient();
-            _udpClient.EnableBroadcast = true;
-            
-            string message = $"CATALYST|{_serverName}|{gamePort}";
-            byte[] data = Encoding.UTF8.GetBytes(message);
-            
-            Task.Run(async () =>
+            _provider?.Shutdown();
+            _provider = null;
+        }
+
+        /// <summary>Sets the discovery provider.</summary>
+        public void SetProvider(IDiscoveryProvider provider)
+        {
+            if (_provider != null)
             {
-                while (_isAdvertising)
-                {
-                    try
-                    {
-                        await _udpClient.SendAsync(data, data.Length, new IPEndPoint(IPAddress.Broadcast, DiscoveryPort));
-                        await Task.Delay(2000); // Pulse every 2 seconds
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogError($"[NetworkDiscovery] Advertising error: {e.Message}");
-                        break;
-                    }
-                }
-            });
-            
-            Debug.Log($"[NetworkDiscovery] Advertising as '{_serverName}' on port {DiscoveryPort}");
+                _provider.OnServerFound -= HandleServerFound;
+                _provider.Shutdown();
+            }
+
+            _provider = provider;
+
+            if (_provider != null)
+            {
+                _provider.OnServerFound += HandleServerFound;
+            }
+
+            Debug.Log($"[NetworkDiscovery] Provider set to: {provider?.Name ?? "none"}");
         }
 
+        /// <summary>Start advertising a server.</summary>
+        public void StartAdvertising(DiscoveryInfo info)
+        {
+            if (_provider == null)
+            {
+                Debug.LogWarning("[NetworkDiscovery] No provider set.");
+                return;
+            }
+            _provider.StartAdvertising(info);
+        }
+
+        /// <summary>Start advertising with simple parameters (legacy API).</summary>
+        public void StartAdvertising(string serverName, ushort gamePort, int currentPlayers = 0, int maxPlayers = 0)
+        {
+            StartAdvertising(new DiscoveryInfo
+            {
+                Name = serverName,
+                Port = gamePort,
+                CurrentPlayers = currentPlayers,
+                MaxPlayers = maxPlayers
+            });
+        }
+
+        /// <summary>Stop advertising.</summary>
+        public void StopAdvertising() => _provider?.StopAdvertising();
+
+        /// <summary>Start scanning for servers.</summary>
         public void StartScanning()
         {
-            if (_isScanning) return;
-            _isScanning = true;
-            
-            var listener = new UdpClient(DiscoveryPort);
-            
-            Task.Run(async () =>
+            if (_provider == null)
             {
-                while (_isScanning)
-                {
-                    try
-                    {
-                        var result = await listener.ReceiveAsync();
-                        string message = Encoding.UTF8.GetString(result.Buffer);
-                        
-                        if (message.StartsWith("CATALYST|"))
-                        {
-                            var parts = message.Split('|');
-                            if (parts.Length >= 3)
-                            {
-                                var info = new DiscoveryInfo
-                                {
-                                    Address = result.RemoteEndPoint.Address.ToString(),
-                                    Name = parts[1],
-                                    Port = ushort.Parse(parts[2])
-                                };
-                                OnServerFound?.Invoke(info);
-                            }
-                        }
-                    }
-                    catch (ObjectDisposedException) { break; }
-                    catch (Exception e)
-                    {
-                        Debug.LogError($"[NetworkDiscovery] Scanning error: {e.Message}");
-                    }
-                }
-                listener.Dispose();
-            });
-            
-            Debug.Log("[NetworkDiscovery] Scanning for servers...");
+                Debug.LogWarning("[NetworkDiscovery] No provider set.");
+                return;
+            }
+            _provider.StartScanning();
         }
 
-        public void StopAll()
+        /// <summary>Stop scanning.</summary>
+        public void StopScanning() => _provider?.StopScanning();
+
+        private void HandleServerFound(DiscoveryInfo info)
         {
-            _isAdvertising = false;
-            _isScanning = false;
-            _udpClient?.Dispose();
-            _udpClient = null;
+            OnServerFound?.Invoke(info);
         }
     }
 }

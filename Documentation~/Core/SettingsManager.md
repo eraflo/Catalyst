@@ -13,7 +13,8 @@ The **Settings Manager** provides a centralized and persistent system for managi
 5. [Creating Custom Pages](#5-creating-custom-pages)
 6. [Extending SettingsData](#6-extending-settingsdata)
 7. [Generic Settings](#7-generic-settings)
-8. [API Reference](#8-api-reference)
+8. [UI Binding](#8-ui-binding)
+9. [API Reference](#9-api-reference)
 
 ---
 
@@ -329,7 +330,33 @@ public class GenericSettingsExample : MonoBehaviour
 
 ---
 
-## 8. API Reference
+## 8. UI Binding
+
+The `UISettingBinder` component allows you to bind UI elements directly to settings without writing code.
+
+### 8.1 Usage
+
+1. Add `UISettingBinder` to a GameObject with a `Slider`, `Toggle`, or `TMP_Dropdown`.
+2. Enter the **Setting Key** (e.g., `MasterVolume` or `Fullscreen`).
+3. (Optional) Enter a **Page ID** to auto-apply a specific page on change.
+
+```csharp
+// Internally it does this:
+slider.onValueChanged.AddListener(val => {
+    settings.Data.MasterVolume = val;
+    settings.ApplyPage("Audio");
+});
+```
+
+### 8.2 Supported Components
+
+- **Slider**: Binds to `float` or `int` settings.
+- **Toggle**: Binds to `bool` settings.
+- **TMP_Dropdown**: Binds to `int` or `enum` (mapped to int) settings.
+
+---
+
+## 9. API Reference
 
 ### SettingsManager
 

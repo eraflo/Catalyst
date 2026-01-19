@@ -10,5 +10,6 @@ namespace Eraflo.Catalyst.Scenes.Networking
     public interface ISceneNetworkBackend
     {
         Task LoadSceneAsync(string sceneName, LoadSceneMode mode);
+        Task UnloadSceneAsync(Scene scene);
     }
 }

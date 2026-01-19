@@ -10,6 +10,7 @@ namespace Eraflo.Catalyst.Networking
     public class NetworkHandlerRegistry
     {
         private readonly List<INetworkMessageHandler> _handlers = new List<INetworkMessageHandler>();
+        private readonly List<INetworkUpdatable> _updateables = new List<INetworkUpdatable>();
         private readonly Dictionary<Type, INetworkMessageHandler> _byType = new Dictionary<Type, INetworkMessageHandler>();
         private bool _connected;
 
@@ -17,11 +18,16 @@ namespace Eraflo.Catalyst.Networking
         {
             if (handler == null) throw new ArgumentNullException(nameof(handler));
             if (_handlers.Contains(handler)) return;
-            
+
             _handlers.Add(handler);
             _byType[handler.GetType()] = handler;
+
+            if (handler is INetworkUpdatable updateable)
+                _updateables.Add(updateable);
+
+            // Initialize the handler
             handler.OnRegistered();
-            
+
             if (_connected) handler.OnNetworkConnected();
         }
 
@@ -29,6 +35,9 @@ namespace Eraflo.Catalyst.Networking
         {
             if (_handlers.Remove(handler))
             {
+                if (handler is INetworkUpdatable updateable)
+                    _updateables.Remove(updateable);
+
                 _byType.Remove(handler.GetType());
                 handler.OnUnregistered();
             }
@@ -58,6 +67,15 @@ namespace Eraflo.Catalyst.Networking
             foreach (var h in _handlers)
             {
                 try { h.OnNetworkDisconnected(); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+        }
+
+        public void Update()
+        {
+            for (int i = 0; i < _updateables.Count; i++)
+            {
+                try { _updateables[i].OnUpdate(); }
                 catch (Exception e) { Debug.LogException(e); }
             }
         }

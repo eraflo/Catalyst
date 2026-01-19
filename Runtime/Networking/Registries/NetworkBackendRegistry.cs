@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Networking;
 using UnityEngine;
 
 namespace Eraflo.Catalyst.Networking
@@ -15,7 +17,7 @@ namespace Eraflo.Catalyst.Networking
         {
             if (factory == null) throw new ArgumentNullException(nameof(factory));
             _factories[factory.Id] = factory;
-            
+
             if (PackageSettings.Instance.NetworkDebugMode)
             {
                 Debug.Log($"[NetworkBackendRegistry] Registered: {factory.Id}");
@@ -24,7 +26,7 @@ namespace Eraflo.Catalyst.Networking
 
         public void Unregister(string id) => _factories.Remove(id);
 
-        public INetworkBackendFactory Get(string id) 
+        public INetworkBackendFactory Get(string id)
             => _factories.TryGetValue(id, out var f) ? f : null;
 
         public INetworkBackend Create(string id)

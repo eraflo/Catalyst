@@ -215,7 +215,24 @@ TimerNetworkExtensions.BroadcastTimerSync();
 
 ---
 
-## 9. API Reference
+## 9. Metrics
+
+Monitor performance and usage via `App.Get<Timer>().Metrics`.
+
+```csharp
+var metrics = App.Get<Timer>().Metrics;
+Debug.Log(metrics.ToString());
+
+// Available data:
+// - TotalCreated, TotalCompleted, TotalCancelled
+// - ActiveCount, PeakActiveCount
+// - AverageDuration
+// - LastUpdateMs, AverageUpdateMs
+```
+
+---
+
+## 10. API Reference
 
 ### Timer (Service)
 

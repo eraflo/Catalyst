@@ -16,6 +16,7 @@ changelog:
         - refactor
         - style
         - chore
+        - docs
     - title: '### Fixed'
       labels:
         - fix

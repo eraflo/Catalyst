@@ -14,10 +14,14 @@ namespace Eraflo.Catalyst.Timers
         /// <returns>Handle to the created timer.</returns>
         TimerHandle Create<T>(TimerConfig config) where T : struct, ITimer;
 
-        /// <summary>
-        /// Gets the current time of a timer.
-        /// </summary>
+        /// <summary>Gets the current time of a timer.</summary>
         float GetCurrentTime(TimerHandle handle);
+
+        /// <summary>Forces the current time of a timer (used for synchronization).</summary>
+        void SetCurrentTime(TimerHandle handle, float time);
+
+        /// <summary>Gets the full assembly-qualified name of the timer's type.</summary>
+        string GetTimerType(TimerHandle handle);
 
         /// <summary>
         /// Gets the progress (0-1) of a timer.
@@ -63,7 +67,7 @@ namespace Eraflo.Catalyst.Timers
         /// Sets the time scale of a timer.
         /// </summary>
         void SetTimeScale(TimerHandle handle, float scale);
-        
+
         /// <summary>
         /// Sets the time channel of a timer.
         /// </summary>

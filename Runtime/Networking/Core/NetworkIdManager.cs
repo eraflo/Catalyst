@@ -64,6 +64,22 @@ namespace Eraflo.Catalyst.Networking
         }
 
         /// <summary>
+        /// Checks if an object instance is registered.
+        /// </summary>
+        public bool Contains(object instance)
+        {
+            return instance != null && _objectToId.ContainsKey(instance);
+        }
+
+        /// <summary>
+        /// Checks if a network ID is registered.
+        /// </summary>
+        public bool ContainsId(uint networkId)
+        {
+            return _idToObject.ContainsKey(networkId);
+        }
+
+        /// <summary>
         /// Gets the object instance for a given network ID.
         /// </summary>
         public T GetObject<T>(uint networkId)

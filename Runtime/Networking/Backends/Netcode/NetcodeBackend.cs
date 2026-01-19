@@ -2,12 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using UnityEngine;
-using NetcodeMgr = Unity.Netcode.NetworkManager;
-using Eraflo.Catalyst.Pooling;
 using Eraflo.Catalyst.Networking.Features.Connection;
 using Eraflo.Catalyst.Networking.Features.Culling;
+using Eraflo.Catalyst.Pooling;
 using Eraflo.Catalyst.Scenes.Networking;
+using UnityEngine;
+using NetcodeMgr = Unity.Netcode.NetworkManager;
 
 namespace Eraflo.Catalyst.Networking.Backends.Netcode
 {
@@ -60,21 +60,26 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
 
             NetcodeMgr.Singleton.OnClientConnectedCallback += HandleClientConnected;
             NetcodeMgr.Singleton.OnClientDisconnectCallback += HandleClientDisconnected;
-
-            if (PackageSettings.Instance.NetworkDebugMode)
-            {
-                Debug.Log("[NetcodeBackend] Initialized");
-            }
         }
 
         private void HandleClientConnected(ulong id)
         {
-            App.Get<NetworkManager>().NotifyClientConnected(id);
+            App.Get<Eraflo.Catalyst.Networking.NetworkManager>().NotifyClientConnected(id);
         }
 
         private void HandleClientDisconnected(ulong id)
         {
-            App.Get<NetworkManager>().NotifyClientDisconnected(id);
+            var nm = App.Get<Eraflo.Catalyst.Networking.NetworkManager>();
+            if (nm != null)
+            {
+                nm.NotifyClientDisconnected(id);
+
+                // If WE are the one who got disconnected, notify the manager
+                if (id == LocalClientId)
+                {
+                    nm.NotifyDisconnected();
+                }
+            }
         }
 
         public void Shutdown()
@@ -107,18 +112,18 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             // Apply to Unity Transport if available
             if (NetcodeMgr.Singleton?.NetworkConfig?.NetworkTransport is Unity.Netcode.Transports.UTP.UnityTransport utp)
             {
-                #if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 utp.SetDebugSimulatorParameters(
                     latencyMs,
                     jitterMs,
                     (int)packetLossPercent
                 );
-                
+
                 if (PackageSettings.Instance.NetworkDebugMode)
                 {
                     Debug.Log($"[NetcodeBackend] Simulation: latency={latencyMs}ms, loss={packetLossPercent}%, jitter={jitterMs}ms");
                 }
-                #endif
+#endif
             }
         }
 
@@ -406,10 +411,19 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             var data = new byte[fullData.Length - 2];
             Buffer.BlockCopy(fullData, 2, data, 0, data.Length);
 
+            if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.Log($"[NetcodeBackend] Received unnamed message {msgType} from {senderId} (Length: {data.Length})");
+            }
+
             if (_handlers.TryGetValue(msgType, out var handler))
             {
                 try { handler.Invoke(data, senderId); }
                 catch (Exception e) { Debug.LogException(e); }
+            }
+            else if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.LogWarning($"[NetcodeBackend] No handler registered for msgType: {msgType}");
             }
         }
 
@@ -423,20 +437,42 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             _handlers.Remove(msgType);
         }
 
-        public void SpawnPlayer(ulong clientId, Vector3? position = null, Quaternion? rotation = null)
+        public GameObject SpawnPlayer(ulong clientId, Vector3? position = null, Quaternion? rotation = null)
         {
-            if (NetcodeMgr.Singleton == null || !NetcodeMgr.Singleton.IsServer) return;
+            if (NetcodeMgr.Singleton == null || !NetcodeMgr.Singleton.IsServer)
+            {
+                Debug.LogWarning($"[NetcodeBackend] SpawnPlayer failed for {clientId}: Singleton={NetcodeMgr.Singleton != null}, IsServer={NetcodeMgr.Singleton?.IsServer}");
+                return null;
+            }
 
             var playerPrefab = NetcodeMgr.Singleton.NetworkConfig.PlayerPrefab;
             if (playerPrefab == null)
             {
-                Debug.LogWarning("[NetcodeBackend] No Player Prefab configured in NetworkManager.");
-                return;
+                Debug.LogWarning("[NetcodeBackend] No Player Prefab configured in NetworkManager. NetworkConfig.PlayerPrefab is NULL.");
+                return null;
             }
 
             var instance = GameObject.Instantiate(playerPrefab, position ?? Vector3.zero, rotation ?? Quaternion.identity);
             var netObj = instance.GetComponent<Unity.Netcode.NetworkObject>();
+
+            if (netObj == null)
+            {
+                Debug.LogError("[NetcodeBackend] Player prefab is missing a NetworkObject component!");
+                return null;
+            }
+
             netObj.SpawnAsPlayerObject(clientId, true);
+
+            if (PackageSettings.Instance.NetworkDebugMode) Debug.Log($"[NetcodeBackend] Player spawned and assigned to client {clientId}");
+
+            return instance;
+        }
+
+        public ulong GetOwner(GameObject go)
+        {
+            if (go == null) return 0;
+            var netObj = go.GetComponent<Unity.Netcode.NetworkObject>();
+            return netObj != null ? netObj.OwnerClientId : 0;
         }
 
         #region Module Backend Implementations
@@ -446,6 +482,11 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
         async Task ISceneNetworkBackend.LoadSceneAsync(string sceneName, UnityEngine.SceneManagement.LoadSceneMode mode)
         {
             if (_sceneHandler != null) await _sceneHandler.LoadSceneAsync(sceneName, mode);
+        }
+
+        async Task ISceneNetworkBackend.UnloadSceneAsync(UnityEngine.SceneManagement.Scene scene)
+        {
+            if (_sceneHandler != null) await _sceneHandler.UnloadSceneAsync(scene);
         }
 
         void IPoolNetworkBackend.SynchronizeInstance(GameObject instance, uint networkId)
@@ -505,10 +546,10 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
 
         #region INetworkLifecycle
 
-        public bool StartServer(ushort port, NetworkTransportType transport = NetworkTransportType.UDP)
+        public bool StartServer(string address, ushort port, NetworkTransportType transport = NetworkTransportType.UDP)
         {
             if (NetcodeMgr.Singleton == null) return false;
-            ConfigureTransport(null, port, transport);
+            ConfigureTransport(address, port, transport);
             bool success = NetcodeMgr.Singleton.StartServer();
             if (success) EnsureMessagingSubscribed();
             return success;
@@ -523,10 +564,10 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             return success;
         }
 
-        public bool StartHost(ushort port, NetworkTransportType transport = NetworkTransportType.UDP)
+        public bool StartHost(string address, ushort port, NetworkTransportType transport = NetworkTransportType.UDP)
         {
             if (NetcodeMgr.Singleton == null) return false;
-            ConfigureTransport(null, port, transport);
+            ConfigureTransport(address, port, transport);
             bool success = NetcodeMgr.Singleton.StartHost();
             if (success) EnsureMessagingSubscribed();
             return success;
@@ -546,11 +587,22 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
         {
             if (NetcodeMgr.Singleton?.NetworkConfig?.NetworkTransport is Unity.Netcode.Transports.UTP.UnityTransport utp)
             {
-                if (!string.IsNullOrEmpty(address))
+                // Most secure default: connect and listen on localhost.
+                string connectAddress = string.IsNullOrEmpty(address) ? "127.0.0.1" : address;
+                string listenAddress = connectAddress;
+
+                // If explicitly requested to bind to all interfaces (less secure, but needed for LAN/Internet hosting)
+                if (address == "0.0.0.0")
                 {
-                    utp.ConnectionData.Address = address;
+                    listenAddress = "0.0.0.0";
+                    connectAddress = "127.0.0.1"; // Host client always connects to localhost if binding to all
                 }
-                utp.ConnectionData.Port = port;
+
+                utp.SetConnectionData(connectAddress, port, listenAddress);
+            }
+            else
+            {
+                Debug.LogWarning("[NetcodeBackend] UTP Transport not found or different transport in use!");
             }
         }
 
@@ -560,7 +612,7 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             {
                 NetcodeMgr.Singleton.Shutdown();
             }
-            App.Get<NetworkManager>()?.NotifyDisconnected();
+            App.Get<Eraflo.Catalyst.Networking.NetworkManager>()?.NotifyDisconnected();
         }
 
         #endregion

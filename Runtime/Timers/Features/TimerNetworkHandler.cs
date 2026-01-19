@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Eraflo.Catalyst.Networking;
 using UnityEngine;
 
 namespace Eraflo.Catalyst.Timers
@@ -7,12 +8,15 @@ namespace Eraflo.Catalyst.Timers
     /// <summary>
     /// Handles network synchronization for timers.
     /// </summary>
-    public class TimerNetworkHandler : Networking.INetworkMessageHandler
+    public class TimerNetworkHandler : INetworkUpdatable
     {
-        private readonly Dictionary<TimerHandle, Networking.AuthorityMode> _timers = new Dictionary<TimerHandle, Networking.AuthorityMode>();
-        private Networking.NetworkIdManager _idManager;
+        private readonly Dictionary<TimerHandle, AuthorityMode> _timers = new Dictionary<TimerHandle, AuthorityMode>();
+        private NetworkIdManager _idManager;
         private uint _nextId = 1;
         private bool _connected;
+
+        private float _syncTimer = 0f;
+        private const float SyncInterval = 0.5f; // Sync twice per second
 
         /// <summary>Fired when a networked timer ticks.</summary>
         public event Action<uint, float> OnTick;
@@ -20,40 +24,79 @@ namespace Eraflo.Catalyst.Timers
         /// <summary>Fired when a networked timer completes.</summary>
         public event Action<uint> OnComplete;
 
+        /// <summary>Fired when a networked timer is registered/created.</summary>
+        public event Action<uint, TimerHandle> OnTimerRegistered;
+
         public void OnRegistered()
         {
-            _idManager = App.Get<Networking.NetworkIdManager>();
-            var network = App.Get<Networking.NetworkManager>();
-            network.On<Networking.TimerSyncMessage>(HandleSync);
-            network.On<Networking.TimerCancelMessage>(HandleCancel);
+            _idManager = App.Get<NetworkIdManager>();
+            var network = App.Get<NetworkManager>();
+            network.On<TimerCreateMessage>(HandleCreate);
+            network.On<TimerSyncMessage>(HandleSync);
+            network.On<TimerCancelMessage>(HandleCancel);
         }
 
         public void OnUnregistered()
         {
-            var network = App.Get<Networking.NetworkManager>();
-            network.Off<Networking.TimerSyncMessage>(HandleSync);
-            network.Off<Networking.TimerCancelMessage>(HandleCancel);
+            var network = App.Get<NetworkManager>();
+            if (network != null)
+            {
+                network.Off<TimerCreateMessage>(HandleCreate);
+                network.Off<TimerSyncMessage>(HandleSync);
+                network.Off<TimerCancelMessage>(HandleCancel);
+            }
             Clear();
         }
 
         public void OnNetworkConnected() => _connected = true;
         public void OnNetworkDisconnected() => _connected = false;
 
+        public void OnUpdate()
+        {
+            if (!_connected) return;
+
+            var network = App.Get<NetworkManager>();
+            if (network != null && network.IsServer)
+            {
+                _syncTimer += Time.deltaTime;
+                if (_syncTimer >= SyncInterval)
+                {
+                    _syncTimer = 0f;
+                    BroadcastSync();
+                }
+            }
+        }
+
         /// <summary>
         /// Makes a timer networked.
         /// </summary>
-        public uint MakeNetworked(TimerHandle handle, Networking.AuthorityMode authority = Networking.AuthorityMode.ServerAuthoritative, uint id = 0)
+        public uint MakeNetworked(TimerHandle handle, AuthorityMode authority = AuthorityMode.ServerAuthoritative, uint id = 0)
         {
             if (!handle.IsValid || _idManager == null) return 0;
 
             if (id == 0) id = _nextId++;
-            
+
             _timers[handle] = authority;
             _idManager.Register(id, handle);
+
+            OnTimerRegistered?.Invoke(id, handle);
 
             var timer = App.Get<Timer>();
             timer.On<OnComplete>(handle, () => HandleComplete(handle, id));
             timer.On<OnTick, float>(handle, dt => OnTick?.Invoke(id, dt));
+
+            // Server: Broadcast creation to all clients
+            var network = App.Get<NetworkManager>();
+            if (network != null && network.IsServer && network.IsConnected)
+            {
+                var msg = new TimerCreateMessage
+                {
+                    NetworkId = id,
+                    Duration = timer.GetCurrentTime(handle),
+                    TimerType = timer.Backend.GetTimerType(handle)
+                };
+                network.SendToClients(msg);
+            }
 
             return id;
         }
@@ -86,12 +129,12 @@ namespace Eraflo.Catalyst.Timers
         /// </summary>
         public void BroadcastSync()
         {
-            var network = App.Get<Networking.NetworkManager>();
+            var network = App.Get<NetworkManager>();
             if (network == null || !network.IsConnected || !network.IsServer) return;
 
             var timer = App.Get<Timer>();
-            var ownership = App.Get<Networking.NetworkOwnershipManager>();
-            
+            var ownership = App.Get<NetworkOwnershipManager>();
+
             foreach (var kvp in _timers)
             {
                 uint id = GetId(kvp.Key);
@@ -99,7 +142,7 @@ namespace Eraflo.Catalyst.Timers
                 if (ownership != null && !ownership.HasAuthority(id, kvp.Value))
                     continue;
 
-                var msg = new Networking.TimerSyncMessage
+                var msg = new TimerSyncMessage
                 {
                     NetworkId = id,
                     RemainingTime = timer.GetCurrentTime(kvp.Key),
@@ -117,14 +160,14 @@ namespace Eraflo.Catalyst.Timers
             Remove(handle);
         }
 
-        private void HandleSync(Networking.TimerSyncMessage msg)
+        private void HandleSync(TimerSyncMessage msg)
         {
             var handle = GetHandle(msg.NetworkId);
             if (!handle.IsValid) return;
             if (!_timers.TryGetValue(handle, out var authority)) return;
 
             // Don't apply sync if we have authority (we are the source)
-            var ownership = App.Get<Networking.NetworkOwnershipManager>();
+            var ownership = App.Get<NetworkOwnershipManager>();
             if (ownership != null && ownership.HasAuthority(msg.NetworkId, authority))
                 return;
 
@@ -133,17 +176,54 @@ namespace Eraflo.Catalyst.Timers
             {
                 timer.CancelTimer(handle);
             }
-            else if (msg.IsRunning && !timer.IsRunning(handle))
+            else
             {
-                timer.Resume(handle);
-            }
-            else if (!msg.IsRunning && timer.IsRunning(handle))
-            {
-                timer.Pause(handle);
+                // Sync values
+                timer.SetCurrentTime(handle, msg.RemainingTime);
+
+                if (msg.IsRunning && !timer.IsRunning(handle))
+                {
+                    timer.Resume(handle);
+                }
+                else if (!msg.IsRunning && timer.IsRunning(handle))
+                {
+                    timer.Pause(handle);
+                }
             }
         }
 
-        private void HandleCancel(Networking.TimerCancelMessage msg)
+        private void HandleCreate(TimerCreateMessage msg)
+        {
+            var network = App.Get<NetworkManager>();
+            if (network.IsServer) return; // Server initiated it
+
+            // If already exists, ignore
+            if (GetHandle(msg.NetworkId).IsValid) return;
+
+            // Resolve the timer type
+            Type timerType = null;
+            if (!string.IsNullOrEmpty(msg.TimerType))
+            {
+                timerType = Type.GetType(msg.TimerType);
+            }
+
+            // Default to CountdownTimer if resolution fails or type is empty (backward compatibility/safety)
+            if (timerType == null)
+            {
+                timerType = typeof(CountdownTimer);
+            }
+
+            // Instantiate local timer via reflection to call generic CreateTimer<T>
+            var timer = App.Get<Timer>();
+            var method = typeof(Timer).GetMethod(nameof(Timer.CreateTimer), new[] { typeof(float) });
+            var generic = method.MakeGenericMethod(timerType);
+            var handle = (TimerHandle)generic.Invoke(timer, new object[] { msg.Duration });
+
+            // Register it
+            MakeNetworked(handle, AuthorityMode.ServerAuthoritative, msg.NetworkId);
+        }
+
+        private void HandleCancel(TimerCancelMessage msg)
         {
             var handle = GetHandle(msg.NetworkId);
             if (handle.IsValid) App.Get<Timer>().CancelTimer(handle);
