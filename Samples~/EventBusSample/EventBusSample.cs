@@ -1,4 +1,7 @@
 using UnityEngine;
+#if UNITY_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 using Eraflo.Catalyst.Events;
 
 namespace Eraflo.Catalyst.Samples.Events
@@ -45,25 +48,27 @@ namespace Eraflo.Catalyst.Samples.Events
 
         private void Update()
         {
-            if (Input.GetKeyDown(publishDamageKey))
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (UnityEngine.Input.GetKeyDown(publishDamageKey))
             {
                 onDamageChannel?.Raise();
                 Debug.Log("<color=orange>[PUBLISH]</color> Damage event raised!");
             }
 
-            if (Input.GetKeyDown(publishHealKey))
+            if (UnityEngine.Input.GetKeyDown(publishHealKey))
             {
                 int amount = Random.Range(5, 25);
                 onHealChannel?.Raise(amount);
                 Debug.Log($"<color=orange>[PUBLISH]</color> Heal event raised with {amount}");
             }
 
-            if (Input.GetKeyDown(publishScoreKey))
+            if (UnityEngine.Input.GetKeyDown(publishScoreKey))
             {
                 int points = Random.Range(100, 1000);
                 onScoreChannel?.Raise(points);
                 Debug.Log($"<color=orange>[PUBLISH]</color> Score event raised with {points}");
             }
+#endif
         }
 
         // Event handlers

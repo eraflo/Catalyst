@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+#if ENABLE_LEGACY_INPUT_MANAGER
 namespace Eraflo.Catalyst.InputSystem.Providers
 {
     /// <summary>
@@ -25,7 +26,7 @@ namespace Eraflo.Catalyst.InputSystem.Providers
         public bool GetButtonDown(string actionId)
         {
             var remapper = App.Get<Remapping.InputRemapper>();
-            
+
             // 1. Check remapper for dynamic bindings
             // If remapper returns default actionId, we use our local mappings
             var binding = remapper?.GetLegacyBinding(actionId, null);
@@ -33,20 +34,21 @@ namespace Eraflo.Catalyst.InputSystem.Providers
             {
                 if (System.Enum.TryParse<KeyCode>(binding, out var keyCode))
                 {
-                    return Input.GetKeyDown(keyCode);
+                    return UnityEngine.Input.GetKeyDown(keyCode);
                 }
             }
 
             // 2. Fallback to local hardcoded mappings
             if (_buttonMappings.TryGetValue(actionId, out var mappedKey))
             {
-                return Input.GetKeyDown(mappedKey);
+                if (UnityEngine.Input.GetKeyDown(mappedKey))
+                    return true;
             }
 
             // 3. Fallback to raw string (e.g. "Space")
             try
             {
-                return Input.GetButtonDown(actionId);
+                return UnityEngine.Input.GetButtonDown(actionId);
             }
             catch
             {
@@ -58,9 +60,9 @@ namespace Eraflo.Catalyst.InputSystem.Providers
         {
             if (_axisMappings.TryGetValue(axisId, out var axisName))
             {
-                return Input.GetAxis(axisName);
+                return UnityEngine.Input.GetAxis(axisName);
             }
-            return Input.GetAxis(axisId);
+            return UnityEngine.Input.GetAxis(axisId);
         }
 
         public void Vibrate(float intensity, float duration)
@@ -69,3 +71,5 @@ namespace Eraflo.Catalyst.InputSystem.Providers
         }
     }
 }
+#endif
+

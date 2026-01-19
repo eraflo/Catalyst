@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
+using System.Threading;
+using System.Threading.Tasks;
 using Eraflo.Catalyst.Core.Chronos;
 using Eraflo.Catalyst.InputSystem.Network;
-using System.Threading.Tasks;
-using System.Threading;
+using UnityEngine;
 
 namespace Eraflo.Catalyst.InputSystem
 {
@@ -60,7 +60,7 @@ namespace Eraflo.Catalyst.InputSystem
         public void Initialize()
         {
             _chronos = App.Get<ChronosManager>();
-            
+
             // Initialize provider from settings if not already set
             if (_provider == null)
             {
@@ -68,13 +68,19 @@ namespace Eraflo.Catalyst.InputSystem
                 switch (settings.InputProvider)
                 {
                     case InputProviderType.Legacy:
+#if ENABLE_LEGACY_INPUT_MANAGER
                         _provider = new Providers.LegacyInputProvider();
+#endif
                         break;
                     case InputProviderType.InputSystem:
+#if UNITY_INPUT_SYSTEM
                         _provider = new Providers.InputSystemProvider(settings.InputActionAsset);
+#endif
                         break;
                     default:
+#if ENABLE_LEGACY_INPUT_MANAGER
                         _provider = new Providers.LegacyInputProvider();
+#endif
                         break;
                 }
             }
@@ -127,17 +133,17 @@ namespace Eraflo.Catalyst.InputSystem
                 {
                     if (_provider.GetButtonDown(action))
                     {
-                        var evt = new InputBufferedEvent 
-                        { 
-                            ActionId = action, 
+                        var evt = new InputBufferedEvent
+                        {
+                            ActionId = action,
                             Timestamp = _currentTime,
                             DeviceType = DetectDeviceType()
                         };
-                        _buffer.Add(new BufferedInput 
-                        { 
-                            ActionId = action, 
-                            Timestamp = _currentTime, 
-                            IsConsumed = false 
+                        _buffer.Add(new BufferedInput
+                        {
+                            ActionId = action,
+                            Timestamp = _currentTime,
+                            IsConsumed = false
                         });
                         OnInputBuffered?.Invoke(evt);
                     }
@@ -187,7 +193,7 @@ namespace Eraflo.Catalyst.InputSystem
             {
                 if (ct.IsCancellationRequested) return false;
                 if (TryConsumeAction(actionId)) return true;
-                
+
                 await Task.Yield();
             }
 
@@ -202,13 +208,13 @@ namespace Eraflo.Catalyst.InputSystem
             _provider?.Vibrate(intensity, duration);
 
             // Basic support for New Input System if active
-            #if UNITY_INPUT_SYSTEM
+#if UNITY_INPUT_SYSTEM
             if (UnityEngine.InputSystem.Gamepad.current != null)
             {
                 UnityEngine.InputSystem.Gamepad.current.SetMotorSpeeds(intensity, intensity);
                 StopVibrationAfterDelay((int)(duration * 1000));
             }
-            #endif
+#endif
         }
 
         private async void StopVibrationAfterDelay(int delayMs)
@@ -221,19 +227,21 @@ namespace Eraflo.Catalyst.InputSystem
 
         private InputDeviceType DetectDeviceType()
         {
-            #if UNITY_INPUT_SYSTEM
+#if UNITY_INPUT_SYSTEM
             if (UnityEngine.InputSystem.Gamepad.current != null && UnityEngine.InputSystem.Gamepad.current.wasUpdatedThisFrame)
                 return InputDeviceType.Gamepad;
-            #endif
-            
-            if (Input.anyKey)
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (UnityEngine.Input.anyKey)
             {
                 for (int i = 0; i < 20; i++)
                 {
-                    if (Input.GetKey("joystick button " + i)) return InputDeviceType.Gamepad;
+                    if (UnityEngine.Input.GetKey("joystick button " + i)) return InputDeviceType.Gamepad;
                 }
                 return InputDeviceType.KeyboardMouse;
             }
+#endif
 
             return InputDeviceType.KeyboardMouse;
         }

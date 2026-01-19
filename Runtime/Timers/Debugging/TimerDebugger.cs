@@ -1,5 +1,5 @@
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Eraflo.Catalyst.Timers.Debugging
 {
@@ -22,7 +22,7 @@ namespace Eraflo.Catalyst.Timers.Debugging
         private GUIStyle _timerBoxStyle;
         private GUIStyle _progressBgStyle;
         private GUIStyle _progressFgStyle;
-        
+
         private List<TimerDebugInfo> _cachedTimers = new List<TimerDebugInfo>();
         private float _lastRefresh;
         private const float REFRESH_INTERVAL = 0.1f;
@@ -34,10 +34,12 @@ namespace Eraflo.Catalyst.Timers.Debugging
 
         private void Update()
         {
-            if (Input.GetKeyDown(_toggleKey))
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (UnityEngine.Input.GetKeyDown(_toggleKey))
             {
                 _showOverlay = !_showOverlay;
             }
+#endif
 
             // Refresh timer list periodically
             if (_showOverlay && Time.realtimeSinceStartup - _lastRefresh > REFRESH_INTERVAL)
@@ -56,12 +58,12 @@ namespace Eraflo.Catalyst.Timers.Debugging
             GUI.Box(new Rect(_position.x, _position.y, _size.x, _size.y), "", _boxStyle);
 
             GUILayout.BeginArea(new Rect(_position.x + 10, _position.y + 10, _size.x - 20, _size.y - 20));
-            
+
             // Header
             var timer = App.Get<Timer>();
             GUILayout.Label("Timer Debugger (F5)", _headerStyle);
             GUILayout.Label($"Active: {_cachedTimers.Count} | {(timer.IsBurstMode ? "Burst" : "Standard")}", _labelStyle);
-            
+
             // Metrics
             var m = timer.Metrics;
             GUILayout.Label($"Created: {m.TotalCreated} | Completed: {m.TotalCompleted} | Cancelled: {m.TotalCancelled}", _labelStyle);
@@ -105,25 +107,25 @@ namespace Eraflo.Catalyst.Timers.Debugging
         private void DrawTimerEntry(TimerDebugInfo info)
         {
             GUILayout.BeginVertical(_timerBoxStyle);
-            
+
             // Row 1: Icon + Type + Status
             GUILayout.BeginHorizontal();
-            
+
             // Status icon with color
             string icon = info.IsRunning ? "▶" : (info.IsFinished ? "✓" : "⏸");
             Color iconColor = info.IsRunning ? Color.green : (info.IsFinished ? Color.gray : Color.yellow);
             GUI.color = iconColor;
             GUILayout.Label(icon, GUILayout.Width(18));
             GUI.color = Color.white;
-            
+
             // Type name
             GUILayout.Label(info.TypeName, _labelStyle, GUILayout.Width(110));
-            
+
             // ID
             GUILayout.Label($"#{info.Id}", _labelStyle, GUILayout.Width(40));
-            
+
             GUILayout.FlexibleSpace();
-            
+
             // Time scale
             if (Mathf.Abs(info.TimeScale - 1f) > 0.01f)
             {
@@ -131,12 +133,12 @@ namespace Eraflo.Catalyst.Timers.Debugging
                 GUILayout.Label($"x{info.TimeScale:F1}", _labelStyle, GUILayout.Width(35));
                 GUI.color = Color.white;
             }
-            
+
             GUILayout.EndHorizontal();
-            
+
             // Row 2: Progress bar
             DrawProgressBar(info.Progress, info.CurrentTime, info.InitialTime);
-            
+
             GUILayout.EndVertical();
             GUILayout.Space(2);
         }
@@ -144,15 +146,15 @@ namespace Eraflo.Catalyst.Timers.Debugging
         private void DrawProgressBar(float progress, float current, float initial)
         {
             Rect rect = GUILayoutUtility.GetRect(0, 16, GUILayout.ExpandWidth(true));
-            
+
             // Background
             GUI.Box(rect, "", _progressBgStyle);
-            
+
             // Foreground (progress)
             float clampedProgress = Mathf.Clamp01(progress);
             Rect fgRect = new Rect(rect.x + 2, rect.y + 2, (rect.width - 4) * clampedProgress, rect.height - 4);
             GUI.Box(fgRect, "", _progressFgStyle);
-            
+
             // Text
             string text = $"{current:F2}s / {clampedProgress:P0}";
             GUI.Label(rect, text, _labelStyle);

@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+#if UNITY_INPUT_SYSTEM
 namespace Eraflo.Catalyst.InputSystem.Providers
 {
     /// <summary>
@@ -40,12 +41,10 @@ namespace Eraflo.Catalyst.InputSystem.Providers
 
         public void Vibrate(float intensity, float duration)
         {
-            #if UNITY_INPUT_SYSTEM
             if (UnityEngine.InputSystem.Gamepad.current != null)
             {
                 UnityEngine.InputSystem.Gamepad.current.SetMotorSpeeds(intensity, intensity);
             }
-            #endif
         }
 
         /// <summary>
@@ -63,3 +62,5 @@ namespace Eraflo.Catalyst.InputSystem.Providers
         }
     }
 }
+#endif
+

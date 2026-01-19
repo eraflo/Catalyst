@@ -43,6 +43,7 @@ using Eraflo.Catalyst.Networking;
 - [Spatial](Modules/Spatial.md) - Spatial partitioning and queries.
 - [Asset Management](Modules/AssetManagement.md) - Reference-counted loading.
 - [Input System](Modules/InputSystem.md) - Input buffering and combo detection.
+- [Aim Assist](Modules/AimAssist.md) - High-performance sticky magnetism and friction.
 - [Command System](Modules/CommandSystem.md) - Undo/Redo, Replay, and Networked actions.
 - [HFSM](Modules/HFSM.md) - Hierarchical Finite State Machine.
 - [Noise](Modules/Noise.md) - High-performance Simplex and Fractal noise.

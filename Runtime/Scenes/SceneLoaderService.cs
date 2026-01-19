@@ -229,11 +229,15 @@ namespace Eraflo.Catalyst
 
         private async Task WaitForInputAsync()
         {
+#if ENABLE_LEGACY_INPUT_MANAGER
             // Simple wait for any key or click for demonstration
-            while (!Input.anyKeyDown && !Input.GetMouseButtonDown(0))
+            while (!UnityEngine.Input.anyKeyDown && !UnityEngine.Input.GetMouseButtonDown(0))
             {
                 await Task.Yield();
             }
+#else
+            await Task.Yield();
+#endif
         }
     }
 }

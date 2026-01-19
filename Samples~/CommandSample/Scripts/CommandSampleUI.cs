@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using Eraflo.Catalyst.Command;
 using Eraflo.Catalyst.Command.Examples;
@@ -23,9 +24,10 @@ namespace Eraflo.Catalyst.Samples.Command
 
         private void Update()
         {
-            if (Input.GetMouseButtonDown(0))
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (UnityEngine.Input.GetMouseButtonDown(0))
             {
-                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                Ray ray = Camera.main.ScreenPointToRay(UnityEngine.Input.mousePosition);
                 if (Physics.Raycast(ray, out RaycastHit hit))
                 {
                     _ = App.Get<CommandManager>().Execute(new MoveCommand(Actor, hit.point));
@@ -33,9 +35,10 @@ namespace Eraflo.Catalyst.Samples.Command
             }
 
             // Keyboard shortcuts for easier testing
-            if (Input.GetKeyDown(KeyCode.R)) StartRecording();
-            if (Input.GetKeyDown(KeyCode.S)) StopRecording();
-            if (Input.GetKeyDown(KeyCode.P)) PlayReplay();
+            if (UnityEngine.Input.GetKeyDown(KeyCode.R)) StartRecording();
+            if (UnityEngine.Input.GetKeyDown(KeyCode.S)) StopRecording();
+            if (UnityEngine.Input.GetKeyDown(KeyCode.P)) PlayReplay();
+#endif
         }
 
         public void StartRecording()
