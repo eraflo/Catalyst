@@ -45,6 +45,8 @@ using Eraflo.Catalyst.Networking;
 - [Input System](Modules/InputSystem.md) - Input buffering and combo detection.
 - [Command System](Modules/CommandSystem.md) - Undo/Redo, Replay, and Networked actions.
 - [HFSM](Modules/HFSM.md) - Hierarchical Finite State Machine.
+- [Noise](Modules/Noise.md) - High-performance Simplex and Fractal noise.
+- [Utilities](Modules/Utilities.md) - Log exporting and helper tools.
 
 ### Infrastructure
 - [CI/CD](Infrastructure/CICD.md) - Automated testing and deployment.

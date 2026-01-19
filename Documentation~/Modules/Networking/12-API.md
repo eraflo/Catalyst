@@ -21,16 +21,20 @@ Complete API documentation for the Networking module.
 
 | Method | Description |
 |--------|-------------|
+| `StartServer/Client/Host(...)` | Start network session |
+| `Stop()` | Stop network session |
+| `SetBackendById(id)` | Set backend by string ID |
+| `SetBackend(backend)` | Set backend instance |
 | `Send<T>(msg, target, delivery?)` | Send message |
-| `SendToClient<T>(clientId, msg, delivery?)` | Send to client |
-| `SendToClients<T>(ids, msg, delivery?)` | Send to multiple |
+| `SendToClient<T>(clientId, msg, delivery?)` | Send to specific client |
+| `SendToClients<T>(msg, delivery, ids)` | Send to multiple clients |
+| `SpawnPlayer(id, pos?, rot?)` | Spawn player (Server only) |
 | `On<T>(handler)` | Subscribe to message |
 | `Off<T>(handler)` | Unsubscribe |
-| `SetBackend(backend)` | Change backend |
-| `SpawnPlayer(id, pos?, rot?)` | Spawn player (Server only) |
 
 | Event | When |
 |-------|------|
+| `OnBackendChanged` | Backend implementation changed |
 | `OnConnected` | Connection established |
 | `OnDisconnected` | Connection lost |
 | `OnClientConnected(clientId)` | Client joined (server) |
