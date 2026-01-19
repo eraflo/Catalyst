@@ -24,11 +24,14 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             if (!_netcodeMgr.IsServer) return;
 
             var tcs = new TaskCompletionSource<bool>();
+            string targetName = sceneName;
+            if (targetName.EndsWith(".unity")) targetName = System.IO.Path.GetFileNameWithoutExtension(targetName);
 
             void OnSceneEvent(Unity.Netcode.SceneEvent sceneEvent)
             {
-                if (sceneEvent.SceneName == sceneName &&
-                    sceneEvent.SceneEventType == Unity.Netcode.SceneEventType.LoadEventCompleted)
+                // On Server, we wait for 'Completed' which means ALL clients have finished.
+                if (IsSceneMatch(sceneEvent.SceneName, targetName) && 
+                    (sceneEvent.SceneEventType == Unity.Netcode.SceneEventType.LoadEventCompleted))
                 {
                     _netcodeMgr.SceneManager.OnSceneEvent -= OnSceneEvent;
                     tcs.TrySetResult(true);
@@ -50,14 +53,20 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
 
         public async Task UnloadSceneAsync(Scene scene)
         {
-            if (!_netcodeMgr.IsServer) return;
+            if (_netcodeMgr == null || _netcodeMgr.SceneManager == null) return;
 
             var tcs = new TaskCompletionSource<bool>();
+            string targetName = scene.name;
 
             void OnSceneEvent(Unity.Netcode.SceneEvent sceneEvent)
             {
-                if (sceneEvent.SceneName == scene.name &&
-                    sceneEvent.SceneEventType == Unity.Netcode.SceneEventType.UnloadEventCompleted)
+                // Server: Wait for all clients to finish (UnloadEventCompleted)
+                // Client: Wait for local completion (UnloadComplete)
+                bool isCompleted = _netcodeMgr.IsServer 
+                    ? sceneEvent.SceneEventType == Unity.Netcode.SceneEventType.UnloadEventCompleted
+                    : sceneEvent.SceneEventType == Unity.Netcode.SceneEventType.UnloadComplete;
+
+                if (IsSceneMatch(sceneEvent.SceneName, targetName) && isCompleted)
                 {
                     _netcodeMgr.SceneManager.OnSceneEvent -= OnSceneEvent;
                     tcs.TrySetResult(true);
@@ -66,15 +75,41 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
 
             _netcodeMgr.SceneManager.OnSceneEvent += OnSceneEvent;
 
-            var status = _netcodeMgr.SceneManager.UnloadScene(scene);
-            if (status != Unity.Netcode.SceneEventProgressStatus.Started)
+            if (_netcodeMgr.IsServer)
             {
-                _netcodeMgr.SceneManager.OnSceneEvent -= OnSceneEvent;
-                Debug.LogError($"[NetcodeSceneHandler] Failed to start scene unload: {status}");
-                tcs.TrySetResult(false);
+                var status = _netcodeMgr.SceneManager.UnloadScene(scene);
+                if (status != Unity.Netcode.SceneEventProgressStatus.Started)
+                {
+                    _netcodeMgr.SceneManager.OnSceneEvent -= OnSceneEvent;
+                    Debug.LogError($"[NetcodeSceneHandler] Failed to start server scene unload for '{targetName}': {status}");
+                    tcs.TrySetResult(false);
+                }
             }
 
+            // Safety timeout to prevent indefinite hangs
+            var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(5000));
+            if (completedTask != tcs.Task)
+            {
+                _netcodeMgr.SceneManager.OnSceneEvent -= OnSceneEvent;
+                if (!_netcodeMgr.IsServer)
+                {
+                    // On client, a timeout might just mean NGO already unloaded it before we started listening
+                    var s = UnityEngine.SceneManagement.SceneManager.GetSceneByName(targetName);
+                    if (!s.IsValid() || !s.isLoaded) tcs.TrySetResult(true);
+                }
+            }
+            
             await tcs.Task;
+        }
+
+        private bool IsSceneMatch(string scenePathOrName, string targetName)
+        {
+            if (string.IsNullOrEmpty(scenePathOrName)) return false;
+            
+            return scenePathOrName == targetName ||
+                   scenePathOrName.EndsWith("/" + targetName) ||
+                   scenePathOrName.EndsWith("/" + targetName + ".unity") ||
+                   System.IO.Path.GetFileNameWithoutExtension(scenePathOrName) == targetName;
         }
     }
 }

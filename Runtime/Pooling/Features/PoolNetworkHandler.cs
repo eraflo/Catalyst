@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
+using Eraflo.Catalyst;
 using Eraflo.Catalyst.Networking;
+using UnityEngine;
 
 namespace Eraflo.Catalyst.Pooling
 {
@@ -24,8 +25,11 @@ namespace Eraflo.Catalyst.Pooling
 
         public void OnUnregistered()
         {
-            _network.Off<PoolNetworkMessage>(HandlePoolMessage);
-            _network.Off<NetworkStateUpdateMessage>(HandleStateUpdate);
+            if (_network != null)
+            {
+                _network.Off<PoolNetworkMessage>(HandlePoolMessage);
+                _network.Off<NetworkStateUpdateMessage>(HandleStateUpdate);
+            }
             Clear();
         }
 
@@ -131,14 +135,14 @@ namespace Eraflo.Catalyst.Pooling
             if (msg.IsSpawn)
             {
                 object instance = null;
-                
+
                 // 1. Try resolving as Prefab
                 GameObject prefab = pool.ResolvePrefab(msg.PoolId);
                 if (prefab != null)
                 {
                     var handle = pool.SpawnObject(prefab, msg.Position, msg.Rotation);
                     instance = handle.Instance;
-                    
+
                     // Client side sync
                     if (_network.Backend is IPoolNetworkBackend backend)
                     {
@@ -175,7 +179,7 @@ namespace Eraflo.Catalyst.Pooling
                         {
                             poolable.OnNetworkDespawn();
                         }
-                        
+
                         pool.DespawnDynamic(instance);
                         UnregisterLocal(msg.NetworkId, instance);
                     }

@@ -24,6 +24,8 @@ namespace Eraflo.Catalyst
         private readonly List<SceneGroup> _groups = new List<SceneGroup>();
         private bool _isTransitioning;
 
+        public bool IsTransitioning => _isTransitioning;
+
         /// <summary>
         /// Sets the loading strategy (Local, Networked, etc.).
         /// </summary>
@@ -74,7 +76,7 @@ namespace Eraflo.Catalyst
         public void Shutdown()
         {
             _groups.Clear();
-            _strategy = null;
+            _isTransitioning = false;
         }
 
         #endregion
@@ -128,32 +130,35 @@ namespace Eraflo.Catalyst
                     }
                 }
 
-                // 3. Unload current scenes using strategy
                 // 3. Keep track of current scenes to unload later
+                // CRITICAL: We scan ALL scenes, but we must NOT unload scenes that are part of the new group
                 int sceneCount = _sceneManager.SceneCount;
                 var scenesToUnload = new List<Scene>();
+
                 for (int i = 0; i < sceneCount; i++)
                 {
-                    scenesToUnload.Add(_sceneManager.GetSceneAt(i));
+                    var scene = _sceneManager.GetSceneAt(i);
+                    if (group.Scenes.Contains(scene.name))
+                    {
+                        continue;
+                    }
+
+                    scenesToUnload.Add(scene);
                 }
 
                 // 4. Load new scenes via strategy first
+                if (_strategy == null)
+                {
+                    Debug.LogError("[SceneLoaderService] Cannot load: No strategy set (likely shutting down).");
+                    return;
+                }
+
                 await _strategy.LoadAsync(group.Scenes, (p) =>
                 {
                     loadingScreen?.UpdateProgress(p * 0.8f); // 80% for loading
                 });
 
-                // 5. Unload old scenes using strategy
-                await _strategy.UnloadAsync(scenesToUnload);
-                loadingScreen?.UpdateProgress(0.9f); // 90% after unload
-
-                // 6. Memory Cleanup
-                await UnloadUnusedAssetsAsync();
-                GC.Collect();
-
-                loadingScreen?.UpdateProgress(1f);
-
-                // 6. Set active scene
+                // 5. Set active scene BEFORE unloading old ones
                 if (!string.IsNullOrEmpty(group.ActiveScene))
                 {
                     var activeScene = _sceneManager.GetSceneByName(group.ActiveScene);
@@ -161,24 +166,40 @@ namespace Eraflo.Catalyst
                     {
                         _sceneManager.SetActiveScene(activeScene);
                     }
+                    else
+                    {
+                        Debug.LogWarning($"[SceneLoaderService] Could not set active scene: '{group.ActiveScene}' not found or invalid.");
+                    }
                 }
 
-                // 7. Wait for input
+                // 6. Unload old scenes using strategy
+                if (_strategy != null)
+                {
+                    await _strategy.UnloadAsync(scenesToUnload);
+                }
+                loadingScreen?.UpdateProgress(0.9f); // 90% after unload
+
+                // 7. Memory Cleanup
+                await UnloadUnusedAssetsAsync();
+                GC.Collect();
+
+                loadingScreen?.UpdateProgress(1f);
+
+                // 8. Wait for input
                 if (waitForInput)
                 {
                     // TODO: This is a placeholder for actual input detection. 
                     // In a real framework, you'd check for a specific input action or button press.
-                    Debug.Log("[SceneLoaderService] Waiting for input...");
                     await WaitForInputAsync();
                 }
 
-                // 8. Hide loading screen
+                // 9. Hide loading screen
                 if (loadingScreen != null)
                 {
                     await loadingScreen.Hide();
                 }
 
-                // 9. Notify completion
+                // 10. Notify completion
                 _onTransitionCompleted?.Raise(groupName);
             }
             catch (Exception e)

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
+using UnityEngine;
 
 namespace Eraflo.Catalyst.Timers.Backends
 {
@@ -110,7 +110,7 @@ namespace Eraflo.Catalyst.Timers.Backends
         private int GetOrRegisterChannel(string name)
         {
             if (string.IsNullOrEmpty(name)) name = "World";
-            
+
             if (!_channelToIndex.TryGetValue(name, out var index))
             {
                 index = _channelNames.Count;
@@ -143,6 +143,33 @@ namespace Eraflo.Catalyst.Timers.Backends
             {
                 if (TryGetIndex(handle.Id, out var i)) return _timerData[i].CurrentTime;
                 return 0f;
+            }
+        }
+
+        public void SetCurrentTime(TimerHandle handle, float time)
+        {
+            lock (_lockObject)
+            {
+                if (TryGetIndex(handle.Id, out var i))
+                {
+                    var data = _timerData[i];
+                    data.CurrentTime = time;
+                    _timerData[i] = data;
+
+                    var w = _wrappers[i];
+                    var t = w.Timer;
+                    t.CurrentTime = time;
+                    w.Timer = t;
+                }
+            }
+        }
+
+        public string GetTimerType(TimerHandle handle)
+        {
+            lock (_lockObject)
+            {
+                if (TryGetIndex(handle.Id, out var i)) return _wrappers[i].Timer.GetType().AssemblyQualifiedName;
+                return null;
             }
         }
 
@@ -433,7 +460,7 @@ namespace Eraflo.Catalyst.Timers.Backends
             _isDisposed = true;
 
             Clear();
-            
+
             if (_timerData.IsCreated) _timerData.Dispose();
             if (_activeFlags.IsCreated) _activeFlags.Dispose();
             if (_handleToIndex.IsCreated) _handleToIndex.Dispose();
@@ -473,7 +500,7 @@ namespace Eraflo.Catalyst.Timers.Backends
 
                     var data = _timerData[index];
                     var wrapper = _wrappers[index];
-                    
+
                     result.Add(new TimerDebugInfo
                     {
                         Id = id,

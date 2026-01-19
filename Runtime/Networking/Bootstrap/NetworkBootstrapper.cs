@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Eraflo.Catalyst;
 using Eraflo.Catalyst.Networking.Backends.Mock;
 #if UNITY_NETCODE
 using Eraflo.Catalyst.Networking.Backends.Netcode;
@@ -23,10 +24,10 @@ namespace Eraflo.Catalyst.Networking
             if (network == null) return;
 
             network.Backends.Register(new MockBackendFactory());
-            
-            #if UNITY_NETCODE
+
+#if UNITY_NETCODE
             network.Backends.Register(new NetcodeBackendFactory());
-            #endif
+#endif
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -36,10 +37,10 @@ namespace Eraflo.Catalyst.Networking
             _initialized = true;
 
             var settings = PackageSettings.Instance;
-            
+
             // Always initialize handlers (for manual backend setup later)
             InitializeHandlers(settings);
-            
+
             // Only auto-initialize backend if configured
             if (settings.EnableNetworking)
             {
@@ -98,7 +99,7 @@ namespace Eraflo.Catalyst.Networking
                 {
                     foreach (var t in asm.GetTypes())
                     {
-                        if (iface.IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface 
+                        if (iface.IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface
                             && t.GetConstructor(Type.EmptyTypes) != null)
                         {
                             types.Add(t);
@@ -116,12 +117,12 @@ namespace Eraflo.Catalyst.Networking
             {
                 // Check if handler is already registered as a service
                 var handler = App.Get(type) as INetworkMessageHandler;
-                
+
                 // If not, create a new instance
                 if (handler == null)
                 {
                     handler = (INetworkMessageHandler)Activator.CreateInstance(type);
-                    
+
                     // If it's a service, it should have been registered via ServiceLocator already.
                     // If it's a standalone handler, we just use this instance.
                     if (handler is IGameService gameService)
@@ -133,7 +134,7 @@ namespace Eraflo.Catalyst.Networking
 
                 var network = App.Get<NetworkManager>();
                 network?.Handlers.Register(handler);
-                
+
                 if (PackageSettings.Instance.NetworkDebugMode)
                     Debug.Log($"[NetworkBootstrapper] Registered: {type.Name}");
             }

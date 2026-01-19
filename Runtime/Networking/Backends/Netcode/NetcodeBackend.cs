@@ -64,12 +64,22 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
 
         private void HandleClientConnected(ulong id)
         {
-            App.Get<NetworkManager>().NotifyClientConnected(id);
+            App.Get<Eraflo.Catalyst.Networking.NetworkManager>().NotifyClientConnected(id);
         }
 
         private void HandleClientDisconnected(ulong id)
         {
-            App.Get<NetworkManager>().NotifyClientDisconnected(id);
+            var nm = App.Get<Eraflo.Catalyst.Networking.NetworkManager>();
+            if (nm != null)
+            {
+                nm.NotifyClientDisconnected(id);
+
+                // If WE are the one who got disconnected, notify the manager
+                if (id == LocalClientId)
+                {
+                    nm.NotifyDisconnected();
+                }
+            }
         }
 
         public void Shutdown()
@@ -401,10 +411,19 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             var data = new byte[fullData.Length - 2];
             Buffer.BlockCopy(fullData, 2, data, 0, data.Length);
 
+            if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.Log($"[NetcodeBackend] Received unnamed message {msgType} from {senderId} (Length: {data.Length})");
+            }
+
             if (_handlers.TryGetValue(msgType, out var handler))
             {
                 try { handler.Invoke(data, senderId); }
                 catch (Exception e) { Debug.LogException(e); }
+            }
+            else if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.LogWarning($"[NetcodeBackend] No handler registered for msgType: {msgType}");
             }
         }
 
@@ -593,7 +612,7 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
             {
                 NetcodeMgr.Singleton.Shutdown();
             }
-            App.Get<NetworkManager>()?.NotifyDisconnected();
+            App.Get<Eraflo.Catalyst.Networking.NetworkManager>()?.NotifyDisconnected();
         }
 
         #endregion

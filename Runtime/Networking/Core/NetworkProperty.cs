@@ -13,7 +13,7 @@ namespace Eraflo.Catalyst.Networking
         private readonly string _name;
         private readonly uint _networkId;
         private readonly NetworkManager _network;
-        
+
         public event Action<T> OnValueChanged;
 
         public T Value
@@ -26,7 +26,7 @@ namespace Eraflo.Catalyst.Networking
 
                 _value = value;
                 OnValueChanged?.Invoke(_value);
-                
+
                 if (_network != null && _network.IsConnected && _network.IsServer)
                 {
                     Sync();
@@ -52,7 +52,7 @@ namespace Eraflo.Catalyst.Networking
                 PropertyName = _name,
                 Data = NetworkSerializer.SerializeValue(_value)
             };
-            
+
             _network.Send(msg, NetworkTarget.Clients, NetworkDelivery.ReliableSequenced);
         }
 

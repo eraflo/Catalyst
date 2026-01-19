@@ -9,7 +9,7 @@ namespace Eraflo.Catalyst.Networking
     /// Provides access to the backend, messaging router, and network handlers.
     /// </summary>
     [Service(Priority = 2)]
-    public class NetworkManager : IGameService, INetworkService
+    public class NetworkManager : IGameService, INetworkService, IUpdatable
     {
         private INetworkBackend _backend;
         private readonly NetworkBackendRegistry _backends = new NetworkBackendRegistry();
@@ -60,6 +60,12 @@ namespace Eraflo.Catalyst.Networking
         void IGameService.Shutdown()
         {
             Reset();
+        }
+        
+        void IUpdatable.OnUpdate()
+        {
+            if (_backend == null || !_backend.IsConnected) return;
+            _handlers.Update();
         }
 
         #endregion

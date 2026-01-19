@@ -32,9 +32,10 @@ namespace Eraflo.Catalyst.Networking.Features.Attachment
             uint childId = child.GetNetworkId();
             uint parentId = parent.gameObject.GetNetworkId();
             
-            if (childId == 0 || parentId == 0)
+            var idManager = App.Get<NetworkIdManager>();
+            if (idManager == null || !idManager.Contains(child) || !idManager.Contains(parent.gameObject))
             {
-                Debug.LogWarning("[NetworkAttachment] Objects must have network IDs.");
+                Debug.LogWarning($"[NetworkAttachment] Objects must be registered in NetworkIdManager. Child registered: {idManager?.Contains(child)}, Parent registered: {idManager?.Contains(parent.gameObject)}");
                 return;
             }
             

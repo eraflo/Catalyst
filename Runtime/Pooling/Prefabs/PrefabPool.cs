@@ -14,9 +14,9 @@ namespace Eraflo.Catalyst.Pooling
         private readonly Stack<GameObject> _available = new Stack<GameObject>();
         private readonly Dictionary<uint, GameObject> _active = new Dictionary<uint, GameObject>();
         private readonly object _lock = new object();
-        
+
         public GameObject Prefab => _prefab;
-        
+
         private Transform _poolRoot;
         private uint _nextId = 1;
         private int _peakActiveCount;
@@ -89,7 +89,7 @@ namespace Eraflo.Catalyst.Pooling
             else
             {
                 instance = Object.Instantiate(_prefab, _poolRoot);
-                
+
                 // Add PooledObject component if not present
                 if (!instance.TryGetComponent<PooledObject>(out _))
                 {
@@ -193,7 +193,7 @@ namespace Eraflo.Catalyst.Pooling
             for (int i = 0; i < count; i++)
             {
                 var instance = Object.Instantiate(_prefab, _poolRoot);
-                
+
                 if (!instance.TryGetComponent<PooledObject>(out _))
                 {
                     instance.AddComponent<PooledObject>();

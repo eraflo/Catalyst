@@ -96,13 +96,13 @@ namespace Eraflo.Catalyst.Timers
     /// </summary>
     public static class TimerCallbacks
     {
-        private static readonly Dictionary<Type, Dictionary<uint, Delegate>> _callbacks 
+        private static readonly Dictionary<Type, Dictionary<uint, Delegate>> _callbacks
             = new Dictionary<Type, Dictionary<uint, Delegate>>();
 
         #region Registration
 
         /// <summary>Registers a callback with no parameters.</summary>
-        public static void Register<TCallback>(TimerHandle handle, Action callback) 
+        public static void Register<TCallback>(TimerHandle handle, Action callback)
             where TCallback : struct, ITimerCallback
         {
             if (!handle.IsValid || callback == null) return;
@@ -110,7 +110,7 @@ namespace Eraflo.Catalyst.Timers
         }
 
         /// <summary>Registers a callback with any parameter type.</summary>
-        public static void Register<TCallback, TArg>(TimerHandle handle, Action<TArg> callback) 
+        public static void Register<TCallback, TArg>(TimerHandle handle, Action<TArg> callback)
             where TCallback : struct, ITimerCallback
         {
             if (!handle.IsValid || callback == null) return;
@@ -134,9 +134,9 @@ namespace Eraflo.Catalyst.Timers
             if (!TryGetCallback<TCallback>(id, out var del)) return;
             SafeInvoke(() =>
             {
-                if (del is Action<TArg> typedAction) 
+                if (del is Action<TArg> typedAction)
                     typedAction.Invoke(value);
-                else 
+                else
                     (del as Action)?.Invoke();
             });
         }

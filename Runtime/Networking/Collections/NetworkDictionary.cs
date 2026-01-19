@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.Networking;
 using UnityEngine;
 
 namespace Eraflo.Catalyst.Networking.Collections
@@ -54,7 +56,7 @@ namespace Eraflo.Catalyst.Networking.Collections
                 if (!HasAuthority()) return;
                 bool exists = _items.TryGetValue(key, out TValue old);
                 _items[key] = value;
-                
+
                 if (exists)
                 {
                     SendDelta(DictionaryOperation.Set, key, value);
@@ -125,7 +127,7 @@ namespace Eraflo.Catalyst.Networking.Collections
         private void HandleDelta(NetworkDictionaryDeltaMessage msg)
         {
             if (msg.NetworkId != _networkId || msg.CollectionName != _name) return;
-            
+
             // Ignore our own messages (we already applied the change locally)
             if (msg.SenderId == _network.LocalClientId) return;
 

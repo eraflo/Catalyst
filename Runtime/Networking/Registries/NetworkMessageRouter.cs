@@ -101,8 +101,19 @@ namespace Eraflo.Catalyst.Networking
             if (_isRouting) return; // Recursion loop guard
             
             LastMessageSenderId = senderId;
-            if (!_idToType.TryGetValue(msgId, out var type)) return;
-            if (!_handlers.TryGetValue(msgId, out var handlers)) return;
+            if (!_idToType.TryGetValue(msgId, out var type))
+            {
+                Debug.LogWarning($"[NetworkMessageRouter] Received unregistered msgId: {msgId} from {senderId}");
+                return;
+            }
+
+            if (!_handlers.TryGetValue(msgId, out var handlers))
+            {
+                Debug.LogWarning($"[NetworkMessageRouter] No handlers registered for {type.Name} (ID: {msgId}) from {senderId}");
+                return;
+            }
+
+            Debug.Log($"[NetworkMessageRouter] Routing {type.Name} from {senderId} (ID: {msgId})");
 
             // Rate limiting check
             if (!CheckRateLimit(msgId, senderId))
@@ -184,11 +195,24 @@ namespace Eraflo.Catalyst.Networking
             var type = typeof(T);
             if (!_typeToId.TryGetValue(type, out var id))
             {
-                id = _nextId++;
+                // Use deterministic hash of the type name (FNV-1a)
+                id = HashTypeName(type.FullName);
+                if (id == 0) id = 1;
+
                 _typeToId[type] = id;
                 _idToType[id] = type;
             }
             return id;
+        }
+
+        private ushort HashTypeName(string name)
+        {
+            uint hash = 2166136261;
+            foreach (char c in name)
+            {
+                hash = (hash ^ c) * 16777619;
+            }
+            return (ushort)((hash ^ (hash >> 16)) & 0xFFFF);
         }
 
         public void ClearEventSubscribers()
