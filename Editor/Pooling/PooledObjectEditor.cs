@@ -11,6 +11,16 @@ namespace Eraflo.Catalyst.Editor.Pooling
     [CustomEditor(typeof(PooledObject))]
     public class PooledObjectEditor : UnityEditor.Editor
     {
+        private void OnEnable()
+        {
+            EditorApplication.update += Repaint;
+        }
+
+        private void OnDisable()
+        {
+            EditorApplication.update -= Repaint;
+        }
+
         public override void OnInspectorGUI()
         {
             var pooledObj = (PooledObject)target;

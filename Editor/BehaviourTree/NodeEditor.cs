@@ -13,6 +13,13 @@ namespace Eraflo.Catalyst.Editor.BehaviourTree
     [CustomEditor(typeof(BTNode), true)]
     public class NodeEditor : UnityEditor.Editor
     {
+        private Eraflo.Catalyst.BehaviourTree.BehaviourTree _cachedTree;
+
+        private void OnEnable()
+        {
+            _cachedTree = FindTreeForNode(target as BTNode);
+        }
+
         public override void OnInspectorGUI()
         {
             var node = target as BTNode;
@@ -126,8 +133,8 @@ namespace Eraflo.Catalyst.Editor.BehaviourTree
             
             // Add child dropdown
             EditorGUILayout.Space();
-            
-            var tree = FindTreeForNode(composite);
+
+            var tree = _cachedTree;
             if (tree != null)
             {
                 var availableNodes = tree.Nodes
@@ -192,7 +199,7 @@ namespace Eraflo.Catalyst.Editor.BehaviourTree
             }
             
             // Set child dropdown
-            var tree = FindTreeForNode(decorator);
+            var tree = _cachedTree;
             if (tree != null && decorator.Child == null)
             {
                 var availableNodes = tree.Nodes

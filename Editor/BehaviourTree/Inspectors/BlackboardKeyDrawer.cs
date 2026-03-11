@@ -12,6 +12,9 @@ namespace Eraflo.Catalyst.BehaviourTree.Editor
     [CustomPropertyDrawer(typeof(BlackboardKeyAttribute))]
     public class BlackboardKeyDrawer : PropertyDrawer
     {
+        private string[] _cachedKeys;
+        private BehaviourTree _lastBTContext;
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             if (property.propertyType != SerializedPropertyType.String)
@@ -83,9 +86,8 @@ namespace Eraflo.Catalyst.BehaviourTree.Editor
         
         private List<string> GetAvailableKeys(SerializedProperty property)
         {
-            var keysWithTypes = new Dictionary<string, System.Type>();
             var attr = attribute as BlackboardKeyAttribute;
-            
+
             // Try to find the BehaviourTree context
             var targetObject = property.serializedObject.targetObject;
             BehaviourTree btContext = null;
@@ -93,7 +95,7 @@ namespace Eraflo.Catalyst.BehaviourTree.Editor
             if (targetObject is Node node)
             {
                 btContext = node.Tree;
-                
+
                 if (btContext == null)
                 {
                     var path = AssetDatabase.GetAssetPath(node);
@@ -103,28 +105,40 @@ namespace Eraflo.Catalyst.BehaviourTree.Editor
                     }
                 }
             }
-            
+
+            // NOTE: This fallback is unreliable when a different BehaviourTree asset is selected.
+            // The BlackboardKey popup may display keys from the wrong tree in that case.
             if (btContext == null && Selection.activeObject is BehaviourTree selectedTree)
             {
                 btContext = selectedTree;
             }
 
-            if (btContext?.Blackboard != null)
+            // Rebuild cache only when the tree context has changed.
+            if (btContext != _lastBTContext)
             {
-                keysWithTypes = btContext.Blackboard.GetKeysAndTypes();
+                _lastBTContext = btContext;
+
+                var keysWithTypes = new Dictionary<string, System.Type>();
+                if (btContext?.Blackboard != null)
+                {
+                    keysWithTypes = btContext.Blackboard.GetKeysAndTypes();
+                }
+
+                if (attr != null && attr.ExpectedType != null)
+                {
+                    _cachedKeys = keysWithTypes
+                        .Where(kvp => kvp.Value == null || attr.ExpectedType.IsAssignableFrom(kvp.Value))
+                        .Select(kvp => kvp.Key)
+                        .OrderBy(k => k)
+                        .ToArray();
+                }
+                else
+                {
+                    _cachedKeys = keysWithTypes.Keys.OrderBy(k => k).ToArray();
+                }
             }
 
-            // Filter by type if requested
-            if (attr != null && attr.ExpectedType != null)
-            {
-                return keysWithTypes
-                    .Where(kvp => kvp.Value == null || attr.ExpectedType.IsAssignableFrom(kvp.Value))
-                    .Select(kvp => kvp.Key)
-                    .OrderBy(k => k)
-                    .ToList();
-            }
-            
-            return keysWithTypes.Keys.OrderBy(k => k).ToList();
+            return _cachedKeys != null ? new List<string>(_cachedKeys) : new List<string>();
         }
     }
 }

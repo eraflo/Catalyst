@@ -1045,14 +1045,15 @@ namespace Eraflo.Catalyst.Editor.BehaviourTree.Canvas
                         var pos = nodeElement.Node.Position;
                         pos.x = Mathf.Round(pos.x / gridSize) * gridSize;
                         pos.y = Mathf.Round(pos.y / gridSize) * gridSize;
-                        
+
+                        Undo.RecordObject(nodeElement.Node, "Move Node");
                         nodeElement.Node.Position = pos;
                         nodeElement.style.left = pos.x;
                         nodeElement.style.top = pos.y;
-                        
+
                         // Update connected edges one last time
                         OnNodePositionChanged(nodeElement);
-                        
+
                         EditorUtility.SetDirty(nodeElement.Node);
                     }
                 }

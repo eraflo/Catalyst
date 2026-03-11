@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEditor;
+using Eraflo.Catalyst;
 using Eraflo.Catalyst.BehaviourTree;
 using Eraflo.Catalyst.Editor.BehaviourTree.Window;
 using Eraflo.Catalyst.Core.Blackboard;
@@ -84,7 +85,44 @@ namespace Eraflo.Catalyst.Editor.BehaviourTree
                     BehaviourTreeEditorWindow.OpenWindow(runner.RuntimeTree);
                 }
                 GUI.backgroundColor = Color.white;
-                
+
+                // ── BTScheduler info ──────────────────────────────────────────────
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("BTScheduler", EditorStyles.boldLabel);
+
+                var scheduler = App.Get<BTSchedulerService>();
+                if (scheduler == null)
+                {
+                    EditorGUILayout.HelpBox("BTSchedulerService not found.", MessageType.None);
+                }
+                else
+                {
+                    if (scheduler.IsRegistered(runner))
+                    {
+                        float dist = Vector3.Distance(
+                            runner.transform.position,
+                            Camera.main != null ? Camera.main.transform.position : Vector3.zero
+                        );
+
+                        string tierLabel;
+                        if (dist < scheduler.Tier1Distance)
+                            tierLabel = "Tier 0 (every frame)";
+                        else if (dist < scheduler.Tier2Distance)
+                            tierLabel = "Tier 1 (every 3 frames)";
+                        else
+                            tierLabel = "Tier 2 (every 10 frames)";
+
+                        EditorGUILayout.LabelField("Status", $"Registered ({tierLabel} — {dist:F1}m)");
+                    }
+                    else
+                    {
+                        EditorGUILayout.LabelField("Status", "Not registered");
+                    }
+
+                    EditorGUILayout.LabelField("Budget",
+                        $"{scheduler.LastFrameMs:F2} ms / {scheduler.MaxMsPerFrame:F1} ms last frame");
+                }
+
                 // Force repaint for live updates
                 Repaint();
             }

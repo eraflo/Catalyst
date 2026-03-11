@@ -15,6 +15,9 @@ namespace Eraflo.Catalyst.Editor
     {
         private List<Type> _availableHandlers;
         private bool _handlersFoldout = true;
+        private GUIStyle _headerStyle;
+
+        private static readonly string[] _backendIdOptions = { "mock", "netcode" };
 
         private SerializedProperty _threadMode;
         private SerializedProperty _networkBackendId;
@@ -108,6 +111,8 @@ namespace Eraflo.Catalyst.Editor
             _maxConnectionAttemptsPerMinute = serializedObject.FindProperty("_maxConnectionAttemptsPerMinute");
             _connectionBanDurationSeconds = serializedObject.FindProperty("_connectionBanDurationSeconds");
 
+            _headerStyle = new GUIStyle(EditorStyles.boldLabel) { fontSize = 13 };
+
             RefreshHandlerList();
         }
 
@@ -126,7 +131,11 @@ namespace Eraflo.Catalyst.Editor
             EditorGUILayout.Space(10);
 
             DrawHeader("🌐 Networking");
-            EditorGUILayout.PropertyField(_networkBackendId, new GUIContent("Backend ID", "mock, netcode, or custom"));
+            int backendIndex = System.Array.IndexOf(_backendIdOptions, _networkBackendId.stringValue);
+            if (backendIndex < 0) backendIndex = 0;
+            int newBackendIndex = EditorGUILayout.Popup(new GUIContent("Backend ID", "mock or netcode"), backendIndex, _backendIdOptions);
+            if (newBackendIndex != backendIndex)
+                _networkBackendId.stringValue = _backendIdOptions[newBackendIndex];
             EditorGUILayout.PropertyField(_networkDebugMode, new GUIContent("Debug Mode"));
             EditorGUILayout.PropertyField(_defaultAuthorityMode, new GUIContent("Default Authority", "Global authority model for messages and handlers"));
             EditorGUILayout.PropertyField(_handlerMode, new GUIContent("Handler Mode"));
@@ -238,8 +247,9 @@ namespace Eraflo.Catalyst.Editor
         private void DrawHeader(string title)
         {
             EditorGUILayout.Space(5);
-            var style = new GUIStyle(EditorStyles.boldLabel) { fontSize = 13 };
-            EditorGUILayout.LabelField(title, style);
+            if (_headerStyle == null)
+                _headerStyle = new GUIStyle(EditorStyles.boldLabel) { fontSize = 13 };
+            EditorGUILayout.LabelField(title, _headerStyle);
             var rect = GUILayoutUtility.GetRect(1, 1);
             EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.3f));
             EditorGUILayout.Space(3);

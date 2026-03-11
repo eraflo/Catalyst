@@ -267,6 +267,16 @@ namespace Eraflo.Catalyst.InputSystem
         public IReadOnlyList<BufferedInput> GetBuffer() => _buffer;
 
         /// <summary>
+        /// Gets all registered action IDs (read-only).
+        /// </summary>
+        public IReadOnlyList<string> GetRegisteredActions() => _registeredActions;
+
+        /// <summary>
+        /// Clears all entries currently in the input buffer.
+        /// </summary>
+        public void ClearBuffer() => _buffer.Clear();
+
+        /// <summary>
         /// Internal method to advance time for testing.
         /// </summary>
         internal void SetTimeForTesting(float time)

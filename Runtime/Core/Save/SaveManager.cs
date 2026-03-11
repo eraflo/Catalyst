@@ -22,6 +22,9 @@ namespace Eraflo.Catalyst.Core.Save
         public ISerializer Serializer { get => _serializer; set => _serializer = value; }
         public IStorageBackend Storage { get => _storage; set => _storage = value; }
 
+        /// <summary>Returns a read-only view of all currently registered saveable entities.</summary>
+        public IReadOnlyCollection<SaveableEntity> RegisteredEntities => _entities;
+
         public void Initialize()
         {
             // Default implementations if none provided

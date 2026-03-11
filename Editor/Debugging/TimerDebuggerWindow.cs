@@ -72,7 +72,8 @@ namespace Eraflo.Catalyst.Editor.Debugging
             {
                 if (GUILayout.Button("Clear All", EditorStyles.toolbarButton))
                 {
-                    App.Get<Timer>()?.Clear(); // No static Clear on Timer facade? Wait, let's check.
+                    if (!EditorUtility.DisplayDialog("Clear All Timers", "This will cancel all active timers. Continue?", "Clear", "Cancel")) return;
+                    App.Get<Timer>()?.Clear();
                     _cachedTimers.Clear();
                 }
                 

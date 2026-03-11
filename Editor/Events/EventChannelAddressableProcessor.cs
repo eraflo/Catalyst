@@ -35,6 +35,12 @@ namespace Eraflo.Catalyst.Editor
             {
                 ProcessAsset(assetPath);
             }
+
+            foreach (string assetPath in deletedAssets)
+            {
+                if (assetPath.EndsWith(".asset"))
+                    RemoveFromAddressables(assetPath);
+            }
         }
 
         private static void ProcessAsset(string assetPath)
@@ -43,12 +49,42 @@ namespace Eraflo.Catalyst.Editor
             if (!assetPath.EndsWith(".asset")) return;
 
             var asset = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath);
-            
+
             // Check if it's an EventChannel
             if (asset == null) return;
             if (!IsEventChannel(asset)) return;
 
             RegisterToAddressables(assetPath, asset);
+        }
+
+        private static void RemoveFromAddressables(string assetPath)
+        {
+            var settings = AddressableAssetSettingsDefaultObject.Settings;
+            if (settings == null) return;
+
+            string assetName = Path.GetFileNameWithoutExtension(assetPath);
+            string addressSuffix = "/" + assetName;
+
+            foreach (var group in settings.groups)
+            {
+                if (group == null) continue;
+
+                AddressableAssetEntry entryToRemove = null;
+                foreach (var entry in group.entries)
+                {
+                    if (entry.address.StartsWith(AddressPrefix) && entry.address.EndsWith(addressSuffix))
+                    {
+                        entryToRemove = entry;
+                        break;
+                    }
+                }
+
+                if (entryToRemove != null)
+                {
+                    group.RemoveAssetEntry(entryToRemove);
+                    Debug.Log($"[EventChannelAddressable] Removed: {entryToRemove.address}");
+                }
+            }
         }
 
         private static bool IsEventChannel(ScriptableObject asset)

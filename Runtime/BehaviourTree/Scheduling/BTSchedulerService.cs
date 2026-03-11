@@ -71,6 +71,14 @@ namespace Eraflo.Catalyst.BehaviourTree
         private int _frameCount;
         private readonly Stopwatch _stopwatch = new Stopwatch();
 
+        // ── Observable budget ─────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Wall-clock milliseconds spent ticking BehaviourTree runners during the last frame.
+        /// Updated at the end of each <see cref="OnUpdate"/> call.
+        /// </summary>
+        public float LastFrameMs { get; private set; }
+
         // ─────────────────────────────────────────────────────────────────────────
         //  IGameService
         // ─────────────────────────────────────────────────────────────────────────
@@ -144,6 +152,17 @@ namespace Eraflo.Catalyst.BehaviourTree
             RemoveFromAllTiers(runner);
         }
 
+        /// <summary>
+        /// Returns <c>true</c> if <paramref name="runner"/> is currently registered with the
+        /// scheduler (i.e. present in any tier list).
+        /// </summary>
+        /// <param name="runner">The runner to check. Null-safe — returns <c>false</c> if null.</param>
+        public bool IsRegistered(BehaviourTreeRunner runner)
+        {
+            if (runner == null) return false;
+            return _originalModes.ContainsKey(runner);
+        }
+
         // ─────────────────────────────────────────────────────────────────────────
         //  IUpdatable
         // ─────────────────────────────────────────────────────────────────────────
@@ -168,13 +187,21 @@ namespace Eraflo.Catalyst.BehaviourTree
 
             // Tier 0 — tick every frame.
             TickTier(_tier0, ref _tier0Index);
-            if (_stopwatch.Elapsed.TotalMilliseconds >= MaxMsPerFrame) return;
+            if (_stopwatch.Elapsed.TotalMilliseconds >= MaxMsPerFrame)
+            {
+                LastFrameMs = (float)_stopwatch.Elapsed.TotalMilliseconds;
+                return;
+            }
 
             // Tier 1 — tick every 3 frames.
             if (_frameCount % Tier1Interval == 0)
             {
                 TickTier(_tier1, ref _tier1Index);
-                if (_stopwatch.Elapsed.TotalMilliseconds >= MaxMsPerFrame) return;
+                if (_stopwatch.Elapsed.TotalMilliseconds >= MaxMsPerFrame)
+                {
+                    LastFrameMs = (float)_stopwatch.Elapsed.TotalMilliseconds;
+                    return;
+                }
             }
 
             // Tier 2 — tick every 10 frames.
@@ -182,6 +209,8 @@ namespace Eraflo.Catalyst.BehaviourTree
             {
                 TickTier(_tier2, ref _tier2Index);
             }
+
+            LastFrameMs = (float)_stopwatch.Elapsed.TotalMilliseconds;
         }
 
         // ─────────────────────────────────────────────────────────────────────────

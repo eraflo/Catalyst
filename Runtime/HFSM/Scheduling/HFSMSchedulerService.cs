@@ -71,6 +71,12 @@ namespace Eraflo.Catalyst.HFSM.Scheduling
         /// </summary>
         public float MaxMsPerFrame { get; set; } = 2f;
 
+        /// <summary>
+        /// The actual milliseconds spent ticking state machines during the last frame update.
+        /// Updated every frame after the OnUpdate sweep completes.
+        /// </summary>
+        public float LastFrameMs { get; private set; }
+
         // ── Internal state ─────────────────────────────────────────────────────────
 
         private struct Entry
@@ -201,6 +207,7 @@ namespace Eraflo.Catalyst.HFSM.Scheduling
             }
 
             _stopwatch.Stop();
+            LastFrameMs = (float)_stopwatch.Elapsed.TotalMilliseconds;
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────────
@@ -219,6 +226,34 @@ namespace Eraflo.Catalyst.HFSM.Scheduling
             if (sqrDist < tier0SqrMax)  return 1;             // Tier 0 — every frame
             if (sqrDist < tier1SqrMax)  return Tier1Interval; // Tier 1 — every N frames
             return Tier2Interval;                              // Tier 2 — every M frames
+        }
+
+        /// <summary>
+        /// Returns a snapshot list of all currently registered (StateMachine, Owner) pairs.
+        /// Intended for editor tooling and debugging only.
+        /// </summary>
+        public List<(StateMachine StateMachine, Transform Owner)> GetRegisteredMachines()
+        {
+            var result = new List<(StateMachine, Transform)>(_entries.Count);
+            for (int i = 0; i < _entries.Count; i++)
+                result.Add((_entries[i].StateMachine, _entries[i].Owner));
+            return result;
+        }
+
+        /// <summary>
+        /// Returns the LOD tier (0, 1, or 2) for the given owner transform based on
+        /// distance to <see cref="Camera.main"/>.
+        /// </summary>
+        /// <param name="owner">The transform to test. Null or no camera returns Tier 0.</param>
+        public int GetTier(Transform owner)
+        {
+            if (_camera == null || owner == null)
+                return 0;
+
+            float sqrDist = (owner.position - _camera.transform.position).sqrMagnitude;
+            if (sqrDist < Tier0MaxDistance * Tier0MaxDistance) return 0;
+            if (sqrDist < Tier1MaxDistance * Tier1MaxDistance) return 1;
+            return 2;
         }
     }
 }

@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using System.Reflection;
 
 namespace Eraflo.Catalyst.Events.Editor
 {
@@ -50,11 +51,15 @@ namespace Eraflo.Catalyst.Events.Editor
     {
         private SerializedProperty _descriptionProperty;
         private SerializedProperty _debugValueProperty;
+        private PropertyInfo _subscriberCountProp;
+        private MethodInfo _raiseDebugMethod;
 
         protected virtual void OnEnable()
         {
             _descriptionProperty = serializedObject.FindProperty("_description");
             _debugValueProperty = serializedObject.FindProperty("_debugValue");
+            _subscriberCountProp = target.GetType().GetProperty("SubscriberCount");
+            _raiseDebugMethod = target.GetType().GetMethod("RaiseDebug");
         }
 
         public override void OnInspectorGUI()
@@ -73,10 +78,9 @@ namespace Eraflo.Catalyst.Events.Editor
             EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
 
             // Subscriber count
-            var subscriberCountProperty = target.GetType().GetProperty("SubscriberCount");
-            if (subscriberCountProperty != null)
+            if (_subscriberCountProp != null)
             {
-                int count = (int)subscriberCountProperty.GetValue(target);
+                int count = (int)_subscriberCountProp.GetValue(target);
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.LabelField("Subscribers:", GUILayout.Width(80));
                 EditorGUILayout.LabelField(count.ToString());
@@ -94,8 +98,7 @@ namespace Eraflo.Catalyst.Events.Editor
             if (GUILayout.Button("Raise Event (with Debug Value)"))
             {
                 // Call RaiseDebug via reflection
-                var raiseDebugMethod = target.GetType().GetMethod("RaiseDebug");
-                raiseDebugMethod?.Invoke(target, null);
+                _raiseDebugMethod?.Invoke(target, null);
             }
 
             GUI.enabled = true;

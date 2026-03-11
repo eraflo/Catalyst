@@ -8,7 +8,8 @@
         "Unity.Addressables.Editor",
         "Unity.ResourceManager",
         "Unity.Burst",
-        "Unity.Mathematics"
+        "Unity.Mathematics",
+        "Unity.Nuget.Newtonsoft-Json"
     ],
     "includePlatforms": [
         "Editor"
