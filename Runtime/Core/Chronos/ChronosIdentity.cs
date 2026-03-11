@@ -7,7 +7,7 @@ namespace Eraflo.Catalyst.Core.Chronos
     {
         [SerializeField] private string _channel = "World";
         
-        private ChronosManager _chronos;
+        [Inject] private ChronosManager _chronos;
 
         public string Channel
         {
@@ -17,7 +17,6 @@ namespace Eraflo.Catalyst.Core.Chronos
 
         private void Start()
         {
-            _chronos = App.Get<ChronosManager>();
             if (_chronos == null)
             {
                 Debug.LogWarning($"[ChronosIdentity] ChronosManager not found on {gameObject.name}. Make sure it is registered as a service.");

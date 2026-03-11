@@ -20,11 +20,10 @@ namespace Eraflo.Catalyst.UI.Settings
         private Toggle _toggle;
         private TMP_Dropdown _dropdown;
 
-        private SettingsManager _manager;
+        [Inject] private SettingsManager _manager;
 
         private void Start()
         {
-            _manager = App.Get<SettingsManager>();
             if (_manager == null) return;
 
             // Cache components

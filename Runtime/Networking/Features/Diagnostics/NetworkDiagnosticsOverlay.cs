@@ -24,7 +24,7 @@ namespace Eraflo.Catalyst.Networking.Features.Diagnostics
         [SerializeField] private bool _showBandwidth = true;
         [SerializeField] private bool _showSimulationIndicator = true;
         
-        private NetworkDiagnostics _diagnostics;
+        [Inject] private NetworkDiagnostics _diagnostics;
         private GUIStyle _textStyle;
         private GUIStyle _boxStyle;
         private Texture2D _backgroundTexture;
@@ -33,8 +33,6 @@ namespace Eraflo.Catalyst.Networking.Features.Diagnostics
         
         private void Start()
         {
-            _diagnostics = App.Get<NetworkDiagnostics>();
-            
             // Create background texture
             _backgroundTexture = new Texture2D(1, 1);
             _backgroundTexture.SetPixel(0, 0, _backgroundColor);

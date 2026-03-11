@@ -10,12 +10,11 @@ namespace Eraflo.Catalyst.InputSystem.Debugging
     /// </summary>
     public class InputDebugOverlay : MonoBehaviour
     {
-        private InputManager _inputManager;
+        [Inject] private InputManager _inputManager;
         private ComboSystem _comboSystem; // Optional, can be multiple
 
         private void Start()
         {
-            _inputManager = App.Get<InputManager>();
             // Combo systems are often localized, we might need a way to track them.
             // For now, we'll look for any active one or just show the buffer.
         }

@@ -9,6 +9,9 @@ The Service Locator is the architectural backbone of Eraflo.Catalyst. It provide
 1. [Key Features](#1-key-features)
 2. [Architecture](#2-architecture)
 3. [Quick Start](#3-quick-start)
+   - 3.1 [Accessing a Service](#31-accessing-a-service)
+   - 3.2 [Recommended Pattern — `[Inject]`](#32-recommended-pattern--inject)
+   - 3.3 [Field Injection — All Patterns](#33-field-injection--all-patterns)
 4. [Creating a Service](#4-creating-a-service)
 5. [Lifecycle Management](#5-lifecycle-management)
 6. [Priority System](#6-priority-system)
@@ -24,6 +27,8 @@ The Service Locator is the architectural backbone of Eraflo.Catalyst. It provide
 - **Lifecycle Management**: Hook into Unity's update loop via `IUpdatable` and `IFixedUpdatable`
 - **Priority Control**: Controlled initialization order via `Priority` property
 - **Global Access**: Access any service from anywhere via `App.Get<T>()`
+- **Field Injection**: Automatically populate service fields with `[Inject]` — no `App.Get<T>()` boilerplate, works on any class
+- **Injectable Factory**: Create plain C# objects with `App.Create<T>()` — fields injected at construction, no manual call needed
 - **No Scene Dependencies**: Works without any GameObjects in your scene
 
 ---
@@ -103,7 +108,9 @@ public class MyGameComponent : MonoBehaviour
 }
 ```
 
-### 3.2 Service Handle Example
+### 3.2 Recommended Pattern — `[Inject]`
+
+The preferred way to access services in a `MonoBehaviour`. Fields are populated automatically before `Start` — no manual call required.
 
 ```csharp
 using UnityEngine;
@@ -113,26 +120,78 @@ using Eraflo.Catalyst.Networking;
 
 public class GameManager : MonoBehaviour
 {
-    private EventBus _events;
-    private NetworkManager _network;
-    private Timer _timer;
-    
-    void Awake()
+    [Inject] private EventBus _events;
+    [Inject] private NetworkManager _network;
+    [Inject] private Timer _timer;
+
+    private void Start()
     {
-        // Cache service references for performance
-        _events = App.Get<EventBus>();
-        _network = App.Get<NetworkManager>();
-        _timer = App.Get<Timer>();
-    }
-    
-    void StartGame()
-    {
-        // Use cached services
+        // All services are already available here
         _events.Publish(new GameStartedEvent());
-        _timer.CreateDelay(3f, () => SpawnEnemies());
+        _timer.CreateDelay(3f, SpawnEnemies);
     }
 }
 ```
+
+> [!TIP]
+> When you need a service inside `Awake` (before automatic injection), call
+> `ServiceInjector.Inject(this)` at the very top of `Awake`, or use `App.Get<T>()` directly.
+
+---
+
+### 3.3 Field Injection — All Patterns
+
+`[Inject]` works on any class. The `MonoBehaviour` case (see [3.2](#32-recommended-pattern--inject)) is fully automatic. Below are the additional patterns.
+
+**Plain C# class — mark with `[Injectable]` and create via `App.Create<T>()`:**
+
+```csharp
+using Eraflo.Catalyst;
+
+[Injectable]
+public class PlayerModel
+{
+    [Inject] private EventBus _eventBus;
+    [Inject] private SaveManager _save;
+
+    // No constructor call needed — injection is done by App.Create<T>()
+}
+
+// Instantiate via factory: fields are injected before the instance is returned
+var model = App.Create<PlayerModel>();
+```
+
+> [!NOTE]
+> `App.Create<T>()` requires a **public parameterless constructor**. If your class needs
+> constructor parameters, call `ServiceInjector.Inject(this)` manually at the end of that
+> constructor instead.
+
+**Runtime-instantiated component — inject after `Instantiate`:**
+
+```csharp
+var go = Instantiate(enemyPrefab);
+ServiceInjector.Inject(go.GetComponent<EnemyController>());
+```
+
+> [!NOTE]
+> Fields of any visibility (`private`, `protected`, `public`) and declared anywhere in the
+> inheritance chain are discovered. The reflection result is cached per type, so the cost
+> is paid only on the first injection of each type.
+
+#### Injection timing
+
+| Context | When injected | How |
+|---|---|---|
+| `MonoBehaviour` in scene (placed in editor) | Automatically before `Start` | `SceneManager.sceneLoaded` |
+| `MonoBehaviour` in additively loaded scene | Automatically before `Start` of that scene | `SceneManager.sceneLoaded` |
+| `MonoBehaviour` via `Instantiate` | Manually, on demand | `ServiceInjector.Inject(target)` |
+| Plain C# class marked `[Injectable]` | At construction | `App.Create<T>()` |
+| Plain C# class with constructor parameters | At end of constructor | `ServiceInjector.Inject(this)` |
+
+> [!WARNING]
+> Scene objects do **not** have their fields injected before `Awake`. If you need a service
+> inside `Awake`, call `ServiceInjector.Inject(this)` at the top of the method or use
+> `App.Get<T>()` directly.
 
 ---
 
@@ -487,6 +546,7 @@ public class AchievementManager : IGameService
 | Method | Description |
 |--------|-------------|
 | `T Get<T>()` | Retrieve a registered service by type or interface |
+| `T Create<T>()` | Instantiate `T` and inject all `[Inject]` fields. Requires a public parameterless constructor. |
 | `void Register<T>(T instance)` | Manually register a service instance |
 | `void Shutdown()` | Shutdown all services and clear registry |
 
@@ -508,6 +568,31 @@ public class MyService : IGameService { ... }
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `Priority` | `int` | `0` | Initialization and update order (lower = earlier) |
+
+### InjectableAttribute
+
+```csharp
+[Injectable]
+public class PlayerModel { ... }
+```
+
+Marks a plain C# class as using field injection. Instances should be created via `App.Create<T>()`.
+
+### InjectAttribute
+
+```csharp
+[Inject] private Timer _timer;
+[Inject] private INetworkService _network;
+```
+
+Marks a field for automatic injection by `ServiceInjector`. Supports any field visibility and any class type.
+
+### ServiceInjector (Static)
+
+| Method | Description |
+|--------|-------------|
+| `T Create<T>()` | Instantiate `T` and inject all `[Inject]` fields. Equivalent to `App.Create<T>()`. |
+| `Inject(object target)` | Inject all `[Inject]` fields on `target` from the service registry. Call once after constructing non-scene objects. |
 
 ---
 

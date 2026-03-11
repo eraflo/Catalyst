@@ -24,7 +24,7 @@ namespace Eraflo.Catalyst.InputSystem.Combos
         private TrieNode _currentNode;
         private float _resetTimeout = 1.0f; 
         private TimerHandle _resetTimer;
-        private Timer _timerManager;
+        [Inject] private Timer _timerManager;
 
         public event Action<ComboDefinition> OnComboExecuted;
 
@@ -36,7 +36,7 @@ namespace Eraflo.Catalyst.InputSystem.Combos
 
         public ComboSystem(ComboDatabase database)
         {
-            _timerManager = App.Get<Timer>();
+            ServiceInjector.Inject(this);
             _currentNode = _root;
             BuildTrie(database);
         }

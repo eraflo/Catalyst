@@ -15,15 +15,13 @@ namespace Eraflo.Catalyst.Command.UI
         [Header("Settings")]
         public bool AutoEnableDisableButtons = true;
 
-        private CommandManager _manager;
+        [Inject] private CommandManager _manager;
 
         private void Start()
         {
-            _manager = App.Get<CommandManager>();
-            
             if (UndoButton != null)
                 UndoButton.onClick.AddListener(OnUndoClick);
-                
+
             if (RedoButton != null)
                 RedoButton.onClick.AddListener(OnRedoClick);
         }

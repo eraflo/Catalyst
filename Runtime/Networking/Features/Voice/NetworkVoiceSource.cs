@@ -26,9 +26,9 @@ namespace Eraflo.Catalyst.Networking.Features.Voice
         [Tooltip("Optional object to show when speaking.")]
         [SerializeField] private GameObject _speakingIndicator;
         
-        private VoiceManager _voiceManager;
-        private NetworkManager _networkManager;
-        private ChronosManager _chronos;
+        [Inject] private VoiceManager _voiceManager;
+        [Inject] private NetworkManager _networkManager;
+        [Inject] private ChronosManager _chronos;
         
         private NetworkProperty<bool> _isSpeaking;
         private float _lastSyncTime;
@@ -45,10 +45,6 @@ namespace Eraflo.Catalyst.Networking.Features.Voice
         /// </summary>
         private void Start()
         {
-            _voiceManager = App.Get<VoiceManager>();
-            _networkManager = App.Get<NetworkManager>();
-            _chronos = App.Get<ChronosManager>();
-            
             // Create networked property for speaking state
             var idManager = App.Get<NetworkIdManager>();
             uint networkId = this.gameObject.GetNetworkId();

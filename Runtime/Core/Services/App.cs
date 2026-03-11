@@ -1,7 +1,7 @@
 namespace Eraflo.Catalyst
 {
     /// <summary>
-    /// Static entry point to access registered services.
+    /// Static entry point to access and create services and injectable objects.
     /// </summary>
     public static class App
     {
@@ -21,6 +21,17 @@ namespace Eraflo.Catalyst
         public static object Get(System.Type type)
         {
             return ServiceLocator.Get(type);
+        }
+
+        /// <summary>
+        /// Creates an instance of <typeparamref name="T"/> and automatically injects all
+        /// fields marked with <see cref="InjectAttribute"/> before returning it.
+        /// Use for classes marked with <see cref="InjectableAttribute"/> instead of <c>new T()</c>.
+        /// </summary>
+        /// <typeparam name="T">A class with a public parameterless constructor.</typeparam>
+        public static T Create<T>() where T : class, new()
+        {
+            return ServiceInjector.Create<T>();
         }
 
         public static void Register<T>(T instance) where T : class, IGameService
