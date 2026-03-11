@@ -11,6 +11,9 @@ namespace Eraflo.Catalyst.Timers
         private readonly List<TimerHandle> _handles = new List<TimerHandle>();
         private readonly string _name;
 
+        private Timer _cleanupTimer;
+        private bool CleanupPredicate(TimerHandle h) => _cleanupTimer.IsFinished(h);
+
         /// <summary>
         /// Name of this timer group.
         /// </summary>
@@ -135,8 +138,8 @@ namespace Eraflo.Catalyst.Timers
         /// </summary>
         public void CleanupFinished()
         {
-            var timer = App.Get<Timer>();
-            _handles.RemoveAll(h => timer.IsFinished(h));
+            _cleanupTimer = App.Get<Timer>();
+            _handles.RemoveAll(CleanupPredicate);
         }
     }
 

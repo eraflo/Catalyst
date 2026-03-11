@@ -10,17 +10,28 @@ namespace Eraflo.Catalyst.BehaviourTree
     public class FindClosestByTagService : ServiceNode
     {
         public string Tag = "Enemy";
-        
+
         [BlackboardKey]
         public string ResultKey = "ClosestEnemy";
-        
+
         public float MaxRange = 100f;
+
+        private GameObject[] _cachedObjects;
+        private float _cacheTime = -999f;
+        private const float CacheInterval = 1f;
 
         protected override void OnServiceUpdate()
         {
             if (Owner == null || Blackboard == null) return;
 
-            var objects = GameObject.FindGameObjectsWithTag(Tag);
+            // Refresh the tag search only once per CacheInterval seconds
+            if (Time.time - _cacheTime > CacheInterval)
+            {
+                _cachedObjects = GameObject.FindGameObjectsWithTag(Tag);
+                _cacheTime = Time.time;
+            }
+
+            var objects = _cachedObjects;
             GameObject closest = null;
             float closestDist = MaxRange;
 

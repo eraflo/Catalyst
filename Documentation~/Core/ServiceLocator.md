@@ -405,6 +405,8 @@ public class AudioManager : IGameService, IUpdatable
 | `InputRemapper` | 40 | Input rebinding |
 | `ChronosManager` | 41 | Time scaling |
 | `InputManager` | 50 | Input processing |
+| `HFSMSchedulerService` | 51 | HFSM update scheduler |
+| `BTSchedulerService` | 52 | Behaviour tree update scheduler |
 | `CommandManager` | 55 | Undo/Redo |
 | `LogExporter` | 100 | Logging utility |
 

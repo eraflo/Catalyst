@@ -41,11 +41,26 @@ namespace Eraflo.Catalyst.InputSystem
     [Service(Priority = 50)]
     public class InputManager : IGameService, IUpdatable
     {
+        private static readonly string[] _joystickButtonNames = new string[]
+        {
+            "joystick button 0",  "joystick button 1",  "joystick button 2",  "joystick button 3",
+            "joystick button 4",  "joystick button 5",  "joystick button 6",  "joystick button 7",
+            "joystick button 8",  "joystick button 9",  "joystick button 10", "joystick button 11",
+            "joystick button 12", "joystick button 13", "joystick button 14", "joystick button 15",
+            "joystick button 16", "joystick button 17", "joystick button 18", "joystick button 19"
+        };
+
         private readonly List<BufferedInput> _buffer = new List<BufferedInput>();
         private readonly List<string> _registeredActions = new List<string>();
+        private readonly Predicate<BufferedInput> _cleanupPred;
         private IInputProvider _provider;
         private ChronosManager _chronos;
         private float _currentTime;
+
+        public InputManager()
+        {
+            _cleanupPred = frame => _currentTime - frame.Timestamp > BufferDuration;
+        }
 
         // Haptics state
         private float _vibrationEndTime;
@@ -151,7 +166,7 @@ namespace Eraflo.Catalyst.InputSystem
             }
 
             // 2. Purge old inputs
-            _buffer.RemoveAll(i => _currentTime - i.Timestamp > BufferDuration);
+            _buffer.RemoveAll(_cleanupPred);
         }
 
         /// <summary>
@@ -237,7 +252,7 @@ namespace Eraflo.Catalyst.InputSystem
             {
                 for (int i = 0; i < 20; i++)
                 {
-                    if (UnityEngine.Input.GetKey("joystick button " + i)) return InputDeviceType.Gamepad;
+                    if (UnityEngine.Input.GetKey(_joystickButtonNames[i])) return InputDeviceType.Gamepad;
                 }
                 return InputDeviceType.KeyboardMouse;
             }

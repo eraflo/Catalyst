@@ -15,7 +15,8 @@ A powerful, hierarchical state machine for complex AI and gameplay logic. Suppor
 7. [Async States](#7-async-states)
 8. [Blackboard Integration](#8-blackboard-integration)
 9. [Networking](#9-networking)
-10. [API Reference](#10-api-reference)
+10. [HFSMSchedulerService](#10-hfsmschedulerservice)
+11. [API Reference](#11-api-reference)
 
 ---
 
@@ -409,7 +410,57 @@ _hfsm.Authority = AuthorityMode.ClientAuthoritative;
 
 ---
 
-## 10. API Reference
+## 10. HFSMSchedulerService
+
+`HFSMSchedulerService` is an optional Catalyst service that applies distance-based LOD to state machine updates. Unlike the BT scheduler, there is no MonoBehaviour driver — you must register and unregister your state machines manually.
+
+| Tier | Distance | Tick Frequency |
+|------|----------|----------------|
+| Tier 0 | < 15 m | Every frame |
+| Tier 1 | 15 – 50 m | Every 3 frames |
+| Tier 2 | > 50 m | Every 10 frames |
+
+### 10.1 Registration
+
+```csharp
+using UnityEngine;
+using Eraflo.Catalyst;
+using Eraflo.Catalyst.HFSM;
+using Eraflo.Catalyst.HFSM.Scheduling;
+
+public class AIAgent : MonoBehaviour
+{
+    private StateMachine _fsm;
+
+    private void OnEnable()
+    {
+        _fsm = new StateMachine(...);
+        _fsm.Start();
+        App.Get<HFSMSchedulerService>()?.Register(_fsm, transform);
+    }
+
+    private void OnDisable()
+    {
+        App.Get<HFSMSchedulerService>()?.Unregister(_fsm);
+    }
+    // Note: do NOT call _fsm.Update() manually when registered with the scheduler
+}
+```
+
+`StateMachine` handles its own delta time via ChronosManager channels — the scheduler just decides when to call `Update()`.
+
+### 10.2 Configuration
+
+```csharp
+var scheduler = App.Get<HFSMSchedulerService>();
+scheduler.Tier1Distance = 20f;
+scheduler.Tier2Distance = 60f;
+scheduler.MaxMsPerFrame = 3f;
+```
+
+---
+
+## 11. API Reference
 
 ### StateMachine
 

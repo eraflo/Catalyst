@@ -20,6 +20,11 @@ namespace Eraflo.Catalyst
         /// </summary>
         public static object Get(System.Type type)
         {
+            if (type == null)
+            {
+                UnityEngine.Debug.LogError("[App] Get(Type): type argument is null.");
+                return null;
+            }
             return ServiceLocator.Get(type);
         }
 

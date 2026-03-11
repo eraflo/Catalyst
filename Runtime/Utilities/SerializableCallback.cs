@@ -86,7 +86,10 @@ namespace Eraflo.Catalyst.Utilities
                 UnityEngine.Object target = null;
                 if (TargetInstanceId != 0)
                 {
-                    var allObjects = UnityEngine.Object.FindObjectsOfType<UnityEngine.Object>();
+                    // FindObjectsByType: no sort needed (we match by ID), and include inactive
+                    // objects so callbacks targeting disabled components still resolve.
+                    var allObjects = UnityEngine.Object.FindObjectsByType<UnityEngine.Object>(
+                        FindObjectsInactive.Include, FindObjectsSortMode.None);
                     foreach (var obj in allObjects)
                     {
                         if (obj.GetInstanceID() == TargetInstanceId)

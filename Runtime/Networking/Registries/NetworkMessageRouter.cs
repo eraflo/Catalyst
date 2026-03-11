@@ -113,7 +113,10 @@ namespace Eraflo.Catalyst.Networking
                 return;
             }
 
-            Debug.Log($"[NetworkMessageRouter] Routing {type.Name} from {senderId} (ID: {msgId})");
+            if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.Log($"[NetworkMessageRouter] Routing {type.Name} from {senderId} (ID: {msgId})");
+            }
 
             // Rate limiting check
             if (!CheckRateLimit(msgId, senderId))
@@ -142,10 +145,13 @@ namespace Eraflo.Catalyst.Networking
             _isRouting = true;
             try
             {
-                foreach (var handler in handlers.ToArray())
+                for (int i = handlers.Count - 1; i >= 0; i--)
                 {
-                    try { handler.DynamicInvoke(message); }
-                    catch (Exception e) { Debug.LogException(e); }
+                    if (i < handlers.Count)
+                    {
+                        try { handlers[i].DynamicInvoke(message); }
+                        catch (Exception e) { Debug.LogException(e); }
+                    }
                 }
             }
             finally

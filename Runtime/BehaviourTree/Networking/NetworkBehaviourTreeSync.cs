@@ -13,6 +13,8 @@ namespace Eraflo.Catalyst.BehaviourTree
     public class NetworkBehaviourTreeSync : MonoBehaviour
     {
         [SerializeField] private BehaviourTreeRunner _runner;
+
+        [Inject] private NetworkManager _networkManager;
         
         /// <summary>If true, only the server/host runs the tree and syncs state to clients.</summary>
         [Tooltip("If true, only the server/host evaluates the tree. Clients receive state updates.")]
@@ -38,9 +40,8 @@ namespace Eraflo.Catalyst.BehaviourTree
             // Register network message handlers
             if (!_isRegistered)
             {
-                var network = App.Get<NetworkManager>();
-                network.On<BlackboardSyncMessage>(OnBlackboardSync);
-                network.On<TreeStateMessage>(OnTreeStateSync);
+                _networkManager.On<BlackboardSyncMessage>(OnBlackboardSync);
+                _networkManager.On<TreeStateMessage>(OnTreeStateSync);
                 _isRegistered = true;
             }
         }
@@ -49,26 +50,24 @@ namespace Eraflo.Catalyst.BehaviourTree
         {
             if (_isRegistered)
             {
-                var network = App.Get<NetworkManager>();
-                network.Off<BlackboardSyncMessage>(OnBlackboardSync);
-                network.Off<TreeStateMessage>(OnTreeStateSync);
+                _networkManager.Off<BlackboardSyncMessage>(OnBlackboardSync);
+                _networkManager.Off<TreeStateMessage>(OnTreeStateSync);
                 _isRegistered = false;
             }
         }
         
         private void Update()
         {
-            if (!App.Get<NetworkManager>().IsConnected) return;
-            
+            if (!_networkManager.IsConnected) return;
+
             // Only server/host evaluates in authoritative mode
-            var network = App.Get<NetworkManager>();
-            if (ServerAuthoritative && !network.IsServer)
+            if (ServerAuthoritative && !_networkManager.IsServer)
             {
                 return;
             }
-            
+
             // Sync blackboard periodically
-            if (network.IsServer && Time.time - _lastSyncTime >= BlackboardSyncInterval)
+            if (_networkManager.IsServer && Time.time - _lastSyncTime >= BlackboardSyncInterval)
             {
                 _lastSyncTime = Time.time;
                 SyncBlackboardToClients();
@@ -80,16 +79,16 @@ namespace Eraflo.Catalyst.BehaviourTree
         /// </summary>
         public void SyncBlackboardInt(string key, int value)
         {
-            if (!App.Get<NetworkManager>().IsServer) return;
-            
+            if (!_networkManager.IsServer) return;
+
             var msg = new BlackboardSyncMessage
             {
                 Key = key,
                 ValueType = ValueTypeId.Int,
                 IntValue = value
             };
-            
-            App.Get<NetworkManager>().SendToClients(msg);
+
+            _networkManager.SendToClients(msg);
         }
         
         /// <summary>
@@ -97,14 +96,14 @@ namespace Eraflo.Catalyst.BehaviourTree
         /// </summary>
         public void SyncTreeState(NodeState state)
         {
-            if (!App.Get<NetworkManager>().IsServer) return;
-            
+            if (!_networkManager.IsServer) return;
+
             var msg = new TreeStateMessage
             {
                 State = (int)state
             };
-            
-            App.Get<NetworkManager>().SendToClients(msg);
+
+            _networkManager.SendToClients(msg);
         }
         
         private void SyncBlackboardToClients()
@@ -124,7 +123,7 @@ namespace Eraflo.Catalyst.BehaviourTree
         private void OnBlackboardSync(BlackboardSyncMessage msg)
         {
             // Clients apply received values
-            if (App.Get<NetworkManager>().IsServer) return;
+            if (_networkManager.IsServer) return;
             
             switch (msg.ValueType)
             {
@@ -142,9 +141,12 @@ namespace Eraflo.Catalyst.BehaviourTree
         
         private void OnTreeStateSync(TreeStateMessage msg)
         {
-            if (App.Get<NetworkManager>().IsServer) return;
-            
-            Debug.Log($"[NetworkBT] Tree state: {(NodeState)msg.State}");
+            if (_networkManager.IsServer) return;
+
+            if (PackageSettings.Instance.NetworkDebugMode)
+            {
+                Debug.Log($"[NetworkBT] Tree state: {(NodeState)msg.State}");
+            }
         }
         
         #region Network Messages

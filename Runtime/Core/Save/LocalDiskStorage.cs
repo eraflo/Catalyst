@@ -22,15 +22,14 @@ namespace Eraflo.Catalyst.Core.Save
         public Task SaveAsync(string name, byte[] data)
         {
             string path = GetPath(name);
-            File.WriteAllBytes(path, data);
-            return Task.CompletedTask;
+            return File.WriteAllBytesAsync(path, data);
         }
 
         public Task<byte[]> LoadAsync(string name)
         {
             string path = GetPath(name);
             if (!File.Exists(path)) return Task.FromResult<byte[]>(null);
-            return Task.FromResult(File.ReadAllBytes(path));
+            return File.ReadAllBytesAsync(path);
         }
 
         public Task DeleteAsync(string name)

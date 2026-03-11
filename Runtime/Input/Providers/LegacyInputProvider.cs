@@ -12,6 +12,12 @@ namespace Eraflo.Catalyst.InputSystem.Providers
     {
         private readonly Dictionary<string, KeyCode> _buttonMappings = new Dictionary<string, KeyCode>();
         private readonly Dictionary<string, string> _axisMappings = new Dictionary<string, string>();
+        private Remapping.InputRemapper _remapper;
+
+        public LegacyInputProvider()
+        {
+            _remapper = App.Get<Remapping.InputRemapper>();
+        }
 
         public void MapButton(string actionId, KeyCode keyCode)
         {
@@ -25,11 +31,11 @@ namespace Eraflo.Catalyst.InputSystem.Providers
 
         public bool GetButtonDown(string actionId)
         {
-            var remapper = App.Get<Remapping.InputRemapper>();
+            if (_remapper == null) _remapper = App.Get<Remapping.InputRemapper>();
 
             // 1. Check remapper for dynamic bindings
             // If remapper returns default actionId, we use our local mappings
-            var binding = remapper?.GetLegacyBinding(actionId, null);
+            var binding = _remapper?.GetLegacyBinding(actionId, null);
             if (!string.IsNullOrEmpty(binding))
             {
                 if (System.Enum.TryParse<KeyCode>(binding, out var keyCode))

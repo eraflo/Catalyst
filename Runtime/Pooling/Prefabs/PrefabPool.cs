@@ -89,12 +89,12 @@ namespace Eraflo.Catalyst.Pooling
             else
             {
                 instance = Object.Instantiate(_prefab, _poolRoot);
+            }
 
-                // Add PooledObject component if not present
-                if (!instance.TryGetComponent<PooledObject>(out _))
-                {
-                    instance.AddComponent<PooledObject>();
-                }
+            // Get or add PooledObject component (avoids a redundant GetComponent call later)
+            if (!instance.TryGetComponent<PooledObject>(out var pooledObj))
+            {
+                pooledObj = instance.AddComponent<PooledObject>();
             }
 
             // Configure transform
@@ -110,15 +110,16 @@ namespace Eraflo.Catalyst.Pooling
                 _peakActiveCount = _active.Count;
 
             // Initialize PooledObject component
-            var pooledObj = instance.GetComponent<PooledObject>();
-            if (pooledObj != null)
+            pooledObj.Initialize(id, _poolId);
+
+            // Cache IPoolable[] on first instantiation, reuse on subsequent spawns
+            if (pooledObj.Poolables == null)
             {
-                pooledObj.Initialize(id, _poolId);
+                pooledObj.Poolables = instance.GetComponentsInChildren<IPoolable>(true);
             }
 
             // Call IPoolable.OnSpawn on all components
-            var poolables = instance.GetComponentsInChildren<IPoolable>(true);
-            foreach (var poolable in poolables)
+            foreach (var poolable in pooledObj.Poolables)
             {
                 poolable.OnSpawn();
             }
@@ -159,8 +160,11 @@ namespace Eraflo.Catalyst.Pooling
                 return;
             }
 
-            // Call IPoolable.OnDespawn on all components
-            var poolables = instance.GetComponentsInChildren<IPoolable>(true);
+            // Call IPoolable.OnDespawn on all components (use cached array if available)
+            var pooledObj = instance.GetComponent<PooledObject>();
+            var poolables = pooledObj != null && pooledObj.Poolables != null
+                ? pooledObj.Poolables
+                : instance.GetComponentsInChildren<IPoolable>(true);
             foreach (var poolable in poolables)
             {
                 poolable.OnDespawn();
@@ -194,16 +198,20 @@ namespace Eraflo.Catalyst.Pooling
             {
                 var instance = Object.Instantiate(_prefab, _poolRoot);
 
-                if (!instance.TryGetComponent<PooledObject>(out _))
+                if (!instance.TryGetComponent<PooledObject>(out var pooledObj))
                 {
-                    instance.AddComponent<PooledObject>();
+                    pooledObj = instance.AddComponent<PooledObject>();
                 }
 
                 instance.SetActive(false);
 
-                // Call OnDespawn for initial state
-                var poolables = instance.GetComponentsInChildren<IPoolable>(true);
-                foreach (var poolable in poolables)
+                // Cache IPoolable[] on first instantiation and call OnDespawn for initial state
+                if (pooledObj.Poolables == null)
+                {
+                    pooledObj.Poolables = instance.GetComponentsInChildren<IPoolable>(true);
+                }
+
+                foreach (var poolable in pooledObj.Poolables)
                 {
                     poolable.OnDespawn();
                 }

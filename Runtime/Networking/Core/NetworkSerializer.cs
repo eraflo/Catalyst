@@ -10,17 +10,20 @@ namespace Eraflo.Catalyst.Networking
     /// </summary>
     public static class NetworkSerializer
     {
+        [System.ThreadStatic] private static MemoryStream _sharedStream;
         /// <summary>
         /// Serializes a message to bytes.
         /// </summary>
         public static byte[] Serialize<T>(T message) where T : struct, INetworkMessage
         {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            if (_sharedStream == null) _sharedStream = new MemoryStream(256);
+            _sharedStream.SetLength(0);
+            _sharedStream.Position = 0;
+            using (var writer = new BinaryWriter(_sharedStream, System.Text.Encoding.UTF8, leaveOpen: true))
             {
                 message.Serialize(writer);
-                return stream.ToArray();
             }
+            return _sharedStream.ToArray();
         }
 
         /// <summary>

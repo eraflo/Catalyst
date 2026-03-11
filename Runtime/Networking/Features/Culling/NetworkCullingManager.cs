@@ -45,6 +45,9 @@ namespace Eraflo.Catalyst.Networking.Features.Culling
         
         // Pool for query results
         private readonly List<ICullable> _queryResults = new();
+
+        // Reusable buffer for computing new visibility sets without per-frame allocation
+        private readonly HashSet<uint> _visibilityBuffer = new HashSet<uint>();
         
         #region Configuration
         
@@ -237,7 +240,8 @@ namespace Eraflo.Catalyst.Networking.Features.Culling
             _queryResults.Clear();
             _spatialHash.QueryRadius(area.Position, area.OuterRadius, _queryResults);
             
-            var newVisibility = new HashSet<uint>();
+            _visibilityBuffer.Clear();
+            var newVisibility = _visibilityBuffer;
             float innerRadiusSq = area.Radius * area.Radius;
             float outerRadiusSq = area.OuterRadius * area.OuterRadius;
             
@@ -289,8 +293,9 @@ namespace Eraflo.Catalyst.Networking.Features.Culling
                 }
             }
             
-            // Update stored visibility
-            _clientVisibility[clientId] = newVisibility;
+            // Update stored visibility in-place so _visibilityBuffer remains separate scratch space
+            currentVisibility.Clear();
+            currentVisibility.UnionWith(_visibilityBuffer);
         }
         
         #endregion

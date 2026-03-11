@@ -221,6 +221,27 @@ public class ManualTreeControl : MonoBehaviour
 }
 ```
 
+### 4.4 AI LOD Scheduler (BTSchedulerService)
+
+`BTSchedulerService` is an optional Catalyst service that automatically manages tick frequency for all registered runners based on their distance to `Camera.main`. When present, `BehaviourTreeRunner` components register and unregister themselves automatically on `OnEnable`/`OnDisable` — no user code is required.
+
+| Tier | Distance | Tick Frequency |
+|------|----------|----------------|
+| Tier 0 | < 15 m | Every frame |
+| Tier 1 | 15 – 50 m | Every 3 frames |
+| Tier 2 | > 50 m | Every 10 frames |
+
+The runner switches to `Manual` mode automatically when the service is active. If the service is absent (e.g. removed from service discovery), runners fall back to their own configured `UpdateMode`.
+
+**Configuration:**
+
+```csharp
+var scheduler = App.Get<BTSchedulerService>();
+scheduler.Tier1Distance = 20f;
+scheduler.Tier2Distance = 60f;
+scheduler.MaxMsPerFrame = 3f;
+```
+
 ---
 
 ## 5. Node Types

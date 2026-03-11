@@ -18,6 +18,7 @@ namespace Eraflo.Catalyst.BehaviourTree
             if (Owner == null || Blackboard == null) return;
 
             Blackboard.Set(PositionKey, Owner.transform.position);
+            // NOTE: No IsDebugEnabled property exists in the base class; DebugMessage allocates a string every tick.
             DebugMessage = $"Pos: {Owner.transform.position}";
         }
     }

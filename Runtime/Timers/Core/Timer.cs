@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Eraflo.Catalyst;
 using Eraflo.Catalyst.Timers.Backends;
 using UnityEngine;
@@ -15,6 +16,9 @@ namespace Eraflo.Catalyst.Timers
     {
         private ITimerBackend _backend;
         private bool _initialized;
+
+        private static readonly Dictionary<Type, Func<Timer, TimerConfig, TimerHandle>> _presetCache
+            = new Dictionary<Type, Func<Timer, TimerConfig, TimerHandle>>();
 
 
         #region Properties
@@ -206,10 +210,15 @@ namespace Eraflo.Catalyst.Timers
 
             EnsureInitialized();
 
-            // Use reflection to call generic CreateTimer<T>
-            var method = typeof(Timer).GetMethod(nameof(CreateTimer), new[] { typeof(TimerConfig) });
-            var generic = method.MakeGenericMethod(preset.TimerType);
-            return (TimerHandle)generic.Invoke(this, new object[] { preset.ToConfig() });
+            if (!_presetCache.TryGetValue(preset.TimerType, out var factory))
+            {
+                var mi = typeof(Timer).GetMethod(nameof(CreateTimer), new[] { typeof(TimerConfig) })
+                                      .MakeGenericMethod(preset.TimerType);
+                factory = (t, cfg) => (TimerHandle)mi.Invoke(t, new object[] { cfg });
+                _presetCache[preset.TimerType] = factory;
+            }
+
+            return factory(this, preset.ToConfig());
         }
 
         /// <summary>

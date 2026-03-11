@@ -276,13 +276,16 @@ Debug.Log($"Depth: {_tree.GetDepth()}");
 
 ### 5.3 When to Use
 
-✅ Nearest neighbor queries  
-✅ K-nearest queries  
-✅ Spawn point selection  
-✅ Static or rarely-updated data  
+✅ Nearest neighbor queries
+✅ K-nearest queries
+✅ Spawn point selection
+✅ Static or rarely-updated data
 
-❌ Frequent insertions/deletions  
-❌ Large radius queries  
+❌ Frequent insertions/deletions
+❌ Large radius queries
+
+> [!NOTE]
+> The KDTree automatically triggers `BuildBalanced()` when ghost nodes (lazy-deleted entries) exceed 50% of total nodes. This prevents query degradation over time in heavily-updated trees without requiring manual rebuilds.
 
 ---
 

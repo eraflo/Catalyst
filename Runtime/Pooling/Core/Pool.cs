@@ -20,6 +20,8 @@ namespace Eraflo.Catalyst.Pooling
         private readonly ConcurrentQueue<Action> _pendingOperations = new ConcurrentQueue<Action>();
         private readonly object _lock = new object();
         
+        private static readonly Dictionary<Type, Func<Pool, object>> _dynamicGetCache = new Dictionary<Type, Func<Pool, object>>();
+
         private bool _initialized;
         private PoolMetrics _metrics;
 
@@ -139,14 +141,18 @@ namespace Eraflo.Catalyst.Pooling
 
         public object GetFromPoolDynamic(Type type)
         {
-            var method = GetType().GetMethod("GetOrCreateGenericPool", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            var generic = method.MakeGenericMethod(type);
-            var pool = generic.Invoke(this, null);
-            
-            var getMethod = pool.GetType().GetMethod("Get");
-            var handle = getMethod.Invoke(pool, null);
+            if (!_dynamicGetCache.TryGetValue(type, out var getter))
+            {
+                var method = typeof(Pool).GetMethod(nameof(GetOrCreateGenericPool), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).MakeGenericMethod(type);
+                getter = (pool) => method.Invoke(pool, null);
+                _dynamicGetCache[type] = getter;
+            }
+
+            var poolObj = getter(this);
+            var getMethod = poolObj.GetType().GetMethod("Get");
+            var handle = getMethod.Invoke(poolObj, null);
             var instance = handle.GetType().GetProperty("Instance").GetValue(handle);
-            
+
             _instanceToHandle[instance] = handle;
             return instance;
         }

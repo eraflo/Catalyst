@@ -69,9 +69,9 @@ namespace Eraflo.Catalyst.HFSM
             float dt = _chronos != null ? _chronos.GetDeltaTime(active.TimeChannel) : Time.deltaTime;
             
             // Increment duration for all active states
-            foreach (var state in _activePath)
+            for (int i = 0; i < _activePath.Count; i++)
             {
-                state.StateDuration += dt;
+                _activePath[i].StateDuration += dt;
             }
 
             // 2. Logic (Bottom-Up)
@@ -167,7 +167,7 @@ namespace Eraflo.Catalyst.HFSM
         private void ExitState(StateBase state)
         {
             state.OnExit();
-            _activePath.Remove(state);
+            _activePath.RemoveAt(_activePath.Count - 1);
         }
 
         public void ChangeStateByPath(string path)

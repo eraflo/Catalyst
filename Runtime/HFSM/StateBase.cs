@@ -84,8 +84,9 @@ namespace Eraflo.Catalyst.HFSM
 
         internal Transition CheckTransitions()
         {
-            foreach (var t in _transitions)
+            for (int i = 0; i < _transitions.Count; i++)
             {
+                var t = _transitions[i];
                 if (t.Condition != null && t.Condition())
                     return t;
             }

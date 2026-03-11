@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
 
 #if UNITY_INPUT_SYSTEM
 namespace Eraflo.Catalyst.InputSystem.Providers
@@ -11,6 +12,7 @@ namespace Eraflo.Catalyst.InputSystem.Providers
     public class InputSystemProvider : IInputProvider
     {
         private InputActionAsset _actionAsset;
+        private readonly Dictionary<string, UnityEngine.InputSystem.InputAction> _actionCache = new Dictionary<string, UnityEngine.InputSystem.InputAction>();
 
         public InputSystemProvider(InputActionAsset actionAsset)
         {
@@ -24,8 +26,8 @@ namespace Eraflo.Catalyst.InputSystem.Providers
         public bool GetButtonDown(string actionId)
         {
             if (_actionAsset == null) return false;
-            
-            var action = _actionAsset.FindAction(actionId);
+
+            var action = GetCachedAction(actionId);
             return action != null && action.WasPressedThisFrame();
         }
 
@@ -33,7 +35,7 @@ namespace Eraflo.Catalyst.InputSystem.Providers
         {
             if (_actionAsset == null) return 0f;
 
-            var action = _actionAsset.FindAction(axisId);
+            var action = GetCachedAction(axisId);
             if (action == null) return 0f;
 
             return action.ReadValue<float>();
@@ -56,9 +58,20 @@ namespace Eraflo.Catalyst.InputSystem.Providers
                 _actionAsset.Disable();
 
             _actionAsset = asset;
-            
+            _actionCache.Clear();
+
             if (_actionAsset != null)
                 _actionAsset.Enable();
+        }
+
+        private UnityEngine.InputSystem.InputAction GetCachedAction(string actionId)
+        {
+            if (!_actionCache.TryGetValue(actionId, out var action))
+            {
+                action = _actionAsset?.FindAction(actionId);
+                if (action != null) _actionCache[actionId] = action;
+            }
+            return action;
         }
     }
 }

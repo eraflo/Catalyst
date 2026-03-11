@@ -21,7 +21,7 @@ namespace Eraflo.Catalyst
         private ISceneLoadingStrategy _strategy;
         private ILoadingScreen _loadingScreen;
         private ISceneManager _sceneManager;
-        private readonly List<SceneGroup> _groups = new List<SceneGroup>();
+        private readonly Dictionary<string, SceneGroup> _groups = new Dictionary<string, SceneGroup>();
         private bool _isTransitioning;
 
         public bool IsTransitioning => _isTransitioning;
@@ -87,8 +87,7 @@ namespace Eraflo.Catalyst
         public void RegisterGroup(SceneGroup group)
         {
             if (group == null || string.IsNullOrEmpty(group.Name)) return;
-            if (_groups.Any(g => g.Name == group.Name)) return;
-            _groups.Add(group);
+            if (!_groups.ContainsKey(group.Name)) _groups[group.Name] = group;
         }
 
         /// <summary>
@@ -105,8 +104,7 @@ namespace Eraflo.Catalyst
                 return;
             }
 
-            var group = _groups.FirstOrDefault(g => g.Name == groupName);
-            if (group == null)
+            if (!_groups.TryGetValue(groupName, out var group))
             {
                 Debug.LogError($"[SceneLoaderService] Scene group '{groupName}' not found.");
                 return;

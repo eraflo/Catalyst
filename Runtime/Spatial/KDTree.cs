@@ -13,6 +13,7 @@ namespace Eraflo.Catalyst.Spatial
     {
         private KDNode _root;
         private int _count;
+        private int _totalNodes = 0;
         
         // Item to node mapping for O(1) removal
         private readonly Dictionary<T, KDNode> _nodeMap = new();
@@ -75,6 +76,7 @@ namespace Eraflo.Catalyst.Spatial
             
             _nodeMap[item] = node;
             _count++;
+            _totalNodes++;
         }
         
         private void InsertNode(KDNode parent, KDNode newNode, int depth)
@@ -120,7 +122,13 @@ namespace Eraflo.Catalyst.Spatial
             node.IsDeleted = true;
             _nodeMap.Remove(item);
             _count--;
-            
+
+            // Trigger a full rebuild when ghost nodes outnumber live nodes
+            if (_count > 0 && (_totalNodes - _count) > _count)
+            {
+                BuildBalanced();
+            }
+
             return true;
         }
         
@@ -158,6 +166,7 @@ namespace Eraflo.Catalyst.Spatial
             _root = null;
             _nodeMap.Clear();
             _count = 0;
+            _totalNodes = 0;
         }
         
         private void ClearNode(KDNode node)
@@ -179,6 +188,17 @@ namespace Eraflo.Catalyst.Spatial
             
             var sortedItems = new List<(T item, Vector3 pos)>(items);
             _root = BuildBalancedRecursive(sortedItems, 0, sortedItems.Count - 1, 0);
+            _totalNodes = _count;
+        }
+
+        private void BuildBalanced()
+        {
+            var items = new List<(T item, Vector3 pos)>(_count);
+            foreach (var kvp in _nodeMap)
+            {
+                items.Add((kvp.Key, kvp.Value.Position));
+            }
+            BuildBalanced(items);
         }
         
         private KDNode BuildBalancedRecursive(List<(T item, Vector3 pos)> items, int start, int end, int depth)
@@ -274,7 +294,11 @@ namespace Eraflo.Catalyst.Spatial
             _nearestBuffer.Clear();
             
             if (_root == null || count <= 0)
-                return _nearestBuffer.ConvertAll(x => x.item);
+            {
+                var result = new List<T>(_nearestBuffer.Count);
+                for (int i = 0; i < _nearestBuffer.Count; i++) result.Add(_nearestBuffer[i].item);
+                return result;
+            }
             
             QueryNearestNRecursive(_root, position, count);
             
@@ -357,15 +381,15 @@ namespace Eraflo.Catalyst.Spatial
         public void QueryRadius(Vector3 center, float radius, List<T> results)
         {
             if (_root == null) return;
-            
+
             float radiusSq = radius * radius;
-            QueryRadiusRecursive(_root, center, radiusSq, results);
+            QueryRadiusRecursive(_root, center, radiusSq, radius, results);
         }
-        
-        private void QueryRadiusRecursive(KDNode node, Vector3 center, float radiusSq, List<T> results)
+
+        private void QueryRadiusRecursive(KDNode node, Vector3 center, float radiusSq, float radius, List<T> results)
         {
             if (node == null) return;
-            
+
             if (!node.IsDeleted)
             {
                 float distSq = (node.Position - center).sqrMagnitude;
@@ -374,23 +398,22 @@ namespace Eraflo.Catalyst.Spatial
                     results.Add(node.Item);
                 }
             }
-            
+
             int axis = node.SplitAxis;
             float centerValue = GetAxisValue(center, axis);
             float nodeValue = GetAxisValue(node.Position, axis);
             float diff = centerValue - nodeValue;
-            float radius = Mathf.Sqrt(radiusSq);
-            
+
             // Always search near side
             KDNode nearSide = diff < 0 ? node.Left : node.Right;
             KDNode farSide = diff < 0 ? node.Right : node.Left;
-            
-            QueryRadiusRecursive(nearSide, center, radiusSq, results);
-            
+
+            QueryRadiusRecursive(nearSide, center, radiusSq, radius, results);
+
             // Search far side if sphere intersects split plane
             if (Mathf.Abs(diff) <= radius)
             {
-                QueryRadiusRecursive(farSide, center, radiusSq, results);
+                QueryRadiusRecursive(farSide, center, radiusSq, radius, results);
             }
         }
         

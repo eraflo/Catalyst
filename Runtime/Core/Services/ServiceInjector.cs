@@ -28,9 +28,21 @@ namespace Eraflo.Catalyst
         private static readonly BindingFlags _flags =
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
 
-        // Reusable buffers — injection always runs on the Unity main thread, no reentrancy risk.
-        private static readonly List<GameObject> _rootBuffer = new List<GameObject>();
+        // Reusable traversal buffers — injection always runs on the Unity main thread.
+        private static readonly List<GameObject>  _rootBuffer      = new List<GameObject>();
         private static readonly List<MonoBehaviour> _behaviourBuffer = new List<MonoBehaviour>();
+
+        // Reusable scratch list for building the per-type field array on cache miss.
+        // Avoids one transient List<FieldInfo> allocation per type during startup scan.
+        private static readonly List<FieldInfo> _fieldScratch = new List<FieldInfo>();
+
+        // Reentrancy guard: prevents corruption of the shared buffers if InjectHierarchy
+        // is invoked recursively (e.g. from a service Initialize or a MonoBehaviour Awake).
+        private static bool _injecting;
+
+        // Idempotency guard: ensures Bootstrap creates exactly one instance even if
+        // RuntimeInitializeOnLoadMethod fires more than once (e.g. on domain reload in Editor).
+        private static bool _bootstrapped;
 
         // ──────────────────────────────────────────────────────────────
         //  Bootstrap — runs AFTER services are initialized
@@ -44,6 +56,9 @@ namespace Eraflo.Catalyst
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Bootstrap()
         {
+            if (_bootstrapped) return;
+            _bootstrapped = true;
+
             var go = new GameObject("[ServiceInjector]")
             {
                 hideFlags = HideFlags.HideAndDontSave
@@ -79,10 +94,11 @@ namespace Eraflo.Catalyst
         {
             if (target == null) return;
 
-            var fields = GetInjectableFields(target.GetType());
+            var type   = target.GetType();
+            var fields = GetInjectableFields(type);
             if (fields.Length == 0) return;
 
-            InjectFields(target, fields);
+            InjectFields(target, type, fields);
         }
 
         // ──────────────────────────────────────────────────────────────
@@ -93,16 +109,54 @@ namespace Eraflo.Catalyst
         {
             if (!scene.IsValid()) return;
 
-            // GetRootGameObjects(List<>) avoids allocating a new array on every scene load.
-            _rootBuffer.Clear();
-            scene.GetRootGameObjects(_rootBuffer);
+            if (_injecting)
+            {
+                Debug.LogWarning("[ServiceInjector] Reentrant InjectScene call detected and skipped.");
+                return;
+            }
 
-            foreach (var root in _rootBuffer)
-                InjectHierarchy(root);
+            _injecting = true;
+            try
+            {
+                // GetRootGameObjects(List<>) avoids allocating a new array on every scene load.
+                _rootBuffer.Clear();
+                scene.GetRootGameObjects(_rootBuffer);
+
+                foreach (var root in _rootBuffer)
+                    InjectHierarchyInternal(root);
+            }
+            finally
+            {
+                _injecting = false;
+            }
         }
 
         internal static void InjectHierarchy(GameObject root)
         {
+            if (root == null) return;
+
+            if (_injecting)
+            {
+                Debug.LogWarning("[ServiceInjector] Reentrant InjectHierarchy call detected and skipped.");
+                return;
+            }
+
+            _injecting = true;
+            try
+            {
+                InjectHierarchyInternal(root);
+            }
+            finally
+            {
+                _injecting = false;
+            }
+        }
+
+        // Internal variant — called from within an already-guarded scope.
+        private static void InjectHierarchyInternal(GameObject root)
+        {
+            if (root == null) return;
+
             // GetComponentsInChildren(bool, List<>) avoids per-root array allocation.
             _behaviourBuffer.Clear();
             root.GetComponentsInChildren(true, _behaviourBuffer);
@@ -111,9 +165,10 @@ namespace Eraflo.Catalyst
             {
                 if (behaviour == null) continue;  // missing script guard
 
-                var fields = GetInjectableFields(behaviour.GetType());
+                var type   = behaviour.GetType();
+                var fields = GetInjectableFields(type);
                 if (fields.Length > 0)
-                    InjectFields(behaviour, fields);  // reuses already-retrieved fields, no second lookup
+                    InjectFields(behaviour, type, fields);
             }
         }
 
@@ -121,7 +176,8 @@ namespace Eraflo.Catalyst
         //  Core injection + reflection cache
         // ──────────────────────────────────────────────────────────────
 
-        private static void InjectFields(object target, FieldInfo[] fields)
+        // `declaringType` is passed in so the warning path avoids a redundant target.GetType() call.
+        private static void InjectFields(object target, Type declaringType, FieldInfo[] fields)
         {
             foreach (var field in fields)
             {
@@ -134,7 +190,7 @@ namespace Eraflo.Catalyst
                 {
                     Debug.LogWarning(
                         $"[ServiceInjector] No service registered for '{field.FieldType.Name}' " +
-                        $"on '{target.GetType().Name}.{field.Name}'.");
+                        $"on '{declaringType.Name}.{field.Name}'.");
                 }
             }
         }
@@ -144,9 +200,11 @@ namespace Eraflo.Catalyst
             if (_fieldCache.TryGetValue(type, out var cached))
                 return cached;
 
-            var fields = new List<FieldInfo>();
+            // Reuse scratch list to avoid allocating a new List<FieldInfo> per type.
+            _fieldScratch.Clear();
+
             var current = type;
-            // For MonoBehaviour subclasses, stop at MonoBehaviour itself to skip Unity engine internals.
+            // For MonoBehaviour subclasses, stop at MonoBehaviour to skip Unity engine internals.
             // For plain C# classes, walk all the way up to (but not including) object.
             var isMono = typeof(MonoBehaviour).IsAssignableFrom(type);
 
@@ -158,12 +216,12 @@ namespace Eraflo.Catalyst
                 foreach (var field in current.GetFields(_flags))
                 {
                     if (field.GetCustomAttribute<InjectAttribute>(false) != null)
-                        fields.Add(field);
+                        _fieldScratch.Add(field);
                 }
                 current = current.BaseType;
             }
 
-            var result = fields.Count > 0 ? fields.ToArray() : _empty;
+            var result = _fieldScratch.Count > 0 ? _fieldScratch.ToArray() : _empty;
             _fieldCache[type] = result;
             return result;
         }

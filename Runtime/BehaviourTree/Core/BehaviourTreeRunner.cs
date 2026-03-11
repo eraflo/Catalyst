@@ -1,4 +1,5 @@
 using UnityEngine;
+using Eraflo.Catalyst;
 using Eraflo.Catalyst.Core.Blackboard;
 
 namespace Eraflo.Catalyst.BehaviourTree
@@ -32,7 +33,18 @@ namespace Eraflo.Catalyst.BehaviourTree
         
         /// <summary>Current state of the tree.</summary>
         public NodeState TreeState => _runtimeTree?.TreeState ?? NodeState.Failure;
-        
+
+        /// <summary>
+        /// Gets or sets the current update mode. The <see cref="BTSchedulerService"/> uses
+        /// this property to switch runners to <see cref="UpdateMode.Manual"/> on registration
+        /// and restore the original value on unregistration.
+        /// </summary>
+        public UpdateMode Mode
+        {
+            get => _updateMode;
+            set => _updateMode = value;
+        }
+
         public enum UpdateMode
         {
             /// <summary>Update every frame.</summary>
@@ -56,7 +68,19 @@ namespace Eraflo.Catalyst.BehaviourTree
                 _runtimeTree.Bind(gameObject);
             }
         }
-        
+
+        private void OnEnable()
+        {
+            var scheduler = App.Get<BTSchedulerService>();
+            if (scheduler != null) scheduler.Register(this);
+        }
+
+        private void OnDisable()
+        {
+            var scheduler = App.Get<BTSchedulerService>();
+            if (scheduler != null) scheduler.Unregister(this);
+        }
+
         private void Update()
         {
             if (_runtimeTree == null) return;

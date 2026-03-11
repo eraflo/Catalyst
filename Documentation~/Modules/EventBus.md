@@ -23,7 +23,7 @@ A unified, thread-safe event system for Unity. Works via **code**, **inspector**
 
 - **Channel-Based Events**: ScriptableObject channels for inspector-friendly setup
 - **Type-Based Events**: Generic C# event structs for code-only events
-- **Thread-Safe**: All operations are lock-protected
+- **Thread-Safe**: Lock-free in `SingleThread` mode (default); locks are only taken when `PackageRuntime.IsThreadSafe` is enabled, meaning zero locking cost for the common single-threaded game loop
 - **Network Ready**: Built-in network event channels with target routing
 - **Inspector Listeners**: MonoBehaviour listeners with UnityEvent responses
 - **Auto-Subscribe**: `[SubscribeTo]` attribute for clean subscription
@@ -143,7 +143,7 @@ graph TB
 
 | Feature | Implementation |
 |---------|----------------|
-| **Thread-safe** | `lock` on all dictionary operations |
+| **Thread-safe** | Lock-free in `SingleThread` mode (default); `lock` taken only when `PackageRuntime.IsThreadSafe` is enabled |
 | **Async-safe** | Copy subscribers before iteration |
 | **Editor-safe** | Raise button disabled outside Play mode |
 

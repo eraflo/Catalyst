@@ -209,7 +209,7 @@ namespace Eraflo.Catalyst.Timers.Debugging
         {
             if (PackageSettings.Instance.EnableDebugOverlay)
             {
-                if (FindObjectOfType<TimerDebugger>() == null)
+                if (Object.FindFirstObjectByType<TimerDebugger>() == null)
                 {
                     var go = new GameObject("TimerDebugger");
                     go.AddComponent<TimerDebugger>();

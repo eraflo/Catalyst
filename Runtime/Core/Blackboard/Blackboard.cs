@@ -19,13 +19,17 @@ namespace Eraflo.Catalyst.Core.Blackboard
             public string Key;
             public string TypeName;
             public string JsonValue;
-            
+
             [NonSerialized] public object CachedValue;
             [NonSerialized] public bool IsCached;
+            [NonSerialized] public bool IsJsonDirty;
         }
         
         [SerializeField] private List<BlackboardEntry> _entries = new();
-        
+
+        // O(1) lookup by key into _entries (kept in sync with _entries)
+        private readonly Dictionary<string, BlackboardEntry> _entryIndex = new();
+
         private readonly Dictionary<string, object> _runtimeData = new();
         private readonly object _lock = new();
         private Blackboard _parent;
@@ -42,7 +46,25 @@ namespace Eraflo.Catalyst.Core.Blackboard
 
         private bool _initialized = false;
 
-        public void OnBeforeSerialize() { }
+        public void OnBeforeSerialize()
+        {
+            // Lazily serialize only entries that were mutated since the last serialize
+            foreach (var entry in _entries)
+            {
+                if (entry.IsJsonDirty && entry.CachedValue != null)
+                {
+                    try
+                    {
+                        entry.JsonValue = JsonConvert.SerializeObject(entry.CachedValue);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"[Blackboard] Failed to serialize '{entry.Key}': {e.Message}");
+                    }
+                    entry.IsJsonDirty = false;
+                }
+            }
+        }
         public void OnAfterDeserialize() => _initialized = false;
 
         public void SetParent(Blackboard parent)
@@ -73,9 +95,12 @@ namespace Eraflo.Catalyst.Core.Blackboard
             _initialized = true;
 
             _runtimeData.Clear();
+            _entryIndex.Clear();
             foreach (var entry in _entries)
             {
                 if (string.IsNullOrEmpty(entry.Key)) continue;
+
+                _entryIndex[entry.Key] = entry;
 
                 object value = null;
                 if (!string.IsNullOrEmpty(entry.TypeName))
@@ -138,24 +163,27 @@ namespace Eraflo.Catalyst.Core.Blackboard
 
         private void SyncEntry(string key, object value)
         {
-            var entry = _entries.Find(e => e.Key == key);
-            if (entry == null)
+            // O(1) lookup via _entryIndex instead of O(n) _entries.Find()
+            if (!_entryIndex.TryGetValue(key, out var entry))
             {
                 entry = new BlackboardEntry { Key = key };
                 _entries.Add(entry);
+                _entryIndex[key] = entry;
             }
-            
+
             if (value != null)
             {
                 entry.TypeName = value.GetType().AssemblyQualifiedName;
-                entry.JsonValue = JsonConvert.SerializeObject(value);
+                // JSON serialization is deferred to OnBeforeSerialize (lazy)
+                entry.IsJsonDirty = true;
             }
             else
             {
                 entry.TypeName = null;
                 entry.JsonValue = null;
+                entry.IsJsonDirty = false;
             }
-            
+
             entry.CachedValue = value;
             entry.IsCached = true;
         }
@@ -232,10 +260,12 @@ namespace Eraflo.Catalyst.Core.Blackboard
                 lock (_lock)
                 {
                     _entries.RemoveAll(e => e.Key == key);
+                    _entryIndex.Remove(key);
                     return _runtimeData.Remove(key);
                 }
             }
             _entries.RemoveAll(e => e.Key == key);
+            _entryIndex.Remove(key);
             return _runtimeData.Remove(key);
         }
 
@@ -247,12 +277,14 @@ namespace Eraflo.Catalyst.Core.Blackboard
                 {
                     _runtimeData.Clear();
                     _entries.Clear();
+                    _entryIndex.Clear();
                 }
             }
             else
             {
                 _runtimeData.Clear();
                 _entries.Clear();
+                _entryIndex.Clear();
             }
         }
 
@@ -315,13 +347,15 @@ namespace Eraflo.Catalyst.Core.Blackboard
                     {
                         _runtimeData.Remove(oldKey);
                         _runtimeData[newKey] = value;
-                        
-                        var entry = _entries.Find(e => e.Key == oldKey);
-                        if (entry != null)
+
+                        // O(1) lookup via _entryIndex instead of O(n) _entries.Find()
+                        if (_entryIndex.TryGetValue(oldKey, out var entry))
                         {
+                            _entryIndex.Remove(oldKey);
                             entry.Key = newKey;
+                            _entryIndex[newKey] = entry;
                         }
-                        
+
                         OnValueChanged?.Invoke(oldKey, value, null);
                         OnValueChanged?.Invoke(newKey, null, value);
                     }
@@ -333,11 +367,13 @@ namespace Eraflo.Catalyst.Core.Blackboard
                 {
                     _runtimeData.Remove(oldKey);
                     _runtimeData[newKey] = value;
-                    
-                    var entry = _entries.Find(e => e.Key == oldKey);
-                    if (entry != null)
+
+                    // O(1) lookup via _entryIndex instead of O(n) _entries.Find()
+                    if (_entryIndex.TryGetValue(oldKey, out var entry))
                     {
+                        _entryIndex.Remove(oldKey);
                         entry.Key = newKey;
+                        _entryIndex[newKey] = entry;
                     }
 
                     OnValueChanged?.Invoke(oldKey, value, null);
@@ -371,12 +407,18 @@ namespace Eraflo.Catalyst.Core.Blackboard
         public void RestoreEntries(List<BlackboardEntry> entries)
         {
             if (entries == null) return;
-            
+
             if (IsThreadSafe)
             {
                 lock (_lock)
                 {
                     _entries = entries;
+                    _entryIndex.Clear();
+                    foreach (var e in _entries)
+                    {
+                        if (!string.IsNullOrEmpty(e.Key))
+                            _entryIndex[e.Key] = e;
+                    }
                     _initialized = false;
                     EnsureInitialized();
                 }
@@ -384,6 +426,12 @@ namespace Eraflo.Catalyst.Core.Blackboard
             else
             {
                 _entries = entries;
+                _entryIndex.Clear();
+                foreach (var e in _entries)
+                {
+                    if (!string.IsNullOrEmpty(e.Key))
+                        _entryIndex[e.Key] = e;
+                }
                 _initialized = false;
                 EnsureInitialized();
             }

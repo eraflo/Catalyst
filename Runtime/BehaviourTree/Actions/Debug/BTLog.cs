@@ -23,23 +23,29 @@ namespace Eraflo.Catalyst.BehaviourTree
             Error
         }
         
+        private string _formattedMessage;
+
+        protected override void OnStart()
+        {
+            // Message is a SerializeField that does not change at runtime; compute once here.
+            _formattedMessage = $"[BT] {Message}";
+        }
+
         protected override NodeState OnUpdate()
         {
-            string formattedMessage = $"[BT] {Message}";
-            
             switch (Level)
             {
                 case LogLevel.Info:
-                    Debug.Log(formattedMessage, Owner);
+                    Debug.Log(_formattedMessage, Owner);
                     break;
                 case LogLevel.Warning:
-                    Debug.LogWarning(formattedMessage, Owner);
+                    Debug.LogWarning(_formattedMessage, Owner);
                     break;
                 case LogLevel.Error:
-                    Debug.LogError(formattedMessage, Owner);
+                    Debug.LogError(_formattedMessage, Owner);
                     break;
             }
-            
+
             return NodeState.Success;
         }
     }

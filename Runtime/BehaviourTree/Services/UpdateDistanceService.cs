@@ -42,6 +42,7 @@ namespace Eraflo.Catalyst.BehaviourTree
             {
                 float distance = Vector3.Distance(Owner.transform.position, targetPos);
                 Blackboard.Set(DistanceKey, distance);
+                // NOTE: No IsDebugEnabled property exists in the base class; DebugMessage allocates a string every tick.
                 DebugMessage = $"Distance: {distance:F1}m";
             }
             else

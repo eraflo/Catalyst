@@ -14,6 +14,9 @@ namespace Eraflo.Catalyst.Pooling
         private float _spawnTime;
         private bool _isActive;
 
+        /// <summary>Cached IPoolable components on this object and its children. Populated on first spawn.</summary>
+        public IPoolable[] Poolables;
+
         /// <summary>Handle ID of this pooled object.</summary>
         public uint HandleId => _handleId;
 

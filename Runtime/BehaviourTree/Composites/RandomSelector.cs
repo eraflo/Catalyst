@@ -15,9 +15,13 @@ namespace Eraflo.Catalyst.BehaviourTree
         protected override void OnStart()
         {
             base.OnStart();
-            
-            // Create and shuffle indices
-            _shuffledIndices = new List<int>();
+
+            // Reuse the existing list to avoid a new allocation on every restart
+            if (_shuffledIndices == null)
+                _shuffledIndices = new List<int>();
+            else
+                _shuffledIndices.Clear();
+
             for (int i = 0; i < Children.Count; i++)
             {
                 _shuffledIndices.Add(i);

@@ -452,7 +452,16 @@ namespace Eraflo.Catalyst.Networking.Backends.Netcode
                 return null;
             }
 
-            var instance = GameObject.Instantiate(playerPrefab, position ?? Vector3.zero, rotation ?? Quaternion.identity);
+            var pool = App.Get<Pool>();
+            GameObject instance;
+            if (pool != null)
+            {
+                instance = pool.SpawnObject(playerPrefab, position ?? Vector3.zero, rotation ?? Quaternion.identity).Instance;
+            }
+            else
+            {
+                instance = GameObject.Instantiate(playerPrefab, position ?? Vector3.zero, rotation ?? Quaternion.identity);
+            }
             var netObj = instance.GetComponent<Unity.Netcode.NetworkObject>();
 
             if (netObj == null)

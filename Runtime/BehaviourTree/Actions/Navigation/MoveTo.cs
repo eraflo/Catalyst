@@ -144,12 +144,11 @@ namespace Eraflo.Catalyst.BehaviourTree
         
         private Vector3 GetTargetPosition()
         {
-            // Check Input Port override
-            var port = Ports.Find(p => p.Name == "InputTarget" && p.IsInput);
-            if (port != null && port.IsConnected)
-            {
-                return GetData<Vector3>("InputTarget");
-            }
+            // GetData uses O(1) cached port lookup (_inputPortCache) instead of O(n) Ports.Find()
+            // Returns default(Vector3) when the port is not connected
+            var inputTarget = GetData<Vector3>("InputTarget");
+            if (inputTarget != Vector3.zero)
+                return inputTarget;
 
             switch (Source)
             {

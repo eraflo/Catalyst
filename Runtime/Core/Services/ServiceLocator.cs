@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.LowLevel;
@@ -14,14 +13,26 @@ namespace Eraflo.Catalyst
     /// </summary>
     public static class ServiceLocator
     {
+        // Primary index: concrete type → service instance (O(1) exact-type lookup).
         private static readonly Dictionary<Type, IGameService> _services = new Dictionary<Type, IGameService>();
+
+        // Secondary index: interface / base type → service instance (O(1) interface lookup,
+        // replaces the previous O(n) LINQ scan in Get<T> / Get(Type)).
+        private static readonly Dictionary<Type, IGameService> _interfaceIndex = new Dictionary<Type, IGameService>();
+
         private static readonly List<IUpdatable> _updatables = new List<IUpdatable>();
         private static readonly List<IFixedUpdatable> _fixedUpdatables = new List<IFixedUpdatable>();
 
-        private static bool _initialized;
+        // volatile: documents that _initialized may be read from non-main-thread contexts
+        // (async continuations, Jobs) and prevents stale-cache reads.
+        private static volatile bool _initialized;
 
         private struct ServiceUpdate { }
         private struct ServiceFixedUpdate { }
+
+        // ──────────────────────────────────────────────────────────────
+        //  Initialization
+        // ──────────────────────────────────────────────────────────────
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
         public static void Initialize()
@@ -57,50 +68,62 @@ namespace Eraflo.Catalyst
                 {
                     string name = assembly.GetName().Name;
 
-                    // Skip large system assemblies unless they contain Eraflo.Catalyst
-                    if (name.StartsWith("System") || name.StartsWith("Unity") || name.StartsWith("mscorlib") ||
-                        name.StartsWith("netstandard") || name.StartsWith("Microsoft") || name.StartsWith("Mono"))
+                    // Skip large system assemblies unless they are part of Eraflo.Catalyst.
+                    // StringComparison.Ordinal: byte-level comparison — faster and culturally neutral.
+                    if (name.StartsWith("System",      StringComparison.Ordinal) ||
+                        name.StartsWith("Unity",       StringComparison.Ordinal) ||
+                        name.StartsWith("mscorlib",    StringComparison.Ordinal) ||
+                        name.StartsWith("netstandard", StringComparison.Ordinal) ||
+                        name.StartsWith("Microsoft",   StringComparison.Ordinal) ||
+                        name.StartsWith("Mono",        StringComparison.Ordinal))
                     {
-                        if (!name.Contains("Eraflo.Catalyst"))
+                        if (!name.Contains("Eraflo.Catalyst", StringComparison.Ordinal))
                             continue;
                     }
 
-                    var types = assembly.GetTypes();
-                    foreach (var type in types)
+                    foreach (var type in assembly.GetTypes())
                     {
                         if (type.IsAbstract || type.IsInterface) continue;
 
                         var attr = type.GetCustomAttribute<ServiceAttribute>();
                         if (attr != null)
-                        {
                             serviceTypes.Add((type, attr));
-                        }
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    // Swallowing scan errors for third-party/system assemblies
+                    // Surface scan failures in the Editor so assembly/type-load errors are visible.
+#if UNITY_EDITOR
+                    Debug.LogWarning($"[ServiceLocator] Skipped assembly during scan: {e.GetType().Name} — {e.Message}");
+#endif
                 }
             }
 
-            foreach (var (type, attr) in serviceTypes.OrderBy(s => s.attr.Priority))
-            {
+            // In-place sort avoids the OrderBy LINQ allocation.
+            serviceTypes.Sort((a, b) => a.attr.Priority.CompareTo(b.attr.Priority));
+
+            foreach (var (type, _) in serviceTypes)
                 Register(type);
-            }
         }
+
+        // ──────────────────────────────────────────────────────────────
+        //  Registration
+        // ──────────────────────────────────────────────────────────────
 
         internal static void Register(Type type)
         {
-            if (_services.ContainsKey(type)) return;
+            // TryGetValue replaces ContainsKey + indexer (single hash computation).
+            if (_services.TryGetValue(type, out _)) return;
 
             try
             {
                 if (Activator.CreateInstance(type) is IGameService service)
                 {
                     _services[type] = service;
+                    AddToInterfaceIndex(type, service);
 
-                    if (service is IUpdatable updatable) _updatables.Add(updatable);
-                    if (service is IFixedUpdatable fixedUpdatable) _fixedUpdatables.Add(fixedUpdatable);
+                    if (service is IUpdatable updatable)       _updatables.Add(updatable);
+                    if (service is IFixedUpdatable fixedUpd)   _fixedUpdatables.Add(fixedUpd);
 
                     service.Initialize();
                 }
@@ -113,33 +136,51 @@ namespace Eraflo.Catalyst
 
         public static void Register<T>(T instance) where T : class, IGameService
         {
+            if (instance == null)
+            {
+                Debug.LogError($"[ServiceLocator] Register<{typeof(T).Name}>: instance is null.");
+                return;
+            }
+
             var type = typeof(T);
 
-            // Remove existing instance from all collections
             if (_services.TryGetValue(type, out var existing))
             {
-                if (existing is IUpdatable oldUpdatable) _updatables.Remove(oldUpdatable);
-                if (existing is IFixedUpdatable oldFixed) _fixedUpdatables.Remove(oldFixed);
-                _services.Remove(type);
+                // Transfer interface index entries from old to new instance
+                // (preserves ownership when two services share an interface).
+                UpdateInterfaceIndex(type, existing, instance);
+
+                if (existing is IUpdatable oldUpd)   _updatables.Remove(oldUpd);
+                if (existing is IFixedUpdatable oldFx) _fixedUpdatables.Remove(oldFx);
+            }
+            else
+            {
+                AddToInterfaceIndex(type, instance);
             }
 
             _services[type] = instance;
-            if (instance is IUpdatable updatable) _updatables.Add(updatable);
-            if (instance is IFixedUpdatable fixedUpdatable) _fixedUpdatables.Add(fixedUpdatable);
+
+            if (instance is IUpdatable updatable)       _updatables.Add(updatable);
+            if (instance is IFixedUpdatable fixedUpd)   _fixedUpdatables.Add(fixedUpd);
 
             instance.Initialize();
         }
+
+        // ──────────────────────────────────────────────────────────────
+        //  Retrieval — all lookups are O(1) dictionary hits
+        // ──────────────────────────────────────────────────────────────
 
         public static T Get<T>() where T : class
         {
             if (!_initialized) Initialize();
 
             if (_services.TryGetValue(typeof(T), out var service))
-            {
                 return service as T;
-            }
 
-            return _services.Values.OfType<T>().FirstOrDefault();
+            if (_interfaceIndex.TryGetValue(typeof(T), out service))
+                return service as T;
+
+            return null;
         }
 
         public static IGameService Get(Type type)
@@ -147,12 +188,51 @@ namespace Eraflo.Catalyst
             if (!_initialized) Initialize();
 
             if (_services.TryGetValue(type, out var service))
-            {
                 return service;
-            }
 
-            return _services.Values.FirstOrDefault(s => type.IsAssignableFrom(s.GetType()));
+            if (_interfaceIndex.TryGetValue(type, out service))
+                return service;
+
+            return null;
         }
+
+        // ──────────────────────────────────────────────────────────────
+        //  Interface index helpers
+        // ──────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Walks all interfaces of <paramref name="concreteType"/> and inserts entries into
+        /// <see cref="_interfaceIndex"/> for any interface not already claimed by another service.
+        /// </summary>
+        private static void AddToInterfaceIndex(Type concreteType, IGameService service)
+        {
+            foreach (var iface in concreteType.GetInterfaces())
+            {
+                if (iface == typeof(IGameService)) continue;
+                // First registered service wins for a given interface.
+                if (!_interfaceIndex.ContainsKey(iface))
+                    _interfaceIndex[iface] = service;
+            }
+        }
+
+        /// <summary>
+        /// When a service is replaced via <see cref="Register{T}(T)"/>, updates every interface
+        /// index entry that pointed to <paramref name="oldService"/> to point to <paramref name="newService"/>.
+        /// Entries owned by a different service are left unchanged.
+        /// </summary>
+        private static void UpdateInterfaceIndex(Type concreteType, IGameService oldService, IGameService newService)
+        {
+            foreach (var iface in concreteType.GetInterfaces())
+            {
+                if (iface == typeof(IGameService)) continue;
+                if (_interfaceIndex.TryGetValue(iface, out var current) && ReferenceEquals(current, oldService))
+                    _interfaceIndex[iface] = newService;
+            }
+        }
+
+        // ──────────────────────────────────────────────────────────────
+        //  PlayerLoop
+        // ──────────────────────────────────────────────────────────────
 
         private static void InjectIntoPlayerLoop()
         {
@@ -171,25 +251,28 @@ namespace Eraflo.Catalyst
 
             for (int i = 0; i < rootLoop.subSystemList.Length; i++)
             {
-                if (rootLoop.subSystemList[i].type == typeof(TLocation))
+                if (rootLoop.subSystemList[i].type != typeof(TLocation)) continue;
+
+                var system = rootLoop.subSystemList[i];
+                var subsystems = system.subSystemList ?? Array.Empty<PlayerLoopSystem>();
+
+                // Plain for-loop — avoids allocating a LINQ enumerator over the array.
+                for (int j = 0; j < subsystems.Length; j++)
                 {
-                    var system = rootLoop.subSystemList[i];
-                    var subsystems = system.subSystemList ?? Array.Empty<PlayerLoopSystem>();
-
-                    if (subsystems.Any(s => s.type == typeof(TMarker))) return;
-
-                    var newSubsystems = new PlayerLoopSystem[subsystems.Length + 1];
-                    Array.Copy(subsystems, newSubsystems, subsystems.Length);
-                    newSubsystems[subsystems.Length] = new PlayerLoopSystem
-                    {
-                        type = typeof(TMarker),
-                        updateDelegate = delegateFunction
-                    };
-
-                    system.subSystemList = newSubsystems;
-                    rootLoop.subSystemList[i] = system;
-                    return;
+                    if (subsystems[j].type == typeof(TMarker)) return; // already inserted
                 }
+
+                var newSubsystems = new PlayerLoopSystem[subsystems.Length + 1];
+                Array.Copy(subsystems, newSubsystems, subsystems.Length);
+                newSubsystems[subsystems.Length] = new PlayerLoopSystem
+                {
+                    type           = typeof(TMarker),
+                    updateDelegate = delegateFunction
+                };
+
+                system.subSystemList = newSubsystems;
+                rootLoop.subSystemList[i] = system;
+                return;
             }
         }
 
@@ -203,14 +286,23 @@ namespace Eraflo.Catalyst
             for (int i = 0; i < _fixedUpdatables.Count; i++) _fixedUpdatables[i].OnFixedUpdate();
         }
 
+        // ──────────────────────────────────────────────────────────────
+        //  Shutdown
+        // ──────────────────────────────────────────────────────────────
+
         public static void Shutdown()
         {
+            // Unsubscribe to prevent a second call if Shutdown() is invoked manually
+            // before the application actually quits.
+            Application.quitting -= Shutdown;
+
             foreach (var service in _services.Values)
             {
                 try { service.Shutdown(); } catch (Exception) { }
             }
 
             _services.Clear();
+            _interfaceIndex.Clear();
             _updatables.Clear();
             _fixedUpdatables.Clear();
             _initialized = false;

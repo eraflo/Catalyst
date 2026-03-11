@@ -17,6 +17,7 @@ namespace Eraflo.Catalyst.Core.Save
         private ISerializer _serializer;
         private IStorageBackend _storage;
         private readonly HashSet<SaveableEntity> _entities = new HashSet<SaveableEntity>();
+        private readonly Dictionary<string, SaveableEntity> _entityIndex = new Dictionary<string, SaveableEntity>();
 
         public ISerializer Serializer { get => _serializer; set => _serializer = value; }
         public IStorageBackend Storage { get => _storage; set => _storage = value; }
@@ -28,19 +29,28 @@ namespace Eraflo.Catalyst.Core.Save
             _storage = _storage ?? new LocalDiskStorage();
         }
 
-        public void Shutdown() 
+        public void Shutdown()
         {
             _entities.Clear();
+            _entityIndex.Clear();
         }
 
         /// <summary>Registers an entity for saving.</summary>
-        public void Register(SaveableEntity entity) => _entities.Add(entity);
+        public void Register(SaveableEntity entity)
+        {
+            _entities.Add(entity);
+            _entityIndex[entity.Guid] = entity;
+        }
 
         /// <summary>Unregisters an entity.</summary>
-        public void Unregister(SaveableEntity entity) => _entities.Remove(entity);
+        public void Unregister(SaveableEntity entity)
+        {
+            _entities.Remove(entity);
+            _entityIndex.Remove(entity.Guid);
+        }
 
         /// <summary>Finds an entity by its unique GUID.</summary>
-        public SaveableEntity GetEntity(string guid) => _entities.FirstOrDefault(e => e.Guid == guid);
+        public SaveableEntity GetEntity(string guid) => _entityIndex.TryGetValue(guid, out var entity) ? entity : null;
 
         /// <summary>
         /// Saves the current game state.

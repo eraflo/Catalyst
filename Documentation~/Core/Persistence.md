@@ -320,7 +320,7 @@ bool success = await saveManager.SaveGame("slot1"); // false on clients
 
 ### 6.1 JsonSerializer
 
-The default serializer uses `Newtonsoft.Json` with Unity type converters.
+The default serializer uses `Newtonsoft.Json` with Unity type converters. Production saves are serialized with `Formatting.None` (compact JSON, no whitespace) to minimize file size.
 
 **Supported Unity Types:**
 - `Vector2`, `Vector3`, `Vector4`
@@ -379,7 +379,7 @@ App.Get<SaveManager>().Serializer = new MyBinarySerializer();
 
 ### 7.1 LocalDiskStorage (Default)
 
-Saves to `Application.persistentDataPath`.
+Saves to `Application.persistentDataPath`. Both `SaveAsync` and `LoadAsync` are truly non-blocking — they use `File.WriteAllBytesAsync` and `File.ReadAllBytesAsync` respectively, so the main thread is never stalled during disk I/O.
 
 ```csharp
 // Default - no setup needed

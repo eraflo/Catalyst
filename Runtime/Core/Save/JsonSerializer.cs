@@ -20,7 +20,7 @@ namespace Eraflo.Catalyst.Core.Save
             _settings = new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.Auto,
-                Formatting = Formatting.Indented,
+                Formatting = Formatting.None,
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore
             };
             
