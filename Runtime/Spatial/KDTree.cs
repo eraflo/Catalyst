@@ -295,9 +295,9 @@ namespace Eraflo.Catalyst.Spatial
             
             if (_root == null || count <= 0)
             {
-                var result = new List<T>(_nearestBuffer.Count);
-                for (int i = 0; i < _nearestBuffer.Count; i++) result.Add(_nearestBuffer[i].item);
-                return result;
+                var result_tmp = new List<T>(_nearestBuffer.Count);
+                for (int i = 0; i < _nearestBuffer.Count; i++) result_tmp.Add(_nearestBuffer[i].item);
+                return result_tmp;
             }
             
             QueryNearestNRecursive(_root, position, count);

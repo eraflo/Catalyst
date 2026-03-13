@@ -305,7 +305,7 @@ namespace Eraflo.Catalyst.Networking.Features.Attachment
             var rb = child.GetComponent<Rigidbody>();
             if (rb != null)
             {
-                rb.velocity = Vector3.zero;
+                rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
                 rb.isKinematic = true;
             }
@@ -337,7 +337,7 @@ namespace Eraflo.Catalyst.Networking.Features.Attachment
                 var parentRb = child.transform.parent.GetComponent<Rigidbody>();
                 if (parentRb != null)
                 {
-                    inheritedVelocity = parentRb.velocity;
+                    inheritedVelocity = parentRb.linearVelocity;
                     inheritedAngularVelocity = parentRb.angularVelocity;
                 }
             }
@@ -372,7 +372,7 @@ namespace Eraflo.Catalyst.Networking.Features.Attachment
                 
                 if (!restoreKinematic && request.InheritVelocity)
                 {
-                    rb.velocity = inheritedVelocity;
+                    rb.linearVelocity = inheritedVelocity;
                     rb.angularVelocity = inheritedAngularVelocity;
                 }
             }
@@ -404,7 +404,7 @@ namespace Eraflo.Catalyst.Networking.Features.Attachment
                 
                 if (!confirm.RestoreKinematic)
                 {
-                    rb.velocity = confirm.InheritedVelocity;
+                    rb.linearVelocity = confirm.InheritedVelocity;
                     rb.angularVelocity = confirm.InheritedAngularVelocity;
                 }
             }
